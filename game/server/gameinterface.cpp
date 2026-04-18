@@ -3570,3 +3570,88 @@ bool UTIL_IsDedicatedServer(void)
 {
 	return engine->IsDedicatedServer();
 }
+
+abstract_class CSource2ServerConfig : public ISource2ServerConfig
+{
+public:
+	virtual const char* GetGameDescription(void) { return "reSource 2 Demo"; }
+
+	virtual int			GetNetworkVersion(void) { return 1; }
+
+	// Get the simulation interval (must be compiled with identical values into both client and game .dll for MOD!!!)
+	// Right now this is only requested at server startup time so it can't be changed on the fly, etc.
+	virtual float			GetTickInterval(void) const { 
+		float tickinterval = DEFAULT_TICK_INTERVAL;
+
+		// override if tick rate specified in command line
+		if (CommandLine()->CheckParm("-tickrate"))
+		{
+			float tickrate = CommandLine()->ParmValue("-tickrate", 0);
+			if (tickrate > 10)
+				tickinterval = 1.0f / tickrate;
+		}
+
+
+		return tickinterval;
+	};
+
+	// Get server maxplayers and lower bound for same
+	virtual void			GetPlayerLimits(int& minplayers, int& maxplayers, int& defaultMaxPlayers, bool& bIsMultiplayer) const {}
+
+	// Returns max splitscreen slot count ( 1 == no splits, 2 for 2-player split screen )
+	virtual int		GetMaxSplitscreenPlayers(void) { return 1; }
+
+	// Return # of human slots, -1 if can't determine or don't care (engine will assume it's == maxplayers )
+	virtual int				GetMaxHumanPlayers() { return 1; }
+
+	virtual bool			ShouldNotifyLocalClientConnectionStateChanges() { return true; }
+
+	virtual bool			AllowPlayerToTakeOverBots() { return true; }
+
+	virtual void			OnClientFullyConnect(void* nEntityIndex) {}
+
+	virtual void		GetHostStateLoopModeInfo(uint32 type, CUtlString& loopModeName, KeyValues** ppLoopModeOptions) {}
+
+	virtual bool		AllowDedicatedServers(EUniverse universe) const { return false; }
+
+	virtual void		GetConVarPrefixesToResetToDefaults(CUtlString& sSemicolonDelimitedPrefixList) const {}
+
+	virtual bool		AllowSaveRestore() { return true; }
+
+	// This is to connect:
+	virtual bool Connect(CreateInterfaceFn factory)
+	{ 
+		Msg("CSource2Server::Connect -- Connected\n");
+		return true;
+	}
+	virtual void Disconnect() {}
+
+	// Here's where systems can access other interfaces implemented by this object
+	// Returns NULL if it doesn't implement the requested interface
+	virtual void* QueryInterface(const char* pInterfaceName) { return NULL; }
+
+	// Init, shutdown
+	virtual InitReturnVal_t Init() { 
+		Msg("CSource2Server::Init -- Begin\n");
+
+		Msg("CSource2Server::Init -- End\n");
+		return INIT_OK; 
+	}
+
+	virtual void Shutdown()
+	{
+		Msg("CSource2Server::Shutdown");
+	}
+
+	virtual const AppSystemInfo_t* GetDependencies() { return NULL; }
+	virtual AppSystemTier_t GetTier() { return APP_SYSTEM_TIER_OTHER; }
+
+	virtual void Reconnect(CreateInterfaceFn factory, const char* pInterfaceName)
+	{
+		ReconnectInterface(factory, pInterfaceName);
+	}
+};
+
+CSource2ServerConfig g_sDefualtClientConfig;
+ISource2ServerConfig* g_pSource2ServerConfig = &g_sDefualtClientConfig;
+EXPOSE_SINGLE_INTERFACE_GLOBALVAR(CSource2ServerConfig, ISource2ServerConfig, INTERFACEVERSION_SERVERCONFIG, g_sDefualtClientConfig)

@@ -52,6 +52,13 @@ enum AppSystemTier_t
 	APP_SYSTEM_TIER_OTHER,
 };
 
+// TODO: populate this with actual values
+enum AppSystemBuildType_t
+{
+	BUILDTYPE_0 = 0,
+	BUILDTYPE_1,
+	BUILDTYPE_2
+};
 
 abstract_class IAppSystem
 {
@@ -76,6 +83,9 @@ public:
 
 	// Reconnect to a particular interface
 	virtual void Reconnect( CreateInterfaceFn factory, const char *pInterfaceName ) = 0;
+
+	virtual bool IsSingleton() { return true; }
+	virtual AppSystemBuildType_t GetBuildType() { return BUILDTYPE_2; } // new for source 2
 };
 
 

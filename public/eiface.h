@@ -23,6 +23,7 @@
 #include "bitvec.h"
 #include "engine/iserverplugin.h"
 #include "tier1/bitbuf.h"
+#include "steam/steamuniverse.h"
 
 //-----------------------------------------------------------------------------
 // forward declarations
@@ -72,7 +73,7 @@ typedef struct player_info_s player_info_t;
 #define DLLEXPORT /* */
 #endif
 
-#define INTERFACEVERSION_VENGINESERVER	"VEngineServer022"
+#define INTERFACEVERSION_VENGINESERVER	"Source2EngineToServer001"
 
 struct bbox_t
 {
@@ -443,7 +444,7 @@ public:
 	virtual bool IsActiveApp() = 0;
 };
 
-#define INTERFACEVERSION_SERVERGAMEDLL				"ServerGameDLL005"
+#define INTERFACEVERSION_SERVERGAMEDLL				"Source2Server001"
 
 //-----------------------------------------------------------------------------
 // Purpose: These are the interfaces that the game .dll exposes to the engine
@@ -581,7 +582,7 @@ public:
 //-----------------------------------------------------------------------------
 #define VENGINE_SERVER_RANDOM_INTERFACE_VERSION	"VEngineRandom001"
 
-#define INTERFACEVERSION_SERVERGAMEENTS			"ServerGameEnts001"
+#define INTERFACEVERSION_SERVERGAMEENTS			"Source2GameEntities001"
 //-----------------------------------------------------------------------------
 // Purpose: Interface to get at server entities
 //-----------------------------------------------------------------------------
@@ -611,7 +612,46 @@ public:
 	virtual void			PrepareForFullUpdate( edict_t *pEdict ) = 0;
 };
 
-#define INTERFACEVERSION_SERVERGAMECLIENTS		"ServerGameClients004"
+#define INTERFACEVERSION_SERVERCONFIG			"Source2ServerConfig001"
+
+abstract_class ISource2ServerConfig : public IAppSystem
+{
+public:
+	// Returns string describing current .dll.  e.g., TeamFortress 2, Half-Life 2.
+	//  Hey, it's more descriptive than just the name of the game directory
+	virtual const char* GetGameDescription(void) = 0;
+
+	virtual int			GetNetworkVersion(void) = 0;
+
+	// Get the simulation interval (must be compiled with identical values into both client and game .dll for MOD!!!)
+	// Right now this is only requested at server startup time so it can't be changed on the fly, etc.
+	virtual float			GetTickInterval(void) const = 0;
+
+	// Get server maxplayers and lower bound for same
+	virtual void			GetPlayerLimits(int& minplayers, int& maxplayers, int& defaultMaxPlayers, bool& bIsMultiplayer) const = 0;
+
+	// Returns max splitscreen slot count ( 1 == no splits, 2 for 2-player split screen )
+	virtual int		GetMaxSplitscreenPlayers(void) = 0;
+
+	// Return # of human slots, -1 if can't determine or don't care (engine will assume it's == maxplayers )
+	virtual int				GetMaxHumanPlayers() = 0;
+
+	virtual bool			ShouldNotifyLocalClientConnectionStateChanges() = 0;
+
+	virtual bool			AllowPlayerToTakeOverBots() = 0;
+
+	virtual void			OnClientFullyConnect(void* nEntityIndex) = 0;
+
+	virtual void		GetHostStateLoopModeInfo(uint32 type, CUtlString& loopModeName, KeyValues** ppLoopModeOptions) = 0;
+
+	virtual bool		AllowDedicatedServers(EUniverse universe) const = 0;
+
+	virtual void		GetConVarPrefixesToResetToDefaults(CUtlString& sSemicolonDelimitedPrefixList) const = 0;
+
+	virtual bool		AllowSaveRestore() = 0;
+};
+
+#define INTERFACEVERSION_SERVERGAMECLIENTS		"Source2GameClients001"
 
 //-----------------------------------------------------------------------------
 // Purpose: Player / Client related functions

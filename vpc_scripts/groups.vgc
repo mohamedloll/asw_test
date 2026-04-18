@@ -1,0 +1,29 @@
+$Group "game"
+{
+	"bonesetup"
+	"client"
+	"server"
+	"missionchooser"
+	"shaderlib"
+	//"responserules"
+	"game_shader"
+	"videocfg"
+}
+
+$Group "shaders"
+{
+	"shaderlib"
+//	"game_shader"
+}
+
+$Group "everything"
+{
+	"bonesetup"
+	"client"
+	"server"
+	"missionchooser"
+	"shaderlib"
+	"responserules"
+	"game_shader"
+	"videocfg"
+}

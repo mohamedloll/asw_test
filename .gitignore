@@ -1,6 +1,7 @@
 # Files to ignore when considering what GIT should commit.
 
-# Visual Studio 
+# Visual Studio
+source-shader-editor
 *.suo
 *.user
 *.sln.docstates
@@ -13,37 +14,30 @@
 *.ilk
 *.lastbuildstate
 vc100.pdb
-vc120.pdb
-vc140.pdb
 ipch
 *.sdf
 *.opensdf
 *.idb
 *.vcxproj
-*.vpc_crc
+*.vcxproj.filters
 *.sln
-*.res
-.vs/
-Release*/
-Debug*/
-
+*.vpc_crc
 *.vpc.sentinel
-*.vpc_cache
-*.vcxproj.*
-
-# OSX/Linux build products
-*.mak
-*.mak.vpc_crc
-*.xcodeproj/
-obj*/
-!devtools/*.mak
-!utils/smdlexp/smdlexp.mak
-
-# Specific Source build products
-/game/
-_vpc_/
-src/vscript/languages/squirrel/vsquirrel/init_nut.h
-generated_proto/
+*.VC
+*.VC.VC.opendb
+*.VC.db
+*.pdb
+Debug*/
+Release*/
+*.mdmp
 
 # shader files
 *.tmp
+
+game/client/Release*
+game/client/Debug*
+game/server/Debug*
+game/server/Release*
+
+
+.vs/*

@@ -1,6 +1,11 @@
 $Group "game"
 {
+	"appframework"
+	"avi"
+	"bitmap"
+	"bitmap_byteswap"
 	"bonesetup"
+	"choreoobjects"
 	"client"
 	"server"
 	"missionchooser"

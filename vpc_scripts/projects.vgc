@@ -53,3 +53,28 @@ $Project "videocfg"
 {
 	"videocfg/videocfg.vpc"
 }
+
+$Project "appframework"
+{
+	"appframework/appframework.vpc"
+}
+
+$Project "bitmap"
+{
+	"bitmap\bitmap.vpc"
+}
+
+$Project "avi"
+{
+	"avi\valve_avi.vpc"
+}
+
+$Project "choreoobjects"
+{
+	"choreoobjects\choreoobjects.vpc"
+}
+
+$Project "bitmap_byteswap"
+{
+	"bitmap\bitmap_byteswap.vpc"
+}

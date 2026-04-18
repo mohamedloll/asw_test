@@ -15,157 +15,8 @@
 #include "tier0/platform.h"
 #include "tier0/dbg.h"
 
-enum NormalDecodeMode_t
-{
-	NORMAL_DECODE_NONE			= 0,
-	NORMAL_DECODE_ATI2N			= 1,
-	NORMAL_DECODE_ATI2N_ALPHA	= 2
-};
+#include "bitmap/imageformat_declarations.h"
 
-// Forward declaration
-#ifdef _WIN32
-typedef enum _D3DFORMAT D3DFORMAT;
-enum DXGI_FORMAT;
-#endif
-
-//-----------------------------------------------------------------------------
-// The various image format types
-//-----------------------------------------------------------------------------
-
-// don't bitch that inline functions aren't used!!!!
-#pragma warning(disable : 4514)
-
-enum ImageFormat 
-{
-	IMAGE_FORMAT_UNKNOWN  = -1,
-	IMAGE_FORMAT_RGBA8888 = 0, 
-	IMAGE_FORMAT_ABGR8888, 
-	IMAGE_FORMAT_RGB888, 
-	IMAGE_FORMAT_BGR888,
-	IMAGE_FORMAT_RGB565, 
-	IMAGE_FORMAT_I8,
-	IMAGE_FORMAT_IA88,
-	IMAGE_FORMAT_P8,
-	IMAGE_FORMAT_A8,
-	IMAGE_FORMAT_RGB888_BLUESCREEN,
-	IMAGE_FORMAT_BGR888_BLUESCREEN,
-	IMAGE_FORMAT_ARGB8888,
-	IMAGE_FORMAT_BGRA8888,
-	IMAGE_FORMAT_DXT1,
-	IMAGE_FORMAT_DXT3,
-	IMAGE_FORMAT_DXT5,
-	IMAGE_FORMAT_BGRX8888,
-	IMAGE_FORMAT_BGR565,
-	IMAGE_FORMAT_BGRX5551,
-	IMAGE_FORMAT_BGRA4444,
-	IMAGE_FORMAT_DXT1_ONEBITALPHA,
-	IMAGE_FORMAT_BGRA5551,
-	IMAGE_FORMAT_UV88,
-	IMAGE_FORMAT_UVWQ8888,
-	IMAGE_FORMAT_RGBA16161616F,
-	IMAGE_FORMAT_RGBA16161616,
-	IMAGE_FORMAT_UVLX8888,
-	IMAGE_FORMAT_R32F,			// Single-channel 32-bit floating point
-	IMAGE_FORMAT_RGB323232F,	// NOTE: D3D9 does not have this format
-	IMAGE_FORMAT_RGBA32323232F,
-	IMAGE_FORMAT_RG1616F,
-	IMAGE_FORMAT_RG3232F,
-	IMAGE_FORMAT_RGBX8888,
-
-	IMAGE_FORMAT_NULL,			// Dummy format which takes no video memory
-
-	// Compressed normal map formats
-	IMAGE_FORMAT_ATI2N,			// One-surface ATI2N / DXN format
-	IMAGE_FORMAT_ATI1N,			// Two-surface ATI1N format
-
-	IMAGE_FORMAT_RGBA1010102,	// 10 bit-per component render targets
-	IMAGE_FORMAT_BGRA1010102,
-	IMAGE_FORMAT_R16F,			// 16 bit FP format
-
-	// Depth-stencil texture formats
-	IMAGE_FORMAT_D16,
-	IMAGE_FORMAT_D15S1,
-	IMAGE_FORMAT_D32,
-	IMAGE_FORMAT_D24S8,
-	IMAGE_FORMAT_LINEAR_D24S8,
-	IMAGE_FORMAT_D24X8,
-	IMAGE_FORMAT_D24X4S4,
-	IMAGE_FORMAT_D24FS8,
-	IMAGE_FORMAT_D16_SHADOW,	// Specific formats for shadow mapping
-	IMAGE_FORMAT_D24X8_SHADOW,	// Specific formats for shadow mapping
-
-	// supporting these specific formats as non-tiled for procedural cpu access (360-specific)
-	IMAGE_FORMAT_LINEAR_BGRX8888,
-	IMAGE_FORMAT_LINEAR_RGBA8888,
-	IMAGE_FORMAT_LINEAR_ABGR8888,
-	IMAGE_FORMAT_LINEAR_ARGB8888,
-	IMAGE_FORMAT_LINEAR_BGRA8888,
-	IMAGE_FORMAT_LINEAR_RGB888,
-	IMAGE_FORMAT_LINEAR_BGR888,
-	IMAGE_FORMAT_LINEAR_BGRX5551,
-	IMAGE_FORMAT_LINEAR_I8,
-	IMAGE_FORMAT_LINEAR_RGBA16161616,
-
-	IMAGE_FORMAT_LE_BGRX8888,
-	IMAGE_FORMAT_LE_BGRA8888,
-
-	NUM_IMAGE_FORMATS
-};
-
-#if defined( POSIX  ) || defined( DX_TO_GL_ABSTRACTION )
-typedef enum _D3DFORMAT
-	{
-		D3DFMT_INDEX16,
-		D3DFMT_D16,
-		D3DFMT_D24S8,
-		D3DFMT_A8R8G8B8,
-		D3DFMT_A4R4G4B4,
-		D3DFMT_X8R8G8B8,
-		D3DFMT_R5G6R5,
-		D3DFMT_X1R5G5B5,
-		D3DFMT_A1R5G5B5,
-		D3DFMT_L8,
-		D3DFMT_A8L8,
-		D3DFMT_A,
-		D3DFMT_DXT1,
-		D3DFMT_DXT3,
-		D3DFMT_DXT5,
-		D3DFMT_V8U8,
-		D3DFMT_Q8W8V8U8,
-		D3DFMT_X8L8V8U8,
-		D3DFMT_A16B16G16R16F,
-		D3DFMT_A16B16G16R16,
-		D3DFMT_R32F,
-		D3DFMT_A32B32G32R32F,
-		D3DFMT_R8G8B8,
-		D3DFMT_D24X4S4,
-		D3DFMT_A8,
-		D3DFMT_R5G6B5,
-		D3DFMT_D15S1,
-		D3DFMT_D24X8,
-		D3DFMT_VERTEXDATA,
-		D3DFMT_INDEX32,
-
-		// adding fake D3D format names for the vendor specific ones (eases debugging/logging)
-		
-		// NV shadow depth tex
-		D3DFMT_NV_INTZ		= 0x5a544e49,	// MAKEFOURCC('I','N','T','Z')
-		D3DFMT_NV_RAWZ		= 0x5a574152,	// MAKEFOURCC('R','A','W','Z')
-
-		// NV null tex
-		D3DFMT_NV_NULL		= 0x4c4c554e,	// MAKEFOURCC('N','U','L','L')
-
-		// ATI shadow depth tex
-		D3DFMT_ATI_D16		= 0x36314644,	// MAKEFOURCC('D','F','1','6')
-		D3DFMT_ATI_D24S8	= 0x34324644,	// MAKEFOURCC('D','F','2','4')
-
-		// ATI 1N and 2N compressed tex
-		D3DFMT_ATI_2N		= 0x32495441,	// MAKEFOURCC('A', 'T', 'I', '2')
-		D3DFMT_ATI_1N		= 0x31495441,	// MAKEFOURCC('A', 'T', 'I', '1')
-		
-		D3DFMT_UNKNOWN
-	} D3DFORMAT;
-#endif
 
 //-----------------------------------------------------------------------------
 // Color structures
@@ -184,7 +35,11 @@ template< int nBitCount > FORCEINLINE int ConvertTo10Bit( int x )
 	case 4:
 		return ( x << 6 ) | ( x << 2 ) | ( x >> 2 );
 	default:
+#if defined(POSIX) || defined(_PS3)
+		return ( x << ( 10 - nBitCount ) ) | ( x >> MAX( 0, MIN( 32, ( nBitCount - ( 10 - nBitCount ) ) ) ) );
+#else // !_PS3
 		return ( x << ( 10 - nBitCount ) ) | ( x >> ( nBitCount - ( 10 - nBitCount ) ) );
+#endif
 	}
 }
 #pragma warning ( default : 4293 )
@@ -396,6 +251,9 @@ struct BGRX8888_t
 // 360 uses this structure for x86 dxt decoding
 #if defined( _X360 )
 #pragma bitfield_order( push, lsb_to_msb )
+#elif defined( _PS3 )
+#pragma ms_struct on
+#pragma reverse_bitfields on
 #endif
 struct BGR565_t
 {
@@ -425,6 +283,9 @@ struct BGR565_t
 };
 #if defined( _X360 )
 #pragma bitfield_order( pop )
+#elif defined( _PS3 )
+#pragma ms_struct off
+#pragma reverse_bitfields off
 #endif
 
 struct BGRA5551_t
@@ -557,6 +418,16 @@ struct KernelInfo_t
 	int m_nDiameter;
 };
 
+//-----------------------------------------------------------------------------
+// Indicates the target console type that a given operation is for.
+// (e.g. you may be running on the PC but you're generating textures
+// for X360 or PS3, so IsPC, IsX360, etc. do not work)
+//-----------------------------------------------------------------------------
+enum VtfConsoleFormatType_t
+{
+	VTF_CONSOLE_360,
+	VTF_CONSOLE_PS3
+};
 
 //-----------------------------------------------------------------------------
 // Various methods related to pixelmaps and color formats
@@ -595,8 +466,8 @@ namespace ImageLoader
 							 int width, int height, int srcStride = 0, int dstStride = 0 );
 
 	// must be used in conjunction with ConvertImageFormat() to pre-swap and post-swap
-	void PreConvertSwapImageData( unsigned char *pImageData, int nImageSize, ImageFormat imageFormat, int width = 0, int stride = 0 );
-	void PostConvertSwapImageData( unsigned char *pImageData, int nImageSize, ImageFormat imageFormat, int width = 0, int stride = 0 );
+	void PreConvertSwapImageData( unsigned char *pImageData, int nImageSize, ImageFormat imageFormat, VtfConsoleFormatType_t targetConsole, int width = 0, int stride = 0 );
+	void PostConvertSwapImageData( unsigned char *pImageData, int nImageSize, ImageFormat imageFormat, VtfConsoleFormatType_t targetConsole, int width = 0, int stride = 0 );
 	void ByteSwapImageData( unsigned char *pImageData, int nImageSize, ImageFormat imageFormat, int width = 0, int stride = 0 );
 	bool IsFormatValidForConversion( ImageFormat fmt );
 
@@ -724,11 +595,31 @@ namespace ImageLoader
 
 
 	//-----------------------------------------------------------------------------
-	// Gets the size of the image format in bytes
+	// Gets the size of the image format in bytes. Be careful - compressed formats will return 0
 	//-----------------------------------------------------------------------------
 	inline int SizeInBytes( ImageFormat fmt )
 	{
 		return ImageFormatInfo(fmt).m_nNumBytes;
+	}
+
+	/// return the byte size of a given w/h. Works with compressed formats
+	inline int SizeInBytes( ImageFormat fmt, int nWidth, int nHeight )
+	{
+		ImageFormatInfo_t const &info = ImageFormatInfo( fmt );
+		if ( info.m_bIsCompressed )
+		{
+			// !!BUG!! hardcoded 4x4 block size, dxt1, dxt5
+			int nNumBytesPerBlock = 8;
+			if ( fmt == IMAGE_FORMAT_DXT5 )
+			{
+				nNumBytesPerBlock = 16;
+			}
+			return nNumBytesPerBlock * ( ( nWidth + 3 ) / 4 ) * ( ( nHeight +3 )/ 4 );
+		}
+		else
+		{
+			return info.m_nNumBytes * nWidth * nHeight;
+		}
 	}
 
 	//-----------------------------------------------------------------------------
@@ -775,6 +666,11 @@ namespace ImageLoader
 				( fmt == IMAGE_FORMAT_RG3232F ) ||
 				( fmt == IMAGE_FORMAT_RGB323232F ) ||
 				( fmt == IMAGE_FORMAT_RGBA32323232F );
+	}
+
+	inline bool IsRuntimeCompressed( ImageFormat fmt )
+	{
+		return ( fmt == IMAGE_FORMAT_DXT1_RUNTIME ) || ( fmt == IMAGE_FORMAT_DXT5_RUNTIME );
 	}
 
 } // end namespace ImageLoader

@@ -41,3 +41,5 @@ game/server/Release*
 
 
 .vs/*
+*.vpc_cache
+*manifest.txt

@@ -126,12 +126,26 @@ public:
 	virtual bool HookXAudio( void ) = 0;
 #endif
 #endif
+
+#if defined( _PS3 )
+	virtual bool SetPS3SoundDevice( int nChannelCount ) = 0;
+#endif // _PS3
+
 	// Pause and unpause the movie playback
 	virtual void Pause( BIKMaterial_t hMaterial ) = 0;
 	virtual void Unpause( BIKMaterial_t hMaterial ) = 0;
 
 	// Number for appending the current material name
 	virtual int GetGlobalMaterialAllocationNumber( void ) = 0;
+
+	virtual bool PrecacheMovie( const char *pFileName, const char *pPathID = NULL ) = 0;
+	virtual void *GetPrecachedMovie( const char *pFileName ) = 0;
+	virtual void EvictPrecachedMovie( const char *pFileName ) = 0;
+	virtual void EvictAllPrecachedMovies() = 0;
+
+	virtual void UpdateVolume( BIKMaterial_t hMaterial ) = 0;
+
+	virtual bool IsMovieResidentInMemory( BIKMaterial_t hMaterial ) = 0;
 };
 
 extern IBik *g_pBIK;

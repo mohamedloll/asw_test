@@ -24,7 +24,7 @@ class CUtlBuffer;
 // for fast lookups to retrieve sequence data, we store the sequence information discretized into
 // a fixed # of frames. If this discretenesss is a visual problem, you can lerp the blend values to get it
 // perfect.
-#define SEQUENCE_SAMPLE_COUNT 1024
+#define SEQUENCE_SAMPLE_COUNT 512
 
 #define MAX_IMAGES_PER_FRAME_ON_DISK 4
 #define MAX_IMAGES_PER_FRAME_IN_MEMORY 2

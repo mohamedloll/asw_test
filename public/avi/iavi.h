@@ -30,7 +30,7 @@ struct AVIParams_t
 {
 	AVIParams_t() :
 		m_nFrameRate( 0 ), m_nFrameScale( 1 ), m_nWidth( 0 ), m_nHeight( 0 ),
-		m_nSampleRate( 0 ), m_nSampleBits( 0 ), m_nNumChannels( 0 )
+		m_nSampleRate( 0 ), m_nSampleBits( 0 ), m_nNumChannels( 0 ), m_bGetCodecFromUser( true )
 	{
 		m_pFileName[ 0 ] = 0;
 	}
@@ -53,6 +53,10 @@ struct AVIParams_t
 	int			m_nSampleRate;
 	int			m_nSampleBits;
 	int			m_nNumChannels;
+
+	// The user will be asked to select a compressor if true, otherwise the
+	// previous or default will be used.
+	bool		m_bGetCodecFromUser;
 };
 
 

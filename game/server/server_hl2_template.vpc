@@ -5,7 +5,7 @@
 //-----------------------------------------------------------------------------
 
 $Macro SRCDIR		"..\.."
-$Macro GAMENAME 	"hl2_template"
+$Macro GAMENAME 	"vr"
 
 $Include "$SRCDIR\game\server\server_hl2_base.vpc"
 

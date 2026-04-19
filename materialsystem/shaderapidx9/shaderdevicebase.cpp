@@ -20,7 +20,6 @@
 #include "shaderapi/ishadershadow.h"
 #include "shaderapi_global.h"
 #include "videocfg/videocfg.h"
-#include "vjobs_interface.h"
 #include "winutils.h"
 
 #ifdef _X360
@@ -40,7 +39,6 @@ CShaderDeviceMgrBase *g_pShaderDeviceMgr;
 IShaderShadow *g_pShaderShadow;
 #if !defined( _PS3 ) && !defined( _OSX )
 IShaderUtil* g_pShaderUtil;		// The main shader utility interface
-IVJobs * g_pVJobs;
 #else
 extern IVJobs * g_pVJobs;
 #endif
@@ -154,10 +152,7 @@ bool CShaderDeviceMgrBase::Connect( CreateInterfaceFn factory )
 #if !defined( _PS3 ) && !defined( _OSX )
 	if ( !g_pShaderUtil )
 		g_pShaderUtil = (IShaderUtil*)ShaderDeviceFactory( SHADER_UTIL_INTERFACE_VERSION, NULL );
-#endif
-	if ( !g_pVJobs )
-		g_pVJobs = (IVJobs *)ShaderDeviceFactory( VJOBS_INTERFACE_VERSION, NULL );
-	
+#endif	
 	g_pShaderDeviceMgr = this;
 
 	s_TempFactory = NULL;

@@ -3189,6 +3189,20 @@ void CShaderAPIDx8::OnDeviceShutdown()
 	ReleaseAllVertexDecl( );
 }
 
+const fltx4 Four_GammaToLinearCoefficients_A = { .1731f, .1731f, .1731f, .1731f };
+const fltx4 Four_GammaToLinearCoefficients_B = { .8717f, .8717f, .8717f, .8717f };
+const fltx4 Four_GammaToLinearCoefficients_C = { -.0452f, -.0452f, -.0452f, -.0452f };
+const fltx4 Four_GammaToLinearCoefficients_D = { .0012f, .0012f, .0012f, .0012f };
+
+fltx4 GammaToLinearExtendedSIMD(fltx4 x)
+{
+	x = MaxSIMD(x, Four_Zeros);
+	fltx4 fl4Ret = AddSIMD(Four_GammaToLinearCoefficients_D,
+		MulSIMD(x, AddSIMD(Four_GammaToLinearCoefficients_C,
+			MulSIMD(x, AddSIMD(Four_GammaToLinearCoefficients_B,
+				MulSIMD(x, Four_GammaToLinearCoefficients_A))))));
+	return MaskedAssign(CmpGeSIMD(x, Four_Ones), x, fl4Ret);
+}
 
 //-----------------------------------------------------------------------------
 // Sets the mode...

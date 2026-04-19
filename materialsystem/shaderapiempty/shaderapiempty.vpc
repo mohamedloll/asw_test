@@ -19,7 +19,7 @@ $Configuration
 
 	$Linker
 	{
-		$AdditionalDependencies				"odbc32.lib odbccp32.lib" [$WINDOWS]
+		$AdditionalDependencies				"odbc32.lib odbccp32.lib msvcrt.lib" [$WINDOWS]
 		$SystemLibraries                    "iconv" [$OSXALL]
 	}
 }

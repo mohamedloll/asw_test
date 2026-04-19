@@ -13,7 +13,6 @@
 
 
 #include "appframework/iappsystem.h"
-#include "appframework/IAppSystem.h"
 #include "tier1/utlstring.h"
 #include "tier1/utlbuffer.h"
 

@@ -25,6 +25,7 @@
 #include "tier1/utlqueue.h"
 #include "appframework/IAppSystem.h"
 #include "tier2/tier2.h"
+#include "tier1/checksum_md5.h"
 
 //-----------------------------------------------------------------------------
 // Forward declarations
@@ -352,6 +353,42 @@ struct FileAsyncRequest_t
 	FSAllocFunc_t			pfnAlloc;			// custom allocator. can be null. not compatible with FSASYNC_FLAGS_FREEDATAPTR
 };
 
+struct FileHash_t
+{
+	enum EFileHashType_t
+	{
+		k_EFileHashTypeUnknown = 0,
+		k_EFileHashTypeEntireFile = 1,
+		k_EFileHashTypeIncompleteFile = 2,
+	};
+	FileHash_t()
+	{
+		m_eFileHashType = FileHash_t::k_EFileHashTypeUnknown;
+		m_cbFileLen = 0;
+		m_PackFileID = 0;
+		m_nPackFileNumber = 0;
+	}
+	int m_eFileHashType;
+	CRC32_t m_crcIOSequence;
+	MD5Value_t m_md5contents;
+	int m_cbFileLen;
+	int m_PackFileID;
+	int m_nPackFileNumber;
+
+	bool operator==(const FileHash_t& src) const
+	{
+		return m_crcIOSequence == src.m_crcIOSequence &&
+			m_md5contents == src.m_md5contents &&
+			m_eFileHashType == src.m_eFileHashType;
+	}
+	bool operator!=(const FileHash_t& src) const
+	{
+		return m_crcIOSequence != src.m_crcIOSequence ||
+			m_md5contents != src.m_md5contents ||
+			m_eFileHashType != src.m_eFileHashType;
+	}
+
+};
 
 class CUnverifiedCRCFile
 {

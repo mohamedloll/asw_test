@@ -78,3 +78,23 @@ $Project "bitmap_byteswap"
 {
 	"bitmap\bitmap_byteswap.vpc"
 }
+
+$Project "vpklib"
+{
+	"vpklib\vpklib.vpc"
+}
+
+$Project "vscript"
+{
+	"vscript\vscript.vpc"
+}
+
+$Project "vstdlib"
+{
+	"vstdlib\vstdlib.vpc"
+}
+
+$Project "vtf"
+{
+	"vtf\vtf.vpc"
+}

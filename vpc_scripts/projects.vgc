@@ -123,3 +123,13 @@ $Project "launcher"
 {
 	"launcher\launcher.vpc"
 }
+
+$Project "localize"
+{
+	"localize\localize.vpc"
+}
+
+$Project "datacache"
+{
+	"datacache\datacache.vpc"
+}

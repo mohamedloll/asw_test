@@ -25,6 +25,12 @@
 #define ALIGN32( a ) a = (byte *)((int)((byte *)a + 31) & ~ 31)
 #define ALIGN64( a ) a = (byte *)((int)((byte *)a + 63) & ~ 63)
 
+#define STUDIO_FRAME_RAWPOS		0x01 // Vector48 in constants
+#define STUDIO_FRAME_RAWROT		0x02 // Quaternion48 in constants
+#define STUDIO_FRAME_ANIMPOS	0x04 // Vector48 in framedata
+#define STUDIO_FRAME_ANIMROT	0x08 // Quaternion48 in framedata
+#define STUDIO_FRAME_FULLANIMPOS	0x10 // Vector in framedata
+
 // Fixup macros create variables that may not be referenced
 #pragma warning( push )
 #pragma warning( disable:4189 ) // local variable is initialized but not referenced
@@ -1940,14 +1946,10 @@ BEGIN_BYTESWAP_DATADESC( studiohdr_t )
 	DEFINE_FIELD( contents, FIELD_INTEGER ),
 	DEFINE_FIELD( numincludemodels, FIELD_INTEGER ),
 	DEFINE_INDEX( includemodelindex, FIELD_INTEGER ),
-	DEFINE_FIELD( virtualModel, FIELD_INTEGER ),				// void*
 	DEFINE_INDEX( szanimblocknameindex, FIELD_INTEGER ),	
 	DEFINE_FIELD( numanimblocks, FIELD_INTEGER ),
 	DEFINE_INDEX( animblockindex, FIELD_INTEGER ),
-	DEFINE_FIELD( animblockModel, FIELD_INTEGER ),				// void*
 	DEFINE_INDEX( bonetablebynameindex, FIELD_INTEGER ),
-	DEFINE_FIELD( pVertexBase, FIELD_INTEGER ),					// void*
-	DEFINE_FIELD( pIndexBase, FIELD_INTEGER ),					// void*
 	DEFINE_FIELD( constdirectionallightdot, FIELD_CHARACTER ),	// byte
 	DEFINE_FIELD( rootLOD, FIELD_CHARACTER ),					// byte
 	DEFINE_FIELD( numAllowedRootLODs, FIELD_CHARACTER ),		// byte
@@ -2503,8 +2505,6 @@ BEGIN_BYTESWAP_DATADESC( mstudiotexture_t )
 	DEFINE_FIELD( flags, FIELD_INTEGER ),
 	DEFINE_FIELD( used, FIELD_INTEGER ),
 	DEFINE_FIELD( unused1, FIELD_INTEGER ),
-	DEFINE_FIELD( material, FIELD_INTEGER ),		// IMaterial*
-	DEFINE_FIELD( clientmaterial, FIELD_INTEGER ),	// void*
 	DEFINE_ARRAY( unused, FIELD_INTEGER, 10 ),
 END_BYTESWAP_DATADESC()
 

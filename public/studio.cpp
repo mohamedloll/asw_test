@@ -2249,8 +2249,6 @@ void CParticleCollection::Render(IMatRenderContext*, const Vector4D&, bool, void
 
 void CParticleSystemMgr::DrawRenderCache(bool) {}
 
-CPackedStore::CPackedStore(const char*, IBaseFileSystem*, bool) {}
-
 CPackedStoreFileHandle CPackedStore::OpenFile(const char*)
 {
 	return {};

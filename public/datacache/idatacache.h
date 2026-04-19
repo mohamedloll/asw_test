@@ -1,4 +1,4 @@
-//===== Copyright © 1996-2005, Valve Corporation, All rights reserved. ======//
+//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -14,7 +14,7 @@
 #pragma once
 #endif
 
-
+#include "tier0/platform.h"
 #include "tier0/dbg.h"
 #include "appframework/iappsystem.h"
 #include "tier3/tier3.h"
@@ -34,7 +34,7 @@ class IDataCache;
 //---------------------------------------------------------
 // Unique (per section) identifier for a cache item defined by client
 //---------------------------------------------------------
-typedef uint32 DataCacheClientID_t;
+typedef uintp DataCacheClientID_t;
 
 
 //---------------------------------------------------------
@@ -49,11 +49,11 @@ typedef memhandle_t DataCacheHandle_t;
 //---------------------------------------------------------
 struct DataCacheLimits_t
 {
-	DataCacheLimits_t( unsigned nMaxBytes = (unsigned)-1, unsigned nMaxItems = (unsigned)-1, unsigned nMinBytes = 0, unsigned nMinItems = 0 )
-		: nMaxBytes(nMaxBytes), 
-		nMaxItems(nMaxItems), 
-		nMinBytes(nMinBytes),
-		nMinItems(nMinItems)
+	DataCacheLimits_t( unsigned _nMaxBytes = (unsigned)-1, unsigned _nMaxItems = (unsigned)-1, unsigned _nMinBytes = 0, unsigned _nMinItems = 0 )
+		: nMaxBytes(_nMaxBytes), 
+		nMaxItems(_nMaxItems), 
+		nMinBytes(_nMinBytes),
+		nMinItems(_nMinItems)
 	{
 	}
 
@@ -179,6 +179,7 @@ enum DataCacheAddFlags_t
 abstract_class IDataCacheSection
 {
 public:
+    virtual ~IDataCacheSection() { };
 	//--------------------------------------------------------
 
 	virtual IDataCache *GetSharedCache() = 0;
@@ -286,7 +287,6 @@ public:
 	//--------------------------------------------------------
 	virtual unsigned Purge( unsigned nBytes ) = 0;
 
-
 	//--------------------------------------------------------
 	// Purpose: Output the state of the section
 	//--------------------------------------------------------
@@ -327,6 +327,7 @@ public:
 abstract_class IDataCacheClient
 {
 public:
+    virtual ~IDataCacheClient() { };
 	//--------------------------------------------------------
 	// 
 	//--------------------------------------------------------
@@ -344,6 +345,7 @@ public:
 class CDefaultDataCacheClient : public IDataCacheClient
 {
 public:
+    virtual ~CDefaultDataCacheClient() { };
 	virtual bool HandleCacheNotification( const DataCacheNotification_t &notification  )
 	{
 		switch ( notification.type )
@@ -351,7 +353,12 @@ public:
 		case DC_AGE_DISCARD:
 		case DC_FLUSH_DISCARD:
 		case DC_REMOVED:
+		default:
 			Assert ( 0 );
+			return false;
+        case DC_NONE:
+        case DC_RELOCATE:
+        case DC_PRINT_INF0:
 			return false;
 		}
 		return false;
@@ -536,9 +543,17 @@ public:
 		case DC_AGE_DISCARD:
 		case DC_FLUSH_DISCARD:
 		case DC_REMOVED:
-			STORAGE_TYPE *p = (STORAGE_TYPE *)notification.clientId;
-			p->DestroyResource();
-			return true;
+			{
+				STORAGE_TYPE *p = (STORAGE_TYPE *)notification.clientId;
+				p->DestroyResource();
+				return true;
+			}
+			break;
+
+		case DC_NONE:
+		case DC_RELOCATE:
+		case DC_PRINT_INF0:
+			break;
 		}
 
 		return CDefaultDataCacheClient::HandleCacheNotification( notification );

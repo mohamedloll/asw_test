@@ -354,8 +354,9 @@ void virtualmodel_t::AppendBonemap( int group, const studiohdr_t *pStudioHdr )
 				int n = k;
 				while (n != -1 && flags != pBaseStudioHdr->pBone( n )->flags)
 				{
-					pBaseStudioHdr->pBone( n )->flags |= flags;
-					n = pBaseStudioHdr->pBone( n )->parent;
+					mstudiobone_t *pBaseBone = const_cast<mstudiobone_t*>( pBaseStudioHdr->pBone( n ) );
+					pBaseBone->flags |= flags;
+					n = pBaseBone->parent;
 				}
 			}
 			else

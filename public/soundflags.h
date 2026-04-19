@@ -117,25 +117,34 @@ enum soundlevel_t
 //-----------------------------------------------------------------------------
 enum SoundFlags_t
 {
-	SND_NOFLAGS			= 0,			// to keep the compiler happy
-	SND_CHANGE_VOL		= (1<<0),		// change sound vol
-	SND_CHANGE_PITCH	= (1<<1),		// change sound pitch
-	SND_STOP			= (1<<2),		// stop the sound
-	SND_SPAWNING		= (1<<3),		// we're spawning, used in some cases for ambients
-										// not sent over net, only a param between dll and server.
-	SND_DELAY			= (1<<4),		// sound has an initial delay
-	SND_STOP_LOOPING	= (1<<5),		// stop all looping sounds on the entity.
-	SND_SPEAKER			= (1<<6),		// being played again by a microphone through a speaker
+	SND_NOFLAGS					= 0,			// to keep the compiler happy
+	SND_CHANGE_VOL				= (1<<0),		// change sound vol
+	SND_CHANGE_PITCH			= (1<<1),		// change sound pitch
+	SND_STOP					= (1<<2),		// stop the sound
+	SND_SPAWNING				= (1<<3),		// we're spawning, used in some cases for ambients
+												// not sent over net, only a param between dll and server.
+	SND_DELAY					= (1<<4),		// sound has an initial delay
+	SND_STOP_LOOPING			= (1<<5),		// stop all looping sounds on the entity.
+	SND_SPEAKER					= (1<<6),		// being played again by a microphone through a speaker
  
-	SND_SHOULDPAUSE		= (1<<7),		// this sound should be paused if the game is paused
-	SND_IGNORE_PHONEMES	= (1<<8),
-	SND_IGNORE_NAME		= (1<<9),		// used to change all sounds emitted by an entity, regardless of scriptname
+	SND_SHOULDPAUSE				= (1<<7),		// this sound should be paused if the game is paused
+	SND_IGNORE_PHONEMES			= (1<<8),
+	SND_IGNORE_NAME				= (1<<9),		// used to change all sounds emitted by an entity, regardless of scriptname
+	SND_IS_SCRIPTHANDLE			= (1<<10),		// server has passed the actual SoundEntry instead of wave filename
+
+	SND_UPDATE_DELAY_FOR_CHOREO	= (1<<11),		// True if we have to update snd_delay_for_choreo with the IO latency.
+	SND_GENERATE_GUID			= (1<<12),		// True if we generate the GUID when we send the sound.
+
+	SND_OVERRIDE_PITCH			= (1<<13),		// The pitch given in code overrides what is present in the sound entry.
 };
 
-#define SND_FLAG_BITS_ENCODE 9
+#define SND_FLAG_BITS_ENCODE 13
 
 #define MAX_SOUND_INDEX_BITS	13
 #define	MAX_SOUNDS				(1<<MAX_SOUND_INDEX_BITS)
+
+// Todo: Morasky, we need to test against this #!
+// MAX_MEASURED_SOUNDENTRIES
 
 #if !defined( IN_XBOX_CODELINE )
 // +/-4096 msec
@@ -147,6 +156,12 @@ enum SoundFlags_t
 
 // Subtract one to leave room for the sign bit
 #define MAX_SOUND_DELAY_MSEC				(1<<(MAX_SOUND_DELAY_MSEC_ENCODE_BITS-1))    // 4096 msec or about 4 seconds
+
+#define MAX_SOUND_SEED_BITS		6	// Used to encode 0-63 for seeding client side sound operators
+									// NOTE: The LSB also carries the server side wave file selection
+#define MIN_SOUND_SEED_VALUE	0
+#define MAX_SOUND_SEED_VALUE	((1<<MAX_SOUND_SEED_BITS)-1)
+#define MAX_SOUND_RNDWAVE_NUM	MAX_SOUND_SEED_VALUE
 
 //-----------------------------------------------------------------------------
 // common pitch values

@@ -173,3 +173,8 @@ $Project "studiorender"
 {
 	"studiorender\studiorender.vpc"
 }
+
+$Project "soundemittersystem"
+{
+	"soundemittersystem\soundemittersystem.vpc"
+}

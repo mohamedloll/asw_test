@@ -79,6 +79,7 @@ protected:
 class CDmaString : public CDmaVar< CUtlSymbolLarge >
 {
 public:
+	const char *GetString() const;
 	const char *Get( ) const;
 	operator const char*() const;
 
@@ -92,4 +93,14 @@ public:
 	bool IsEmpty() const;
 };
 
+//-----------------------------------------------------------------------------
+//
+// Inline methods for CDmaString
+//
+//-----------------------------------------------------------------------------
+
+inline const char *CDmaString::GetString() const
+{
+	return this->Value().String();
+}
 #endif // DMVAR_H

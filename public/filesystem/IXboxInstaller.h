@@ -20,9 +20,9 @@
 #define SOURCE_SECTOR_SIZE	2048	// DVD Sector Size
 #define TARGET_SECTOR_SIZE	512		// HDD Sector Size
 
-// all L4D cached files relative to this, having a parent dir is critical
+// all CStrike15 cached files relative to this, having a parent dir is critical
 // the cache is a shared resource among titles, using the simple root would be VERY bad
-#define CACHE_PATH_L4D		"cache:/l4d002"
+#define CACHE_PATH_CSTIKRE15		"cache:/cs1501"
 
 struct CopyStats_t
 {

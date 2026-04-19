@@ -98,3 +98,28 @@ $Project "vtf"
 {
 	"vtf\vtf.vpc"
 }
+
+$Project "datamodel"
+{
+	"datamodel\datamodel.vpc"
+}
+
+$Project "dedicated"
+{
+	"dedicated\dedicated.vpc"
+}
+
+$Project "dedicated_main"
+{
+	"dedicated_main\dedicated_main.vpc"
+}
+
+$Project "filesystem"
+{
+	"filesystem\filesystem_stdio.vpc"
+}
+
+$Project "launcher"
+{
+	"launcher\launcher.vpc"
+}

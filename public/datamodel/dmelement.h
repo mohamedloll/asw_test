@@ -1,4 +1,4 @@
-//====== Copyright © 1996-2004, Valve Corporation, All rights reserved. =======
+//====== Copyright ï¿½ 1996-2004, Valve Corporation, All rights reserved. =======
 //
 // Purpose: 
 //
@@ -804,7 +804,7 @@ private:
 template< class T >
 T *FindReferringElement( const CDmElement *pElement, const char *pAttrName = NULL, bool bMustBeInSameFile = true, TraversalDepth_t depth = TD_ALL )
 {
-	CUtlSymbolLarge sym = pAttrName ? g_pDataModel->GetSymbol( pAttrName ) : UTL_INVAL_SYMBOL_LARGE;
+	CUtlSymbolLarge sym = pAttrName ? g_pDataModel->GetSymbol( pAttrName ) : (CUtlSymbolLarge)UTL_INVAL_SYMBOL_LARGE;
 	return FindReferringElement< T >( pElement, sym, bMustBeInSameFile, depth );
 }
 

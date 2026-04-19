@@ -1,4 +1,4 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
+//===== Copyright © 1996-2005, Valve Corporation, All rights reserved. ======//
 //
 // Purpose: 
 //
@@ -22,10 +22,17 @@
 #include "tier1/utlstring.h"
 #include "tier1/functors.h" 
 #include "tier1/checksum_crc.h"
-#include "tier1/utlqueue.h"
-#include "appframework/IAppSystem.h"
-#include "tier2/tier2.h"
 #include "tier1/checksum_md5.h"
+#include "tier1/utlqueue.h"
+#include "appframework/iappsystem.h"
+#include "tier2/tier2.h"
+#ifdef _PS3
+#include <sysutil/sysutil_syscache.h>
+#include <sysutil/sysutil_gamecontent.h>
+struct HddCacheFileStatus;
+extern char gSrcGameDataPath[];
+class CFileGroupSystem;
+#endif
 
 //-----------------------------------------------------------------------------
 // Forward declarations
@@ -93,9 +100,11 @@ enum FileWarningLevel_t
 // search path filtering
 enum PathTypeFilter_t
 {
-	FILTER_NONE        = 0,	// no filtering, all search path types match
-	FILTER_CULLPACK    = 1,	// pack based search paths are culled (maps and zips)
-	FILTER_CULLNONPACK = 2,	// non-pack based search paths are culled
+	FILTER_NONE               = 0,	// no filtering, all search path types match
+	FILTER_CULLPACK           = 1,	// pack based search paths are culled (maps and zips)
+	FILTER_CULLNONPACK        = 2,	// non-pack based search paths are culled
+	FILTER_CULLLOCALIZED      = 3,	// Ignore localized paths, assumes CULLNONPACK
+	FILTER_CULLLOCALIZED_ANY  = 4,	// Ignore any localized paths
 };
 
 // search path querying (bit flags)
@@ -118,6 +127,33 @@ enum DVDMode_t
 	DVDMODE_DEV    = 2, // dev mode, mutiple devices ok
 	DVDMODE_DEV_VISTA = 3, // dev mode from a vista host, mutiple devices ok
 };
+
+#ifdef _PS3
+
+enum FsState_t
+{
+    FS_STATE_INIT = 0,
+    FS_STATE_LEVEL_LOAD = 1,
+    FS_STATE_LEVEL_RUN = 2,
+    FS_STATE_LEVEL_RESTORE = 3,
+    FS_STATE_LEVEL_LOAD_END = 4,
+    FS_STATE_EXITING = 5
+};
+
+enum Ps3FileType_t
+{
+    PS3_FILETYPE_WAV,
+    PS3_FILETYPE_ANI,
+    PS3_FILETYPE_BSP,
+    PS3_FILETYPE_VMT,
+    PS3_FILETYPE_QPRE,
+    PS3_FILETYPE_OTHER,
+    PS3_FILETYPE_DIR,
+    PS3_FILETYPE_UNKNOWN
+};
+
+
+#endif
 
 // In non-retail builds, enable the file blocking access tracking stuff...
 #if defined( TRACK_BLOCKING_IO )
@@ -308,7 +344,8 @@ enum FSAsyncFlags_t
 enum EFileCRCStatus
 {
 	k_eFileCRCStatus_CantOpenFile,		// We don't have this file. 
-	k_eFileCRCStatus_GotCRC
+	k_eFileCRCStatus_GotCRC,
+	k_eFileCRCStatus_FileInVPK,
 };
 
 // Used in CacheFileCRCs.
@@ -333,7 +370,6 @@ typedef void (*FSAsyncCallbackFunc_t)(const FileAsyncRequest_t &request, int nBy
 typedef void (*FSAsyncScanAddFunc_t)( void* pContext, char* pFoundPath, char* pFoundFile );
 typedef void (*FSAsyncScanCompleteFunc_t)( void* pContext, FSAsyncStatus_t err );
 
-
 //---------------------------------------------------------
 // Description of an async request
 //---------------------------------------------------------
@@ -353,13 +389,14 @@ struct FileAsyncRequest_t
 	FSAllocFunc_t			pfnAlloc;			// custom allocator. can be null. not compatible with FSASYNC_FLAGS_FREEDATAPTR
 };
 
-struct FileHash_t
+
+struct FileHash_t 
 {
 	enum EFileHashType_t
 	{
-		k_EFileHashTypeUnknown = 0,
-		k_EFileHashTypeEntireFile = 1,
-		k_EFileHashTypeIncompleteFile = 2,
+		k_EFileHashTypeUnknown			= 0,
+		k_EFileHashTypeEntireFile		= 1,
+		k_EFileHashTypeIncompleteFile	= 2,
 	};
 	FileHash_t()
 	{
@@ -375,19 +412,28 @@ struct FileHash_t
 	int m_PackFileID;
 	int m_nPackFileNumber;
 
-	bool operator==(const FileHash_t& src) const
+	bool operator==( const FileHash_t &src ) const
 	{
-		return m_crcIOSequence == src.m_crcIOSequence &&
-			m_md5contents == src.m_md5contents &&
+		return m_crcIOSequence == src.m_crcIOSequence && 
+			m_md5contents == src.m_md5contents && 
 			m_eFileHashType == src.m_eFileHashType;
 	}
-	bool operator!=(const FileHash_t& src) const
+	bool operator!=( const FileHash_t &src ) const
 	{
-		return m_crcIOSequence != src.m_crcIOSequence ||
-			m_md5contents != src.m_md5contents ||
+		return m_crcIOSequence != src.m_crcIOSequence || 
+			m_md5contents != src.m_md5contents || 
 			m_eFileHashType != src.m_eFileHashType;
 	}
 
+};
+
+class CUnverifiedFileHash
+{
+public:
+	char m_PathID[MAX_PATH];
+	char m_Filename[MAX_PATH];
+	int m_nFileFraction;
+	FileHash_t m_FileHash;
 };
 
 class CUnverifiedCRCFile
@@ -430,6 +476,15 @@ public:
 // a named set of files.
 #define BASEFILESYSTEM_INTERFACE_VERSION		"VBaseFileSystem011"
 
+// This interface is for VPK files to communicate with FileTracker
+abstract_class IThreadedFileMD5Processor
+{
+public:
+	virtual int				SubmitThreadedMD5Request( uint8 *pubBuffer, int cubBuffer, int PackFileID, int nPackFileNumber, int nPackFileFraction ) = 0;
+	virtual bool			BlockUntilMD5RequestComplete( int iRequest, MD5Value_t *pMd5ValueOut ) = 0;
+	virtual bool			IsMD5RequestComplete( int iRequest, MD5Value_t *pMd5ValueOut ) = 0;
+};
+
 abstract_class IBaseFileSystem
 {
 public:
@@ -463,6 +518,30 @@ public:
 	virtual bool			UnzipFile( const char *pFileName, const char *pPath, const char *pDestination ) = 0;
 };
 
+abstract_class IIoStats
+{
+public:
+	virtual void OnFileSeek( int nTimeInMs ) = 0;
+	virtual void OnFileRead( int nTimeInMs, int nBytesRead ) = 0;
+	virtual void OnFileOpen( const char * pFileName ) = 0;
+
+	virtual int GetNumberOfFileSeeks() = 0;
+	virtual int GetTimeInFileSeek() = 0;
+
+	virtual int GetNumberOfFileReads() = 0;
+	virtual int GetTimeInFileReads() = 0;
+	virtual int GetFileReadTotalSize() = 0;
+
+	virtual int GetNumberOfFileOpens() = 0;
+
+	virtual void Reset() = 0;
+
+protected:
+	virtual ~IIoStats()
+	{
+		// Do nothing...
+	}
+};
 
 //-----------------------------------------------------------------------------
 // Main file system interface
@@ -510,9 +589,14 @@ public:
 	// remember it in case you add search paths with this path ID.
 	virtual void			MarkPathIDByRequestOnly( const char *pPathID, bool bRequestOnly ) = 0;
 
+	virtual bool			IsFileInReadOnlySearchPath(const char *pPath, const char *pathID = 0) = 0;
+
 	// converts a partial path into a full path
 	virtual const char		*RelativePathToFullPath( const char *pFileName, const char *pPathID, char *pLocalPath, int localPathBufferSize, PathTypeFilter_t pathFilter = FILTER_NONE, PathTypeQuery_t *pPathType = NULL ) = 0;
-
+#if IsGameConsole()
+	// Given a relative path, gets the PACK file that contained this file and its offset and size. Can be used to prefetch a file to a HDD for caching reason.
+	virtual bool            GetPackFileInfoFromRelativePath( const char *pFileName, const char *pPathID, char *pPackPath, int nPackPathBufferSize, int64 &nPosition, int64 &nLength ) = 0;
+#endif
 	// Returns the search path, each path is separated by ;s. Returns the length of the string returned
 	virtual int				GetSearchPath( const char *pathID, bool bGetPackFiles, char *pPath, int nMaxLen ) = 0;
 
@@ -548,7 +632,12 @@ public:
 	virtual bool			EndOfFile( FileHandle_t file ) = 0;
 
 	virtual char			*ReadLine( char *pOutput, int maxChars, FileHandle_t file ) = 0;
+#if ! defined(SWIG)
+	// Don't let SWIG see the PRINTF_FORMAT_STRING attribute or it will complain.
+	virtual int				FPrintf( FileHandle_t file, PRINTF_FORMAT_STRING const char *pFormat, ... ) FMTFUNCTION( 3, 4 ) = 0;
+#else
 	virtual int				FPrintf( FileHandle_t file, const char *pFormat, ... ) FMTFUNCTION( 3, 4 ) = 0;
+#endif
 
 	//--------------------------------------------------------
 	// Dynamic library operations
@@ -574,6 +663,10 @@ public:
 		const char *pPathID,
 		FileFindHandle_t *pHandle
 		) = 0;
+
+	// Searches for a file in all paths and results absolute path names for the file, works in pack files (zip and vpk) too
+	// Lets you search for something like sound/sound.cache and get a list of every sound cache
+	virtual void			FindFileAbsoluteList( CUtlVector< CUtlString > &outAbsolutePathNames, const char *pWildCard, const char *pPathID ) = 0;
 
 	//--------------------------------------------------------
 	// File name and directory operations
@@ -673,6 +766,28 @@ public:
 	// Returns the file system statistics retreived by the implementation.  Returns NULL if not supported.
 	virtual const FileSystemStatistics *GetFilesystemStatistics() = 0;
 
+#if defined( _PS3 )
+	// EA cruft not used:   virtual Ps3FileType_t GetPs3FileType(const char* path) = 0;
+	virtual void LogFileAccess( const char *pFullFileName ) = 0;
+
+	// Prefetches a full file in the HDD cache.
+	virtual bool PrefetchFile( const char *pFileName, int nPriority, bool bPersist ) = 0;
+	// Prefetches a file portion in the HDD cache.
+	virtual bool PrefetchFile( const char *pFileName, int nPriority, bool bPersist, int64 nOffset, int64 nSize ) = 0;
+	// Flushes the HDD cache.
+	virtual void FlushCache() = 0;
+	// Suspends all prefetches (like when the game is doing a file intensive operation not controlled by the HDD cache, like Bink movies).
+	virtual void SuspendPrefetches( const char *pWhy ) = 0;
+	// Resumes prefetches. This function has to to be called as many time as SuspendPrefetches() to effectively resumes prefetches.
+	virtual void ResumePrefetches( const char * pWhy ) = 0;
+
+	// Gets called when we are starting / ending a save (it allows the file system to reduce its HDD usage and use BluRay instead).
+	virtual void OnSaveStateChanged( bool bSaving ) = 0;
+
+	// Returns the prefetching state. If true, everything has been prefetched on the HDD.
+	virtual bool IsPrefetchingDone() = 0;
+
+#endif //_PS3
 	//--------------------------------------------------------
 	// Start of new functions after Lost Coast release (7/05)
 	//--------------------------------------------------------
@@ -701,6 +816,7 @@ public:
 		TYPE_VMT,
 		TYPE_SOUNDEMITTER,
 		TYPE_SOUNDSCAPE,
+		TYPE_SOUNDOPERATORS,
 		NUM_PRELOAD_TYPES
 	};
 
@@ -751,7 +867,7 @@ public:
 
 	// This should be called ONCE at startup. Multiplayer games (gameinfo.txt does not contain singleplayer_only)
 	// want to enable this so sv_pure works.
-	virtual void			EnableWhitelistFileTracking( bool bEnable ) = 0;
+	virtual void			EnableWhitelistFileTracking( bool bEnable, bool bCacheAllVPKHashes, bool bRecalculateAndCheckHashes ) = 0;
 
 	// This is called when the client connects to a server using a pure_server_whitelist.txt file.
 	//
@@ -782,7 +898,7 @@ public:
 	// As the server loads whitelists when it transitions maps, it calls this to calculate CRCs for any files marked
 	// with check_crc.   Then it calls CheckCachedFileCRC later when it gets client requests to verify CRCs.
 	virtual void			CacheFileCRCs( const char *pPathname, ECacheCRCType eType, IFileList *pFilter ) = 0;
-	virtual EFileCRCStatus	CheckCachedFileCRC( const char *pPathID, const char *pRelativeFilename, CRC32_t *pCRC ) = 0;
+	virtual EFileCRCStatus	CheckCachedFileHash( const char *pPathID, const char *pRelativeFilename, int nFileFraction, FileHash_t *pFileHash ) = 0;
 
 	// Fills in the list of files that have been loaded off disk and have not been verified.
 	// Returns the number of files filled in (between 0 and nMaxFiles).
@@ -790,7 +906,7 @@ public:
 	// This also removes any files it's returning from the unverified CRC list, so they won't be
 	// returned from here again.
 	// The client sends batches of these to the server to verify.
-	virtual int				GetUnverifiedCRCFiles( CUnverifiedCRCFile *pFiles, int nMaxFiles ) = 0;
+	virtual int				GetUnverifiedFileHashes( CUnverifiedFileHash *pFiles, int nMaxFiles ) = 0;
 	
 	// Control debug message output.
 	// Pass a combination of WHITELIST_SPEW_ flags.
@@ -825,11 +941,20 @@ public:
 	virtual bool			GetAnyCorruptDLCInfo( int iCorruptDLC, wchar_t *pTitleBuff, int nOutTitleSize ) = 0;
 	virtual bool			AddDLCSearchPaths() = 0;
 	virtual bool			IsSpecificDLCPresent( unsigned int nDLCPackage ) = 0;
-
+	
 	// call this to look for CPU-hogs during loading processes. When you set this, a breakpoint
 	// will be issued whenever the indicated # of seconds go by without an i/o request.  Passing
 	// 0.0 will turn off the functionality.
 	virtual void            SetIODelayAlarm( float flThreshhold ) = 0;
+
+	virtual bool			AddXLSPUpdateSearchPath( const void *pData, int nSize ) = 0;
+	
+	virtual IIoStats		*GetIoStats() = 0;
+
+	virtual void			CacheAllVPKFileHashes( bool bCacheAllVPKHashes, bool bRecalculateAndCheckHashes ) = 0;
+	virtual bool			CheckVPKFileHash( int PackFileID, int nPackFileNumber, int nFileFraction, MD5Value_t &md5Value ) = 0;
+
+	virtual void			GetVPKFileStatisticsKV( KeyValues *pKV ) = 0;
 
 };
 

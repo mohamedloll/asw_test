@@ -84,6 +84,10 @@ public:
 	virtual void OnEndMapLoading( bool bAbort ) = 0;
 
 	virtual void PurgeAll() = 0;
+
+#if defined( _PS3 )
+	virtual bool RequiresRendererLock() = 0;
+#endif // _PS3
 };
 
 // Default implementation
@@ -93,6 +97,9 @@ class CResourcePreload : public IResourcePreload
 	void PurgeUnreferencedResources()	{}
 	void OnEndMapLoading( bool bAbort )	{}
 	void PurgeAll() {}
+#if defined( _PS3 )
+	virtual bool RequiresRendererLock() { return false; }
+#endif // _PS3
 };
 
 // UI can install progress notification
@@ -122,7 +129,7 @@ public:
 
 	// Set bOptimizeReload if you want appropriate data (such as static prop lighting)
 	// to persist - rather than being purged and reloaded - when going from map A to map A.
-	virtual bool				BeginMapLoading( const char *pMapName, bool bLoadForHDR, bool bOptimizeMapReload ) = 0;
+	virtual bool				BeginMapLoading( const char *pMapName, bool bLoadForHDR, bool bOptimizeMapReload, void (*pfnBeginMapLoadingCallback)( int nStage ) ) = 0;
 	virtual void				EndMapLoading( bool bAbort ) = 0;
 	virtual bool				AddJob( const LoaderJob_t *pLoaderJob ) = 0;
 
@@ -145,6 +152,11 @@ public:
 	virtual int					GetSpewDetail() const = 0;
 
 	virtual void				PurgeAll( ResourcePreload_t *pDontPurgeList = NULL, int nPurgeListSize = 0 ) = 0;
+#ifdef _PS3
+	// hack to prevent PS/3 deadlock on queued loader render mutex when quitting during loading a map
+	virtual uint                UnlockProgressBarMutex() = 0;
+	virtual void                LockProgressBarMutex( uint nLockCount ) = 0;
+#endif
 };
 
 DECLARE_TIER2_INTERFACE( IQueuedLoader, g_pQueuedLoader );

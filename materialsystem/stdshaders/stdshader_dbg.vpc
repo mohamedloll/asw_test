@@ -51,7 +51,7 @@ $Configuration
 
 	$Linker
 	{
-		$AdditionalDependencies			"$BASE version.lib winmm.lib"	[$WINDOWS]
+		$AdditionalDependencies			"$BASE version.lib winmm.lib msvcrt.lib"	[$WINDOWS]
 		$ModuleDefinitionFile			"xbox\xbox_dbg.def"				[$X360]
 	}
 }
@@ -88,9 +88,9 @@ $Project "stdshader_dbg"
 
 	$Folder	"Link Libraries"
 	{
-		$Lib	"$SRCDIR\dx9sdk\lib\d3dx9"			[$WINDOWS && !$GL]
-		$Lib	"$SRCDIR\lib\public\mathlib"		[$WINDOWS]
-		$Lib	"$SRCDIR\lib\public\shaderlib"		[$WINDOWS]
+		$Lib	"$SRCDIR\dx9sdk\lib\amd64\d3dx9"			[$WINDOWS && !$GL]
+		$Lib	mathlib
+		$Lib	shaderlib
 
 		$Lib	"$SRCDIR\lib\public\mathlib_360"	[$X360]
 		$Lib	"$SRCDIR\lib\public\shaderlib_360"	[$X360]

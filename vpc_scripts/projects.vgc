@@ -158,3 +158,13 @@ $Project "shaderapiempty"
 {
 	"materialsystem\shaderapiempty\shaderapiempty.vpc"
 }
+
+$Project "stdshader_dbg"
+{
+	"materialsystem\stdshaders\stdshader_dbg.vpc"
+}
+
+$Project "stdshader_dx9"
+{
+	"materialsystem\stdshaders\stdshader_dx9.vpc"
+}

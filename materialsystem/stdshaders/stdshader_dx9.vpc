@@ -54,7 +54,7 @@ $Configuration
 
 	$Linker [!$PS3]
 	{
-		$AdditionalDependencies			"$BASE version.lib winmm.lib"	[$WINDOWS]
+		$AdditionalDependencies			"$BASE version.lib winmm.lib msvcrt.lib"	[$WINDOWS]
 		$ModuleDefinitionFile			"xbox\xbox_dx9.def"				[$X360]
 		$SystemLibraries                                                        "iconv" [$OSXALL]
 	}

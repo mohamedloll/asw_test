@@ -149,8 +149,6 @@ $Project
 
 		$Folder	"Remove me when VAC2 is out" [$WINDOWS]
 		{
-			$File	"$SRCDIR\tier1\checksum_crc.cpp"
-			$File	"$SRCDIR\tier1\checksum_md5.cpp"
 			$File	"$STDSHADERSDIR\..\shader_dll_verify.cpp"
 			$File	"$STDSHADERSDIR\..\shader_dll_verify.h"
 		}

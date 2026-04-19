@@ -111,3 +111,5 @@ typedef wchar_t ucs2; // under windows wchar_t is ucs2
 
 
 #endif // WCHARTYPES
+
+

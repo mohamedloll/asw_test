@@ -82,6 +82,9 @@
 // dll export stuff
 //-----------------------------------------------------------------------------
 
+// FIXME: HACKHACK: This should be defined by the project file, but I don't want to mess with them right now
+#define UNITLIB_DLL_EXPORT
+
 #ifdef UNITLIB_DLL_EXPORT
 #define UNITLIB_INTERFACE DLL_EXPORT
 #define UNITLIB_CLASS_INTERFACE DLL_CLASS_EXPORT

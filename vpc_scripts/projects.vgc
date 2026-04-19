@@ -133,3 +133,8 @@ $Project "datacache"
 {
 	"datacache\datacache.vpc"
 }
+
+$Project "tier0"
+{
+	"tier0\tier0.vpc"
+}

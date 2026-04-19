@@ -1121,7 +1121,7 @@ bool DoesPathExistAlready( const char *pPathEnvVar, const char *pTestPath )
 
 FSReturnCode_t SetSteamInstallPath( char *steamInstallPath, int steamInstallPathLen, CSteamEnvVars &steamEnvVars, bool bErrorsAsWarnings )
 {
-	if ( IsConsole() )
+	if ( IsGameConsole() )
 	{
 		// consoles don't use steam
 		return FS_MISSING_STEAM_DLL;

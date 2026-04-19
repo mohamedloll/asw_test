@@ -32,12 +32,6 @@
 
 #include "tier0/memdbgon.h"
 
-
-bool CThread::Start(unsigned int)
-{
-	return true;
-}
-
 class CJobThread;
 
 //-----------------------------------------------------------------------------

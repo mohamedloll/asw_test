@@ -34,6 +34,8 @@ $Group "game"
 	"vpklib"
 	"vscript"
 	"vstdlib"
+	"vguimatsurface"
+	"vgui_surfacelib"
 	"vtf"
 }
 

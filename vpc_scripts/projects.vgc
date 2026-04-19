@@ -188,3 +188,13 @@ $Project "soundsystem_lowlevel"
 {
 	"soundsystem\lowlevel\soundsystem_lowlevel.vpc"
 }
+
+$Project "vguimatsurface"
+{
+	"vguimatsurface\vguimatsurface.vpc"
+}
+
+$Project "vgui_surfacelib"
+{
+	"vgui2\vgui_surfacelib\vgui_surfacelib.vpc"
+}

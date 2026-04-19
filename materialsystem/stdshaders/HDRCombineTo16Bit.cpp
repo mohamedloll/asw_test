@@ -7,9 +7,9 @@
 
 #include "BaseVSShader.h"
 #include "common_hlsl_cpp_consts.h"
-#include "hdrcombineto16bit_ps20.inc"
-#include "hdrcombineto16bit_ps20b.inc"
-#include "hdrcombineto16bit_vs20.inc"
+#include "HDRCombineTo16Bit_ps20.inc"
+#include "HDRCombineTo16Bit_ps20b.inc"
+#include "HDRCombineTo16Bit_vs20.inc"
 #include "convar.h"
 
 // NOTE: This has to be the last file included!
@@ -61,7 +61,7 @@ BEGIN_VS_SHADER_FLAGS( HDRCombineTo16Bit, "Help for HDRCombineTo16Bit", SHADER_N
 
 		DYNAMIC_STATE
 		{
-			BindTexture( SHADER_SAMPLER0, SOURCEMRTRENDERTARGET, -1 );
+			BindTexture( SHADER_SAMPLER0, TEXTURE_BINDFLAGS_NONE, SOURCEMRTRENDERTARGET, -1 );
 			DECLARE_DYNAMIC_VERTEX_SHADER( hdrcombineto16bit_vs20 );
 			SET_DYNAMIC_VERTEX_SHADER( hdrcombineto16bit_vs20 );
 

@@ -17,12 +17,7 @@ struct PS_INPUT
 {
 	float2 baseCoord				: TEXCOORD0;
 	float2 baseCoord2				: TEXCOORD1;
-// CENTROID: TEXCOORD2
-	#if defined( _X360 )
-		float2 lightmapCoord		: TEXCOORD2_centroid;
-	#else
-		float2 lightmapCoord		: TEXCOORD2;
-	#endif
+	float2 lightmapCoord			: TEXCOORD2_centroid;
 	float2 macrosCoord				: TEXCOORD3;
 };
 

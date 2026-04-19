@@ -1,7 +1,8 @@
 //========== Copyright (c) Valve Corporation, All rights reserved. ==========//
 
-// STATIC: "FLASHLIGHTDEPTHFILTERMODE"	"0..2"	[ps20b] [PC]
-// STATIC: "FLASHLIGHTDEPTHFILTERMODE"	"0..0"	[ps20b] [XBOX]
+// STATIC: "FLASHLIGHTDEPTHFILTERMODE"	"0..3"	[ps20b] [PC]
+// STATIC: "FLASHLIGHTDEPTHFILTERMODE"	"0..2"	[ps30]  [PC]
+// STATIC: "FLASHLIGHTDEPTHFILTERMODE"	"0..0"	[ps20b] [CONSOLE]
 // STATIC: "DEPTH_IN_ALPHA"				"0..1"
 
 #include "common_ps_fxc.h"
@@ -10,7 +11,7 @@ const float4 g_Parameters	: register( c0 );
 
 sampler DepthTextureSampler : register( s0 );	// Scalar shadow depth map
 
-float4 main( float2 baseTexCoord : TEXCOORD0 ) : COLOR
+float4_color_return_type main( float2 baseTexCoord : TEXCOORD0 ) : COLOR
 {
 	float fDepth = 0;
 

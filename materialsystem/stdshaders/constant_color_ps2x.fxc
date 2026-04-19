@@ -12,7 +12,7 @@ struct PS_INPUT
 
 float4 Constant_color : register( c0 );
 
-float4 main( PS_INPUT i ) : COLOR
+float4_color_return_type main( PS_INPUT i ) : COLOR
 {
 	return FinalOutput( float4(0,1,0,1), 0, PIXEL_FOG_TYPE_NONE, TONEMAP_SCALE_NONE ); //Constant_color;
 }

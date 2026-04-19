@@ -1,4 +1,4 @@
-//===== Copyright © 1996-2005, Valve Corporation, All rights reserved. ======//
+//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
 //
 // Purpose: 
 //
@@ -7,14 +7,14 @@
 
 #include "BaseVSShader.h"
 #include "cloak_dx9_helper.h"
-#include "..\shaderapidx9\locald3dtypes.h"												   
+#include "../shaderapidx9/locald3dtypes.h"												   
 #include "convar.h"
 #include "cpp_shader_constant_register_map.h"
 #include "cloak_vs20.inc"
 #include "cloak_ps20.inc"
 #include "cloak_ps20b.inc"
 
-#ifndef _X360
+#if !defined( _X360 ) && !defined( _PS3 )
 #include "cloak_vs30.inc"
 #include "cloak_ps30.inc"
 #endif
@@ -48,7 +48,7 @@ void InitCloak_DX9( CBaseVSShader *pShader, IMaterialVar** params, Cloak_DX9_Var
 {
 	if (params[info.m_nBaseTexture]->IsDefined() )
 	{
-		pShader->LoadTexture( info.m_nBaseTexture );
+		pShader->LoadTexture( info.m_nBaseTexture, TEXTUREFLAGS_SRGB );
 	}
 
 	if (params[info.m_nNormalMap]->IsDefined() )
@@ -109,13 +109,17 @@ void DrawCloak_DX9( CBaseVSShader *pShader, IMaterialVar** params, IShaderDynami
 
 		pShaderShadow->VertexShaderVertexFormat( flags, nTexCoordCount, NULL, userDataSize );
 
-#ifndef _X360
+#if !defined( _X360 ) && !defined( _PS3 )
 		if ( !g_pHardwareConfig->HasFastVertexTextures() )
 #endif
 		{
+			bool bFlattenStaticControlFlow = !g_pHardwareConfig->SupportsStaticControlFlow();
+
 			DECLARE_STATIC_VERTEX_SHADER( cloak_vs20 );
 			SET_STATIC_VERTEX_SHADER_COMBO( MODEL,  bIsModel );
+			SET_STATIC_VERTEX_SHADER_COMBO( FLATTEN_STATIC_CONTROL_FLOW, bFlattenStaticControlFlow );
 			SET_STATIC_VERTEX_SHADER( cloak_vs20 );
+
 
 			// Bind ps_2_b shader so we can get Phong terms
 			if ( g_pHardwareConfig->SupportsPixelShaders_2_b() )
@@ -131,7 +135,7 @@ void DrawCloak_DX9( CBaseVSShader *pShader, IMaterialVar** params, IShaderDynami
 				SET_STATIC_PIXEL_SHADER( cloak_ps20 );
 			}
 		}
-#ifndef _X360
+#if !defined( _X360 ) && !defined( _PS3 )
 		else
 		{
 			// The vertex shader uses the vertex id stream
@@ -166,35 +170,38 @@ void DrawCloak_DX9( CBaseVSShader *pShader, IMaterialVar** params, IShaderDynami
 		pShaderAPI->SetDefaultState();
 
 		// Bind textures
-		pShader->BindTexture( SHADER_SAMPLER0, info.m_nBaseTexture, 0 );							// Base Map
-		pShaderAPI->BindStandardTexture( SHADER_SAMPLER2, TEXTURE_FRAME_BUFFER_FULL_TEXTURE_0 );	// Refraction Map
-		pShader->BindTexture( SHADER_SAMPLER3, info.m_nNormalMap, info.m_nBumpFrame );				// Normal Map
-		pShaderAPI->BindStandardTexture( SHADER_SAMPLER5, TEXTURE_NORMALIZATION_CUBEMAP_SIGNED );	// Normalization cube map
+		pShader->BindTexture( SHADER_SAMPLER0, TEXTURE_BINDFLAGS_SRGBREAD, info.m_nBaseTexture, 0 );							// Base Map
+		pShaderAPI->BindStandardTexture( SHADER_SAMPLER2, TEXTURE_BINDFLAGS_NONE, TEXTURE_FRAME_BUFFER_FULL_TEXTURE_0 );	// Refraction Map
+		pShader->BindTexture( SHADER_SAMPLER3, TEXTURE_BINDFLAGS_NONE, info.m_nNormalMap, info.m_nBumpFrame );				// Normal Map
+		pShaderAPI->BindStandardTexture( SHADER_SAMPLER5, TEXTURE_BINDFLAGS_NONE, TEXTURE_NORMALIZATION_CUBEMAP_SIGNED );	// Normalization cube map
 
 		if ( hasDiffuseWarp )
 		{
 			if ( r_lightwarpidentity.GetBool() )
 			{
-				pShaderAPI->BindStandardTexture( SHADER_SAMPLER1, TEXTURE_IDENTITY_LIGHTWARP );
+				pShaderAPI->BindStandardTexture( SHADER_SAMPLER1, TEXTURE_BINDFLAGS_NONE, TEXTURE_IDENTITY_LIGHTWARP );
 			}
 			else
 			{
-				pShader->BindTexture( SHADER_SAMPLER1, info.m_nDiffuseWarpTexture );					// Light warp texture
+				pShader->BindTexture( SHADER_SAMPLER1, TEXTURE_BINDFLAGS_NONE, info.m_nDiffuseWarpTexture );					// Light warp texture
 			}
 		}
 
 		MaterialFogMode_t fogType = pShaderAPI->GetSceneFogMode();
 
-		LightState_t lightState;
+		LightState_t lightState = {0, false, false};
 		pShaderAPI->GetDX9LightState( &lightState );
 
-#ifndef _X360
+#if !defined( _X360 ) && !defined( _PS3 )
 		if ( !g_pHardwareConfig->HasFastVertexTextures() )
 #endif
 		{
+			bool bUseStaticControlFlow = g_pHardwareConfig->SupportsStaticControlFlow();
+
 			DECLARE_DYNAMIC_VERTEX_SHADER( cloak_vs20 );
 			SET_DYNAMIC_VERTEX_SHADER_COMBO( SKINNING,      pShaderAPI->GetCurrentNumBones() > 0 );
 			SET_DYNAMIC_VERTEX_SHADER_COMBO( COMPRESSED_VERTS, (int)vertexCompression );
+			SET_DYNAMIC_VERTEX_SHADER_COMBO( NUM_LIGHTS, bUseStaticControlFlow ? 0 : lightState.m_nNumLights );
 			SET_DYNAMIC_VERTEX_SHADER( cloak_vs20 );
 
 			// Bind ps_2_b shader so we can get Phong, rim and a cloudier refraction
@@ -218,7 +225,7 @@ void DrawCloak_DX9( CBaseVSShader *pShader, IMaterialVar** params, IShaderDynami
 				SET_DYNAMIC_PIXEL_SHADER( cloak_ps20 );
 			}
 		}
-#ifndef _X360
+#if !defined( _X360 ) && !defined( _PS3 )
 		else
 		{
 			pShader->SetHWMorphVertexShaderState( VERTEX_SHADER_SHADER_SPECIFIC_CONST_6, VERTEX_SHADER_SHADER_SPECIFIC_CONST_7, SHADER_VERTEXTEXTURE_SAMPLER0 );

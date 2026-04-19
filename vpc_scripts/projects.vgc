@@ -143,3 +143,8 @@ $Project "inputsystem"
 {
 	"inputsystem\inputsystem.vpc"
 }
+
+$Project "materialsystem"
+{
+	"materialsystem\materialsystem.vpc"
+}

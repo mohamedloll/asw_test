@@ -60,11 +60,7 @@ struct VS_OUTPUT
 #endif
 
 #if DEPTHBLEND
-	#if defined( REVERSE_DEPTH_ON_X360 )
-		float4 vScreenPos_ReverseZ		: TEXCOORD5;
-	#else
-		float4 vScreenPos		: TEXCOORD7;
-	#endif
+	float4 vProjPos		: TEXCOORD5;
 #endif
 
 #ifndef PIXELSHADER

@@ -28,6 +28,7 @@ public:
 	}
 	void SetFLASHLIGHTDEPTHFILTERMODE( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 2 );
 		m_nFLASHLIGHTDEPTHFILTERMODE = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bFLASHLIGHTDEPTHFILTERMODE = true;
@@ -72,6 +73,7 @@ public:
 	}
 	void SetPIXELFOGTYPE( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nPIXELFOGTYPE = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bPIXELFOGTYPE = true;
@@ -93,6 +95,7 @@ public:
 	}
 	void SetFLASHLIGHTSHADOWS( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nFLASHLIGHTSHADOWS = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bFLASHLIGHTSHADOWS = true;
@@ -114,6 +117,7 @@ public:
 	}
 	void SetUBERLIGHT( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nUBERLIGHT = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bUBERLIGHT = true;
@@ -148,3 +152,30 @@ public:
 	}
 };
 #define shaderDynamicTest_eyes_flashlight_ps30 psh_forgot_to_set_dynamic_FLASHLIGHTSHADOWS + psh_forgot_to_set_dynamic_UBERLIGHT + 0
+
+static const ShaderComboInformation_t s_DynamicComboArray_eyes_flashlight_ps30[3] = 
+{
+	{ "PIXELFOGTYPE", 0, 1 },
+	{ "FLASHLIGHTSHADOWS", 0, 1 },
+	{ "UBERLIGHT", 0, 1 },
+};
+
+static const ShaderComboInformation_t s_StaticComboArray_eyes_flashlight_ps30[1] = 
+{
+	{ "FLASHLIGHTDEPTHFILTERMODE", 0, 2 },
+};
+static const ShaderComboSemantics_t eyes_flashlight_ps30_combos =
+{
+	"eyes_flashlight_ps30", s_DynamicComboArray_eyes_flashlight_ps30, 3, s_StaticComboArray_eyes_flashlight_ps30, 1 
+};
+
+class ConstructMe_eyes_flashlight_ps30
+{
+public:
+	ConstructMe_eyes_flashlight_ps30()
+	{
+		GetShaderDLL()->AddShaderComboInformation( &eyes_flashlight_ps30_combos );
+	}
+};
+
+static ConstructMe_eyes_flashlight_ps30 s_ConstructMe_eyes_flashlight_ps30;

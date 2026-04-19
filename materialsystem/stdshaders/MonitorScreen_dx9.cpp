@@ -61,11 +61,11 @@ BEGIN_VS_SHADER( MonitorScreen_DX9,
 	{
 		if (params[BASETEXTURE]->IsDefined())
 		{
-			LoadTexture( BASETEXTURE );
+			LoadTexture( BASETEXTURE, TEXTUREFLAGS_SRGB );
 		}
 		if (params[TEXTURE2]->IsDefined())
 		{
-			LoadTexture( TEXTURE2 );
+			LoadTexture( TEXTURE2, TEXTUREFLAGS_SRGB );
 		}
 	}
 
@@ -140,10 +140,10 @@ BEGIN_VS_SHADER( MonitorScreen_DX9,
 		}
 		DYNAMIC_STATE
 		{
-			BindTexture( SHADER_SAMPLER0, BASETEXTURE, FRAME );
+			BindTexture( SHADER_SAMPLER0, TEXTURE_BINDFLAGS_SRGBREAD, BASETEXTURE, FRAME );
 			if( bHasTexture2 )
 			{
-				BindTexture( SHADER_SAMPLER1, TEXTURE2, FRAME2 );
+				BindTexture( SHADER_SAMPLER1, TEXTURE_BINDFLAGS_SRGBREAD, TEXTURE2, FRAME2 );
 				SetVertexShaderTextureTransform( VERTEX_SHADER_SHADER_SPECIFIC_CONST_2, TEXTURE2TRANSFORM );
 			}
 			SetVertexShaderTextureTransform( VERTEX_SHADER_SHADER_SPECIFIC_CONST_0, BASETEXTURETRANSFORM );

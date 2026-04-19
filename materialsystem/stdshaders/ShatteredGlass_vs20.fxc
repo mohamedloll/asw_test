@@ -43,15 +43,21 @@ VS_OUTPUT main( const VS_INPUT v )
 	projPos = mul( float4( v.vPos, 1 ), cModelViewProj );
 	o.projPos = projPos;
 	
+#ifdef _PS3
+	// Account for OpenGL's flipped y coordinate and expanded z range [-1,1] instead of [0,1]
+	o.projPos.y = -o.projPos.y;
+	o.projPos.z = 2.0f * o.projPos.z - o.projPos.w;
+#endif // _PS3
+
 	o.worldPos_projPosZ.w = projPos.z;
-	o.worldPos_projPosZ.xyz = mul( float4( v.vPos, 1 ), cModel[0] );
-	o.worldNormal = mul( vObjNormal, ( float3x3 )cModel[0] );
-	o.baseTexCoord.x = dot( v.vBaseTexCoord, cBaseTexCoordTransform[0] ) + cBaseTexCoordTransform[0].w;
-	o.baseTexCoord.y = dot( v.vBaseTexCoord, cBaseTexCoordTransform[1] ) + cBaseTexCoordTransform[1].w;
-	o.detailTexCoord.x = dot( v.vDetailTexCoord, cDetailTexCoordTransform[0] ) + cDetailTexCoordTransform[0].w;
-	o.detailTexCoord.y = dot( v.vDetailTexCoord, cDetailTexCoordTransform[1] ) + cDetailTexCoordTransform[1].w;
-	o.envmapMaskTexCoord.x = dot( v.vDetailTexCoord, cDetailTexCoordTransform[0] ) + cDetailTexCoordTransform[0].w;
-	o.envmapMaskTexCoord.y = dot( v.vDetailTexCoord, cDetailTexCoordTransform[1] ) + cDetailTexCoordTransform[1].w;
+	o.worldPos_projPosZ.xyz = mul4x3( float4( v.vPos, 1 ), cModel[0] );
+	o.worldNormal = mul3x3( vObjNormal, ( float3x3 )cModel[0] );
+	o.baseTexCoord.x = dot( v.vBaseTexCoord, cBaseTexCoordTransform[0].xy ) + cBaseTexCoordTransform[0].w;
+	o.baseTexCoord.y = dot( v.vBaseTexCoord, cBaseTexCoordTransform[1].xy ) + cBaseTexCoordTransform[1].w;
+	o.detailTexCoord.x = dot( v.vDetailTexCoord, cDetailTexCoordTransform[0].xy ) + cDetailTexCoordTransform[0].w;
+	o.detailTexCoord.y = dot( v.vDetailTexCoord, cDetailTexCoordTransform[1].xy ) + cDetailTexCoordTransform[1].w;
+	o.envmapMaskTexCoord.x = dot( v.vDetailTexCoord, cDetailTexCoordTransform[0].xy ) + cDetailTexCoordTransform[0].w;
+	o.envmapMaskTexCoord.y = dot( v.vDetailTexCoord, cDetailTexCoordTransform[1].xy ) + cDetailTexCoordTransform[1].w;
 	o.lightmapTexCoord = v.vLightmapTexCoord;
 	
 #if !defined( _X360 ) && !defined( SHADER_MODEL_VS_3_0 )

@@ -12,7 +12,7 @@ struct PS_INPUT
 #define MAX_LUM 5
 #define MIN_LUM .1
 
-float4 main( PS_INPUT i ) : COLOR
+float4_color_return_type main( PS_INPUT i ) : COLOR
 {
 	float4 fbSample = tex2D( FBSampler, i.texCoord );
 

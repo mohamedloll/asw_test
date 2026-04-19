@@ -5,12 +5,12 @@
 // $NoKeywords: $
 //=============================================================================
 
-#include "basevsshader.h"
+#include "BaseVSShader.h"
 
 #include "screenspaceeffect_vs20.inc"
 #include "filmgrain_ps20.inc"
 
-#include "..\materialsystem_global.h"
+#include "../materialsystem_global.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -55,7 +55,7 @@ BEGIN_VS_SHADER_FLAGS( FilmGrain, "Help for FilmGrain", SHADER_NOT_EDITABLE )
 		}
 		DYNAMIC_STATE
 		{
-			BindTexture( SHADER_SAMPLER0, GRAIN_TEXTURE, -1 );
+			BindTexture( SHADER_SAMPLER0, TEXTURE_BINDFLAGS_NONE, GRAIN_TEXTURE, -1 );
 						
 			SetPixelShaderConstant( 0, NOISESCALE );
 

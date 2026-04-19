@@ -23,6 +23,7 @@ public:
 	}
 	void SetLIGHTWARPTEXTURE( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nLIGHTWARPTEXTURE = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bLIGHTWARPTEXTURE = true;
@@ -67,6 +68,7 @@ public:
 	}
 	void SetPIXELFOGTYPE( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nPIXELFOGTYPE = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bPIXELFOGTYPE = true;
@@ -88,6 +90,7 @@ public:
 	}
 	void SetWRITEWATERFOGTODESTALPHA( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nWRITEWATERFOGTODESTALPHA = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bWRITEWATERFOGTODESTALPHA = true;
@@ -109,6 +112,7 @@ public:
 	}
 	void SetNUM_LIGHTS( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 4 );
 		m_nNUM_LIGHTS = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bNUM_LIGHTS = true;
@@ -143,3 +147,30 @@ public:
 	}
 };
 #define shaderDynamicTest_cloak_ps30 psh_forgot_to_set_dynamic_WRITEWATERFOGTODESTALPHA + psh_forgot_to_set_dynamic_NUM_LIGHTS + 0
+
+static const ShaderComboInformation_t s_DynamicComboArray_cloak_ps30[3] = 
+{
+	{ "PIXELFOGTYPE", 0, 1 },
+	{ "WRITEWATERFOGTODESTALPHA", 0, 1 },
+	{ "NUM_LIGHTS", 0, 4 },
+};
+
+static const ShaderComboInformation_t s_StaticComboArray_cloak_ps30[1] = 
+{
+	{ "LIGHTWARPTEXTURE", 0, 1 },
+};
+static const ShaderComboSemantics_t cloak_ps30_combos =
+{
+	"cloak_ps30", s_DynamicComboArray_cloak_ps30, 3, s_StaticComboArray_cloak_ps30, 1 
+};
+
+class ConstructMe_cloak_ps30
+{
+public:
+	ConstructMe_cloak_ps30()
+	{
+		GetShaderDLL()->AddShaderComboInformation( &cloak_ps30_combos );
+	}
+};
+
+static ConstructMe_cloak_ps30 s_ConstructMe_cloak_ps30;

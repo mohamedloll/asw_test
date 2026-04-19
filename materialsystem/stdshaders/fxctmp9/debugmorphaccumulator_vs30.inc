@@ -35,3 +35,18 @@ public:
 	}
 };
 #define shaderDynamicTest_debugmorphaccumulator_vs30 0
+static const ShaderComboSemantics_t debugmorphaccumulator_vs30_combos =
+{
+	"debugmorphaccumulator_vs30", NULL, 0, NULL, 0 
+};
+
+class ConstructMe_debugmorphaccumulator_vs30
+{
+public:
+	ConstructMe_debugmorphaccumulator_vs30()
+	{
+		GetShaderDLL()->AddShaderComboInformation( &debugmorphaccumulator_vs30_combos );
+	}
+};
+
+static ConstructMe_debugmorphaccumulator_vs30 s_ConstructMe_debugmorphaccumulator_vs30;

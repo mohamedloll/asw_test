@@ -33,6 +33,7 @@ class IIndexBuffer;
 struct Shader_VertexArrayData_t;
 struct ShaderRenderState_t;
 class KeyValues;
+class CBasePerMaterialContextData;
 
 
 struct tokencache_t
@@ -85,12 +86,17 @@ public:
 	virtual int		GetMaxLightmapPageID( ) const = 0;
 
 	virtual IShader *GetShader() const = 0;
+	virtual IMaterialVar** GetVars()  { return NULL; }
 
 	// Can we use it?
 	virtual bool	IsPrecached( ) const = 0;
 	virtual bool	IsPrecachedVars() const = 0;
 
 	// main draw method
+	virtual CBasePerMaterialContextData **GetContextData( int modulationFlags ) { return NULL; }
+
+	virtual StateSnapshot_t	GetSnapshotId( int modulation, int renderPass ) { return (StateSnapshot_t)-1; } 
+	virtual unsigned char* GetInstanceCommandBuffer( int modulation ) { return NULL; }
 	virtual void	DrawMesh( VertexCompressionType_t vertexCompression, bool bIsAlphaModulating, bool bUsingPreTessPatches ) = 0;
 
 	// Gets the vertex format
@@ -138,6 +144,7 @@ public:
 
 	virtual void			ReportVarChanged( IMaterialVar *pVar ) = 0;
 	virtual uint32			GetChangeID() const = 0;
+	virtual uint32			GetChangeTimestamp()  const { return 0; }
 
 	virtual bool			IsTranslucentInternal( float fAlphaModulation ) const = 0;
 
@@ -160,6 +167,9 @@ public:
 	virtual void ReloadFromWhitelistIfMarked() = 0;
 
 	virtual void CompactMaterialVars() = 0;
+
+	// Are any of the proxies attached to this material callable from the queued thread?
+	virtual bool HasQueueFriendlyProxies() const = 0;
 };
 
 extern void InsertKeyValues( KeyValues& dst, KeyValues& src, bool bCheckForExistence );

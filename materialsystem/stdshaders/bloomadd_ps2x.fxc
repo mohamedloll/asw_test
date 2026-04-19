@@ -8,12 +8,12 @@ float g_flBloomAmount	: register( c0 );
 
 struct PS_INPUT
 {
-	HALF2 baseTexCoord				: TEXCOORD0;		// Base texture coordinate
+	float2 baseTexCoord				: TEXCOORD0;		// Base texture coordinate
 };
 
-float4 main( PS_INPUT i ) : COLOR
+float4_color_return_type main( PS_INPUT i ) : COLOR
 {
-	float4 result = g_flBloomAmount * tex2D( TexSampler, i.baseTexCoord );
+	float4_color_return_type result = g_flBloomAmount * tex2D( TexSampler, i.baseTexCoord );
 	result.a = 1.0f;
 	return result; //FinalOutput( result, 0, PIXEL_FOG_TYPE_NONE, TONEMAP_SCALE_NONE );
 }

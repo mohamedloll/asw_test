@@ -21,6 +21,7 @@ public:
 	}
 	void SetVERTEXCOLOR( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nVERTEXCOLOR = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bVERTEXCOLOR = true;
@@ -42,6 +43,7 @@ public:
 	}
 	void SetLIGHTING_PREVIEW( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nLIGHTING_PREVIEW = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bLIGHTING_PREVIEW = true;
@@ -63,6 +65,7 @@ public:
 	}
 	void SetDOPIXELFOG( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nDOPIXELFOG = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bDOPIXELFOG = true;
@@ -84,6 +87,7 @@ public:
 	}
 	void SetHARDWAREFOGBLEND( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 0 );
 		m_nHARDWAREFOGBLEND = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bHARDWAREFOGBLEND = true;
@@ -118,7 +122,7 @@ public:
 		bool bAllStaticVarsDefined = m_bVERTEXCOLOR && m_bLIGHTING_PREVIEW && m_bDOPIXELFOG && m_bHARDWAREFOGBLEND;
 		Assert( bAllStaticVarsDefined );
 #endif // _DEBUG
-		return ( 16 * m_nVERTEXCOLOR ) + ( 32 * m_nLIGHTING_PREVIEW ) + ( 64 * m_nDOPIXELFOG ) + ( 128 * m_nHARDWAREFOGBLEND ) + 0;
+		return ( 8 * m_nVERTEXCOLOR ) + ( 16 * m_nLIGHTING_PREVIEW ) + ( 32 * m_nDOPIXELFOG ) + ( 64 * m_nHARDWAREFOGBLEND ) + 0;
 	}
 };
 #define shaderStaticTest_decalmodulate_vs30 vsh_forgot_to_set_static_VERTEXCOLOR + vsh_forgot_to_set_static_LIGHTING_PREVIEW + 0
@@ -140,6 +144,7 @@ public:
 	}
 	void SetCOMPRESSED_VERTS( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nCOMPRESSED_VERTS = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bCOMPRESSED_VERTS = true;
@@ -161,6 +166,7 @@ public:
 	}
 	void SetDOWATERFOG( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nDOWATERFOG = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bDOWATERFOG = true;
@@ -182,6 +188,7 @@ public:
 	}
 	void SetSKINNING( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nSKINNING = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bSKINNING = true;
@@ -195,7 +202,7 @@ private:
 public:
 	void SetMORPHING( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		Assert( i >= 0 && i <= 0 );
 		m_nMORPHING = i;
 #ifdef _DEBUG
 		m_bMORPHING = true;
@@ -203,6 +210,7 @@ public:
 	}
 	void SetMORPHING( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 0 );
 		m_nMORPHING = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bMORPHING = true;
@@ -227,7 +235,7 @@ public:
 #ifdef _DEBUG
 		m_bMORPHING = true;
 #endif // _DEBUG
-		m_nMORPHING = pShaderAPI->IsHWMorphingEnabled() ;
+		m_nMORPHING = false ;
 	}
 	int GetIndex()
 	{
@@ -241,3 +249,34 @@ public:
 	}
 };
 #define shaderDynamicTest_decalmodulate_vs30 vsh_forgot_to_set_dynamic_COMPRESSED_VERTS + vsh_forgot_to_set_dynamic_SKINNING + 0
+
+static const ShaderComboInformation_t s_DynamicComboArray_decalmodulate_vs30[4] = 
+{
+	{ "COMPRESSED_VERTS", 0, 1 },
+	{ "DOWATERFOG", 0, 1 },
+	{ "SKINNING", 0, 1 },
+	{ "MORPHING", 0, 0 },
+};
+
+static const ShaderComboInformation_t s_StaticComboArray_decalmodulate_vs30[4] = 
+{
+	{ "VERTEXCOLOR", 0, 1 },
+	{ "LIGHTING_PREVIEW", 0, 1 },
+	{ "DOPIXELFOG", 0, 1 },
+	{ "HARDWAREFOGBLEND", 0, 0 },
+};
+static const ShaderComboSemantics_t decalmodulate_vs30_combos =
+{
+	"decalmodulate_vs30", s_DynamicComboArray_decalmodulate_vs30, 4, s_StaticComboArray_decalmodulate_vs30, 4 
+};
+
+class ConstructMe_decalmodulate_vs30
+{
+public:
+	ConstructMe_decalmodulate_vs30()
+	{
+		GetShaderDLL()->AddShaderComboInformation( &decalmodulate_vs30_combos );
+	}
+};
+
+static ConstructMe_decalmodulate_vs30 s_ConstructMe_decalmodulate_vs30;

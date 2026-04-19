@@ -79,6 +79,7 @@ public:
 	static void DeleteUnreferencedTextures( bool enable );
 
 	virtual ITexture		*GetTextureValue( void ) = 0;
+	virtual bool			IsTextureValueInternalEnvCubemap( void ) const = 0;
 
 	virtual char const *	GetName( void ) const = 0;
 	virtual MaterialVarSym_t	GetNameAsSymbol() const = 0;

@@ -28,6 +28,7 @@ public:
 	}
 	void SetBASETEXTURE( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nBASETEXTURE = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bBASETEXTURE = true;
@@ -49,6 +50,7 @@ public:
 	}
 	void SetREFLECT( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nREFLECT = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bREFLECT = true;
@@ -70,6 +72,7 @@ public:
 	}
 	void SetREFRACT( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nREFRACT = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bREFRACT = true;
@@ -91,6 +94,7 @@ public:
 	}
 	void SetENVMAPMASK( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nENVMAPMASK = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bENVMAPMASK = true;
@@ -147,6 +151,7 @@ public:
 	}
 	void SetPIXELFOGTYPE( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nPIXELFOGTYPE = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bPIXELFOGTYPE = true;
@@ -168,6 +173,7 @@ public:
 	}
 	void SetWRITE_DEPTH_TO_DESTALPHA( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nWRITE_DEPTH_TO_DESTALPHA = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bWRITE_DEPTH_TO_DESTALPHA = true;
@@ -198,3 +204,32 @@ public:
 	}
 };
 #define shaderDynamicTest_lightmappedreflective_ps20b psh_forgot_to_set_dynamic_WRITE_DEPTH_TO_DESTALPHA + 0
+
+static const ShaderComboInformation_t s_DynamicComboArray_lightmappedreflective_ps20b[2] = 
+{
+	{ "PIXELFOGTYPE", 0, 1 },
+	{ "WRITE_DEPTH_TO_DESTALPHA", 0, 1 },
+};
+
+static const ShaderComboInformation_t s_StaticComboArray_lightmappedreflective_ps20b[4] = 
+{
+	{ "BASETEXTURE", 0, 1 },
+	{ "REFLECT", 0, 1 },
+	{ "REFRACT", 0, 1 },
+	{ "ENVMAPMASK", 0, 1 },
+};
+static const ShaderComboSemantics_t lightmappedreflective_ps20b_combos =
+{
+	"lightmappedreflective_ps20b", s_DynamicComboArray_lightmappedreflective_ps20b, 2, s_StaticComboArray_lightmappedreflective_ps20b, 4 
+};
+
+class ConstructMe_lightmappedreflective_ps20b
+{
+public:
+	ConstructMe_lightmappedreflective_ps20b()
+	{
+		GetShaderDLL()->AddShaderComboInformation( &lightmappedreflective_ps20b_combos );
+	}
+};
+
+static ConstructMe_lightmappedreflective_ps20b s_ConstructMe_lightmappedreflective_ps20b;

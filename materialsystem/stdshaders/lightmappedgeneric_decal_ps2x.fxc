@@ -31,7 +31,7 @@ struct PS_INPUT
 	float4 vColor		: COLOR0;
 };
 
-float4 main( PS_INPUT i ) : COLOR
+float4_color_return_type main( PS_INPUT i ) : COLOR
 {
 	float4 resultColor;
 	
@@ -44,7 +44,7 @@ float4 main( PS_INPUT i ) : COLOR
 	
 	// Modulate by decal texture
 	float4 decalColor = tex2D( BaseTextureSampler, i.vTexCoord0 );
-	resultColor.rgb = resultColor * decalColor;
+	resultColor.rgb = resultColor.rgb * decalColor.rgb;
 	resultColor.a = decalColor.a;
 	
 	// Modulate by constant color

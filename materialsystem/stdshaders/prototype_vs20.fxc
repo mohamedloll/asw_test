@@ -1,12 +1,17 @@
 //========== Copyright (c) Valve Corporation, All rights reserved. ==========//
 
-// STATIC: "VERTEXCOLOR"		"0..1"
+// STATIC: "VERTEXCOLOR"					"0..1"
+// STATIC: "FLATTEN_STATIC_CONTROL_FLOW"	"0..1" [vs20] [PC]
+// STATIC: "FLATTEN_STATIC_CONTROL_FLOW"	"0..0" [CONSOLE]
 
-// DYNAMIC: "SKINNING"			"0..1"
-// DYNAMIC: "COMPRESSED_VERTS"	"0..1"
-// DYNAMIC: "DYNAMIC_LIGHT"		"0..1"
-// DYNAMIC: "STATIC_LIGHT"		"0..1"
-// DYNAMIC: "NUM_LIGHTS"		"0..4"
+// DYNAMIC: "SKINNING"						"0..1"
+// DYNAMIC: "COMPRESSED_VERTS"				"0..1"
+// DYNAMIC: "DYNAMIC_LIGHT"					"0..1"
+// DYNAMIC: "STATIC_LIGHT"					"0..1"
+// DYNAMIC: "NUM_LIGHTS"					"0..4"
+
+// If using static control flow on Direct3D, we should use the NUM_LIGHTS=0 combo
+//  SKIP: ( $FLATTEN_STATIC_CONTROL_FLOW == 0 ) && ( $NUM_LIGHTS > 0 ) [vs20] [PC]
 
 // Includes =======================================================================================
 #include "common_vs_fxc.h"
@@ -74,11 +79,26 @@ VS_OUTPUT main( const VS_INPUT i )
 	// Texture coordinates
 	o.vUv0.xy = i.vTexCoord0.xy;
 
-	// Scalar light attenuation
-	o.vLightAtten.x = GetVertexAttenForLight( vWorldPosition.xyz, 0 );
-	o.vLightAtten.y = GetVertexAttenForLight( vWorldPosition.xyz, 1 );
-	o.vLightAtten.z = GetVertexAttenForLight( vWorldPosition.xyz, 2 );
-	o.vLightAtten.w = GetVertexAttenForLight( vWorldPosition.xyz, 3 );
+#if ( defined ( SHADER_MODEL_VS_2_0 ) && FLATTEN_STATIC_CONTROL_FLOW )
+	o.vLightAtten = float4( 0, 0, 0, 0 );
+	#if ( NUM_LIGHTS > 0 )
+		o.vLightAtten.x = GetVertexAttenForLight( vWorldPosition.xyz, 0, false );
+	#endif
+	#if ( NUM_LIGHTS > 1 )
+		o.vLightAtten.y = GetVertexAttenForLight( vWorldPosition.xyz, 1, false );
+	#endif
+	#if ( NUM_LIGHTS > 2 )
+		o.vLightAtten.z = GetVertexAttenForLight( vWorldPosition.xyz, 2, false );
+	#endif
+	#if ( NUM_LIGHTS > 3 )
+		o.vLightAtten.w = GetVertexAttenForLight( vWorldPosition.xyz, 3, false );
+	#endif
+#else
+	o.vLightAtten.x = GetVertexAttenForLight( vWorldPosition.xyz, 0, true );
+	o.vLightAtten.y = GetVertexAttenForLight( vWorldPosition.xyz, 1, true );
+	o.vLightAtten.z = GetVertexAttenForLight( vWorldPosition.xyz, 2, true );
+	o.vLightAtten.w = GetVertexAttenForLight( vWorldPosition.xyz, 3, true );
+#endif
 
 	#if ( VERTEXCOLOR )
 	{

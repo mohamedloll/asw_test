@@ -7,48 +7,21 @@
 #include "shaderlib/cshader.h"
 class projected_ps30_Static_Index
 {
-private:
-	int m_nFOW;
-#ifdef _DEBUG
-	bool m_bFOW;
-#endif
-public:
-	void SetFOW( int i )
-	{
-		Assert( i >= 0 && i <= 1 );
-		m_nFOW = i;
-#ifdef _DEBUG
-		m_bFOW = true;
-#endif
-	}
-	void SetFOW( bool i )
-	{
-		m_nFOW = i ? 1 : 0;
-#ifdef _DEBUG
-		m_bFOW = true;
-#endif
-	}
 public:
 	// CONSTRUCTOR
 	projected_ps30_Static_Index( IShaderShadow *pShaderShadow, IMaterialVar **params )
 	{
-#ifdef _DEBUG
-		m_bFOW = false;
-#endif // _DEBUG
-		m_nFOW = 0;
 	}
 	int GetIndex()
 	{
 		// Asserts to make sure that we aren't using any skipped combinations.
 		// Asserts to make sure that we are setting all of the combination vars.
 #ifdef _DEBUG
-		bool bAllStaticVarsDefined = m_bFOW;
-		Assert( bAllStaticVarsDefined );
 #endif // _DEBUG
-		return ( 2 * m_nFOW ) + 0;
+		return 0;
 	}
 };
-#define shaderStaticTest_projected_ps30 psh_forgot_to_set_static_FOW + 0
+#define shaderStaticTest_projected_ps30 0
 class projected_ps30_Dynamic_Index
 {
 private:
@@ -67,6 +40,7 @@ public:
 	}
 	void SetPIXELFOGTYPE( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nPIXELFOGTYPE = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bPIXELFOGTYPE = true;
@@ -93,3 +67,23 @@ public:
 	}
 };
 #define shaderDynamicTest_projected_ps30 0
+
+static const ShaderComboInformation_t s_DynamicComboArray_projected_ps30[1] = 
+{
+	{ "PIXELFOGTYPE", 0, 1 },
+};
+static const ShaderComboSemantics_t projected_ps30_combos =
+{
+	"projected_ps30", s_DynamicComboArray_projected_ps30, 1, NULL, 0 
+};
+
+class ConstructMe_projected_ps30
+{
+public:
+	ConstructMe_projected_ps30()
+	{
+		GetShaderDLL()->AddShaderComboInformation( &projected_ps30_combos );
+	}
+};
+
+static ConstructMe_projected_ps30 s_ConstructMe_projected_ps30;

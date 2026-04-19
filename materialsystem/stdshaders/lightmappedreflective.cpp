@@ -1,7 +1,7 @@
 //============ Copyright (c) Valve Corporation, All rights reserved. ============
 
 #include "BaseVSShader.h"
-#include "mathlib/VMatrix.h"
+#include "mathlib/vmatrix.h"
 #include "common_hlsl_cpp_consts.h" // hack hack hack!
 
 #include "lightmappedreflective_vs20.inc"
@@ -57,20 +57,21 @@ BEGIN_VS_SHADER( LightmappedReflective_DX90, "Help for Lightmapped Reflective" )
 	{
 		if ( params[REFRACTTEXTURE]->IsDefined() )
 		{
-			LoadTexture( REFRACTTEXTURE );
+			LoadTexture( REFRACTTEXTURE, g_pHardwareConfig->GetHDRType() == HDR_TYPE_INTEGER || IsOSX() ? TEXTUREFLAGS_SRGB : 0 );
 		}
 		if ( params[REFLECTTEXTURE]->IsDefined() )
 		{
-			LoadTexture( REFLECTTEXTURE );
+			LoadTexture( REFLECTTEXTURE, g_pHardwareConfig->GetHDRType() == HDR_TYPE_INTEGER || IsOSX() ? TEXTUREFLAGS_SRGB : 0 );
 		}
 		if ( params[NORMALMAP]->IsDefined() )
 		{
 			LoadBumpMap( NORMALMAP );
 		}
-		if ( params[BASETEXTURE]->IsDefined() )
+		if( params[BASETEXTURE]->IsDefined() )
 		{
-			LoadTexture( BASETEXTURE );
-			if ( params[ENVMAPMASK]->IsDefined() )
+			LoadTexture( BASETEXTURE, TEXTUREFLAGS_SRGB );
+			
+			if( params[ENVMAPMASK]->IsDefined() )
 			{
 				LoadTexture( ENVMAPMASK );
 			}
@@ -89,27 +90,34 @@ BEGIN_VS_SHADER( LightmappedReflective_DX90, "Help for Lightmapped Reflective" )
 
 		SHADOW_STATE
 		{
-			SetInitialShadowState();
-			if ( bRefraction )
+			SetInitialShadowState( );
+			if( bRefraction )
 			{
-				pShaderShadow->EnableTexture( SHADER_SAMPLER0, true );
-				pShaderShadow->EnableTexture( SHADER_SAMPLER1, true );
-				pShaderShadow->EnableSRGBRead( SHADER_SAMPLER0, true );
+				pShaderShadow->EnableTexture( SHADER_SAMPLER0, true );	// Refract
+				pShaderShadow->EnableSRGBRead( SHADER_SAMPLER0, g_pHardwareConfig->GetHDRType() == HDR_TYPE_INTEGER || IsOSX() );
+				
+				pShaderShadow->EnableTexture( SHADER_SAMPLER1, true );	// Base
+				pShaderShadow->EnableSRGBRead( SHADER_SAMPLER1, true );
 			}
-
-			if ( bReflection )
+			
+			if( bReflection )
 			{
-				pShaderShadow->EnableTexture( SHADER_SAMPLER2, true );
-				pShaderShadow->EnableTexture( SHADER_SAMPLER3, true );
-				pShaderShadow->EnableSRGBRead( SHADER_SAMPLER2, true );
+				pShaderShadow->EnableTexture( SHADER_SAMPLER2, true );	// Reflect
+				pShaderShadow->EnableSRGBRead( SHADER_SAMPLER2, g_pHardwareConfig->GetHDRType() == HDR_TYPE_INTEGER || IsOSX() );
+				
+				pShaderShadow->EnableTexture( SHADER_SAMPLER3, true );	// Lightmap
+				pShaderShadow->EnableSRGBRead( SHADER_SAMPLER3, g_pHardwareConfig->GetHDRType() == HDR_TYPE_NONE );
 			}
-
-			if ( params[BASETEXTURE]->IsTexture() )
+			
+			if( params[BASETEXTURE]->IsTexture() )
 			{
 				// BASETEXTURE
 				pShaderShadow->EnableTexture( SHADER_SAMPLER1, true );
+				pShaderShadow->EnableSRGBRead( SHADER_SAMPLER1, true );
+				
 				// LIGHTMAP
 				pShaderShadow->EnableTexture( SHADER_SAMPLER3, true );
+				pShaderShadow->EnableSRGBRead( SHADER_SAMPLER3, g_pHardwareConfig->GetHDRType() == HDR_TYPE_NONE );
 
 				if ( params[ENVMAPMASK]->IsTexture() )
 				{
@@ -172,28 +180,31 @@ BEGIN_VS_SHADER( LightmappedReflective_DX90, "Help for Lightmapped Reflective" )
 		}
 		DYNAMIC_STATE
 		{
+			TextureBindFlags_t nBindFlags = ( g_pHardwareConfig->GetHDRType() == HDR_TYPE_INTEGER || IsOSXOpenGL() ) ? TEXTURE_BINDFLAGS_SRGBREAD : TEXTURE_BINDFLAGS_NONE;
+
+
 			if ( bRefraction )
 			{
 				// HDRFIXME: add comment about binding.. Specify the number of MRTs in the enable
-				BindTexture( SHADER_SAMPLER0, REFRACTTEXTURE, -1 );
+				BindTexture( SHADER_SAMPLER0, nBindFlags, REFRACTTEXTURE, -1 );
 			}
 
 			if ( bReflection )
 			{
-				BindTexture( SHADER_SAMPLER2, REFLECTTEXTURE, -1 );
+				BindTexture( SHADER_SAMPLER2, nBindFlags, REFLECTTEXTURE, -1 );
 			}
 
-			BindTexture( SHADER_SAMPLER4, NORMALMAP, BUMPFRAME );
+			BindTexture( SHADER_SAMPLER4, TEXTURE_BINDFLAGS_NONE, NORMALMAP, BUMPFRAME );
 
 			if ( params[BASETEXTURE]->IsTexture() )
 			{
-				BindTexture( SHADER_SAMPLER1, BASETEXTURE, FRAME );
-				pShaderAPI->BindStandardTexture( SHADER_SAMPLER3, TEXTURE_LIGHTMAP );
+				BindTexture( SHADER_SAMPLER1, TEXTURE_BINDFLAGS_SRGBREAD, BASETEXTURE, FRAME );
+				pShaderAPI->BindStandardTexture( SHADER_SAMPLER3, ( g_pHardwareConfig->GetHDRType() == HDR_TYPE_NONE ) ? TEXTURE_BINDFLAGS_SRGBREAD : TEXTURE_BINDFLAGS_NONE, TEXTURE_LIGHTMAP );
 				SetVertexShaderTextureTransform( VERTEX_SHADER_SHADER_SPECIFIC_CONST_3, BASETEXTURETRANSFORM );
 
 				if ( params[ENVMAPMASK]->IsTexture() )
 				{
-					BindTexture( SHADER_SAMPLER6, ENVMAPMASK, ENVMAPMASKFRAME );
+					BindTexture( SHADER_SAMPLER6, TEXTURE_BINDFLAGS_NONE, ENVMAPMASK, ENVMAPMASKFRAME );
 				}
 			}
 

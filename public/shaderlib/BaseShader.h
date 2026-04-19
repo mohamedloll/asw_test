@@ -17,7 +17,7 @@
 #include "materialsystem/imaterialvar.h"
 #include "materialsystem/ishaderapi.h"
 #include "materialsystem/imaterialsystemhardwareconfig.h"
-
+#include "shaderlib/baseshader_declarations.h"
 
 //-----------------------------------------------------------------------------
 // Forward declarations
@@ -26,68 +26,7 @@ class IMaterialVar;
 class CPerInstanceContextData;
 
 
-//-----------------------------------------------------------------------------
-// Standard material vars
-//-----------------------------------------------------------------------------
-// Note: if you add to these, add to s_StandardParams in CBaseShader.cpp
-enum ShaderMaterialVars_t
-{
-	FLAGS = 0,
-	FLAGS_DEFINED,	// mask indicating if the flag was specified
-	FLAGS2,
-	FLAGS_DEFINED2,
-	COLOR,
-	ALPHA,
-	BASETEXTURE,
-	FRAME,
-	BASETEXTURETRANSFORM,
-	FLASHLIGHTTEXTURE,
-	FLASHLIGHTTEXTUREFRAME,
-	COLOR2,
-	SRGBTINT,
 
-	NUM_SHADER_MATERIAL_VARS
-};
-
-
-// Alpha belnd mode enums. Moved from basevsshader
-enum BlendType_t
-{
-	// no alpha blending
-	BT_NONE = 0,
-
-
-
-	// src * srcAlpha + dst * (1-srcAlpha)
-	// two passes for HDR:
-	//		pass 1:
-	//			color: src * srcAlpha + dst * (1-srcAlpha)
-	//			alpha: srcAlpha * zero + dstAlpha * (1-srcAlpha)
-	//		pass 2:
-	//			color: none
-	//			alpha: srcAlpha * one + dstAlpha * one
-	//
-	BT_BLEND,
-
-
-	
-	// src * one + dst * one
-	// one pass for HDR
-	BT_ADD,
-
-
-	
-	// Why do we ever use this instead of using premultiplied alpha?
-	// src * srcAlpha + dst * one
-	// two passes for HDR
-	//		pass 1:
-	//			color: src * srcAlpha + dst * one
-	//			alpha: srcAlpha * one + dstAlpha * one
-	//		pass 2:
-	//			color: none
-	//			alpha: srcAlpha * one + dstAlpha * one
-	BT_BLENDADD
-};
 
 
 //-----------------------------------------------------------------------------
@@ -162,23 +101,23 @@ public:
 	bool CanUseEditorMaterials() const;
 
 	// Loads a texture
-	void LoadTexture( int nTextureVar );
+	void LoadTexture( int nTextureVar, int nAdditionalCreationFlags = 0 );
 
 	// Loads a bumpmap
-	void LoadBumpMap( int nTextureVar );
+	void LoadBumpMap( int nTextureVar, int nAdditionalCreationFlags = 0 );
 
 	// Loads a cubemap
-	void LoadCubeMap( int nTextureVar );
+	void LoadCubeMap( int nTextureVar, int nAdditionalCreationFlags = 0  );
 
 	// get the shaderapi handle for a texture. BE CAREFUL WITH THIS. 
 	ShaderAPITextureHandle_t GetShaderAPITextureBindHandle( int nTextureVar, int nFrameVar, int nTextureChannel = 0 );
 	ShaderAPITextureHandle_t GetShaderAPITextureBindHandle( ITexture *pTexture, int nFrame, int nTextureChannel = 0 );
 
 	// Binds a texture
-	void BindTexture( Sampler_t sampler1, Sampler_t sampler2, int nTextureVar, int nFrameVar = -1 );
-	void BindTexture( Sampler_t sampler1, int nTextureVar, int nFrameVar = -1 );
-	void BindTexture( Sampler_t sampler1, ITexture *pTexture, int nFrame = 0 );
-	void BindTexture( Sampler_t sampler1, Sampler_t sampler2, ITexture *pTexture, int nFrame = 0 );
+	void BindTexture( Sampler_t sampler1, Sampler_t sampler2, TextureBindFlags_t nBindFlags, int nTextureVar, int nFrameVar = -1 );
+	void BindTexture( Sampler_t sampler1, TextureBindFlags_t nBindFlags, int nTextureVar, int nFrameVar = -1 );
+	void BindTexture( Sampler_t sampler1, TextureBindFlags_t nBindFlags, ITexture *pTexture, int nFrame = 0 );
+	void BindTexture( Sampler_t sampler1, Sampler_t sampler2, TextureBindFlags_t nBindFlags, ITexture *pTexture, int nFrame = 0 );
 
 	// Bind vertex texture
 	void BindVertexTexture( VertexTextureSampler_t vtSampler, int nTextureVar, int nFrame = 0 );
@@ -216,8 +155,13 @@ public:
 
 	bool UsingFlashlight( IMaterialVar **params ) const;
 	bool UsingEditor( IMaterialVar **params ) const;
+	bool IsRenderingPaint( IMaterialVar **params ) const;
 
-	void ApplyColor2Factor( float *pColorOut ) const;		// (*pColorOut) *= COLOR2
+	void ApplyColor2Factor( float *pColorOut, bool isLinearSpace = false ) const;		// (*pColorOut) *= COLOR2
+	
+	static inline IMaterialVar **GetPPParams();
+	void SetPPParams( IMaterialVar **params ) { s_ppParams = params; }
+	void SetModulationFlags( int modulationFlags ) { s_nModulationFlags = modulationFlags; }
 
 private:
 	// This is a per-instance state which is handled completely by the system
@@ -225,9 +169,9 @@ private:
 	void PI_SetVertexShaderLocalLighting( );
 
 	FORCEINLINE void SetFogMode( ShaderFogMode_t fogMode );
-
+	
 protected:
-	static IMaterialVar **s_ppParams;
+	static IMaterialVar **s_ppParams;	
 	static const char *s_pTextureGroupName; // Current material's texture group name.
 	static IShaderShadow *s_pShaderShadow;
 	static IShaderDynamicAPI *s_pShaderAPI;
@@ -239,7 +183,6 @@ private:
 
 	template <class T> friend class CBaseCommandBufferBuilder;
 };
-
 
 //-----------------------------------------------------------------------------
 // Gets at the current materialvar flags
@@ -281,5 +224,12 @@ inline bool CBaseShader::IsWhite( int colorVar )
 	return (color[0] >= 1.0f) && (color[1] >= 1.0f) && (color[2] >= 1.0f);
 }
 
+//-----------------------------------------------------------------------------
+// Returns the s_ppParams static member variable - for internal use only.
+//-----------------------------------------------------------------------------
+inline IMaterialVar **CBaseShader::GetPPParams()
+{
+	return s_ppParams;
+}
 
 #endif // BASESHADER_H

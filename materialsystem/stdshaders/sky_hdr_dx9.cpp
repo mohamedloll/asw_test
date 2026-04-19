@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
+//========= Copyright 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -15,7 +15,7 @@
 #include "sky_hdr_compressed_rgbs_ps20.inc"
 #include "sky_hdr_compressed_rgbs_ps20b.inc"
 
-#include "ConVar.h"
+#include "convar.h"
 
 // NOTE: This has to be the last file included!
 #include "tier0/memdbgon.h"
@@ -47,33 +47,76 @@ BEGIN_VS_SHADER( Sky_HDR_DX9, "Help for Sky_HDR_DX9 shader" )
 	}
 	SHADER_INIT
 	{
-		if (params[HDRCOMPRESSEDTEXTURE]->IsDefined() && (mat_use_compressed_hdr_textures.GetBool() ) )
+		// First figure out if sampler zero wants to be sRGB
+		int nSamplerZeroFlags = 0;
+		if ( (params[HDRCOMPRESSEDTEXTURE]->IsDefined()) &&	mat_use_compressed_hdr_textures.GetBool() )
 		{
-			LoadTexture( HDRCOMPRESSEDTEXTURE );
+			nSamplerZeroFlags = 0;
 		}
 		else
 		{
 			if (params[HDRCOMPRESSEDTEXTURE0]->IsDefined())
 			{
-				LoadTexture( HDRCOMPRESSEDTEXTURE0 );
-				if (params[HDRCOMPRESSEDTEXTURE1]->IsDefined())
+				nSamplerZeroFlags = 0;
+			}
+			else
+			{
+				ITexture *txtr=params[HDRBASETEXTURE]->GetTextureValue();
+				ImageFormat fmt=txtr->GetImageFormat();
+				if ( ( fmt == IMAGE_FORMAT_RGBA16161616F ) || ( fmt == IMAGE_FORMAT_RGBA16161616 ) )
+					nSamplerZeroFlags = 0;
+				else
+					nSamplerZeroFlags = TEXTUREFLAGS_SRGB;
+			}
+		}
+
+		// Next, figure out which texture will be on sampler zero
+		int nSampler0 = HDRCOMPRESSEDTEXTURE;
+		if ( params[HDRCOMPRESSEDTEXTURE]->IsDefined() && mat_use_compressed_hdr_textures.GetBool() )
+		{
+			nSampler0 = HDRCOMPRESSEDTEXTURE;
+		}
+		else
+		{
+			if ( params[HDRCOMPRESSEDTEXTURE0]->IsDefined() )
+			{
+				nSampler0 = HDRCOMPRESSEDTEXTURE0;
+			}
+			else
+			{
+				nSampler0 = HDRBASETEXTURE;
+			}
+		}
+
+		// Load the appropriate textures, making sure that the texture set on sampler 0 is sRGB if necessary
+		if ( params[HDRCOMPRESSEDTEXTURE]->IsDefined() && (mat_use_compressed_hdr_textures.GetBool() ) )
+		{
+			LoadTexture( HDRCOMPRESSEDTEXTURE, HDRCOMPRESSEDTEXTURE == nSampler0 ? nSamplerZeroFlags : 0 );
+		}
+		else
+		{
+			if (params[HDRCOMPRESSEDTEXTURE0]->IsDefined())
+			{
+				LoadTexture( HDRCOMPRESSEDTEXTURE0, HDRCOMPRESSEDTEXTURE0 == nSampler0 ? nSamplerZeroFlags : 0 );
+				if ( params[HDRCOMPRESSEDTEXTURE1]->IsDefined() )
 				{
-					LoadTexture( HDRCOMPRESSEDTEXTURE1 );
+					LoadTexture( HDRCOMPRESSEDTEXTURE1, HDRCOMPRESSEDTEXTURE1 == nSampler0 ? nSamplerZeroFlags : 0 );
 				}
-				if (params[HDRCOMPRESSEDTEXTURE2]->IsDefined())
+				if ( params[HDRCOMPRESSEDTEXTURE2]->IsDefined())
 				{
-					LoadTexture( HDRCOMPRESSEDTEXTURE2 );
+					LoadTexture( HDRCOMPRESSEDTEXTURE2, HDRCOMPRESSEDTEXTURE2 == nSampler0 ? nSamplerZeroFlags : 0 );
 				}
 			}
 			else
 			{
-				if (params[HDRBASETEXTURE]->IsDefined())
+				if ( params[HDRBASETEXTURE]->IsDefined() )
 				{
-					LoadTexture( HDRBASETEXTURE );
+					LoadTexture( HDRBASETEXTURE, HDRBASETEXTURE == nSampler0 ? nSamplerZeroFlags : 0 );
 				}
 			}
 		}
 	}
+
 	SHADER_DRAW
 	{
 		SHADOW_STATE
@@ -148,6 +191,14 @@ BEGIN_VS_SHADER( Sky_HDR_DX9, "Help for Sky_HDR_DX9 shader" )
 			pShaderShadow->EnableSRGBWrite( true );
 
 			pShaderShadow->EnableAlphaWrites( true );
+
+#if defined(_PS3)
+			// only way to change order in which skybox can be rendered (or to appropriately defer skybox rendering on PS3 in the absence of z pre-pass) if the skybox material is set to ignorez 1.
+			// kind of obviates the need for ignorez flags/ignorez in the material. Note that not all skybox materials use this shader.
+			// TODO - agree on a more common way of handling z with skyboxes (material vs shader).
+ 			pShaderShadow->EnableDepthWrites( false );
+ 			pShaderShadow->EnableDepthTest( true );
+#endif
 		}
 
 		DYNAMIC_STATE
@@ -176,7 +227,7 @@ BEGIN_VS_SHADER( Sky_HDR_DX9, "Help for Sky_HDR_DX9 shader" )
 				float c1[4]={0.5/w-FUDGE, 0.5/h-FUDGE, w, h };
 				pShaderAPI->SetVertexShaderConstant( VERTEX_SHADER_SHADER_SPECIFIC_CONST_0, c1);
 
-				BindTexture( SHADER_SAMPLER0, HDRCOMPRESSEDTEXTURE, FRAME );
+				BindTexture( SHADER_SAMPLER0, TEXTURE_BINDFLAGS_SRGBREAD, HDRCOMPRESSEDTEXTURE, FRAME );
 				c0[0]*=8.0;
 				c0[1]*=8.0;
 				c0[2]*=8.0;
@@ -199,9 +250,9 @@ BEGIN_VS_SHADER( Sky_HDR_DX9, "Help for Sky_HDR_DX9 shader" )
 
 				if (params[HDRCOMPRESSEDTEXTURE0]->IsDefined() )
 				{
-					BindTexture( SHADER_SAMPLER0, HDRCOMPRESSEDTEXTURE0, FRAME );
-					BindTexture( SHADER_SAMPLER1, HDRCOMPRESSEDTEXTURE1, FRAME );
-					BindTexture( SHADER_SAMPLER2, HDRCOMPRESSEDTEXTURE2, FRAME );
+					BindTexture( SHADER_SAMPLER0, TEXTURE_BINDFLAGS_NONE, HDRCOMPRESSEDTEXTURE0, FRAME );
+					BindTexture( SHADER_SAMPLER1, TEXTURE_BINDFLAGS_NONE, HDRCOMPRESSEDTEXTURE1, FRAME );
+					BindTexture( SHADER_SAMPLER2, TEXTURE_BINDFLAGS_NONE, HDRCOMPRESSEDTEXTURE2, FRAME );
 					if( g_pHardwareConfig->SupportsPixelShaders_2_b() )
 					{
 						DECLARE_DYNAMIC_PIXEL_SHADER( sky_hdr_compressed_ps20b );
@@ -217,7 +268,7 @@ BEGIN_VS_SHADER( Sky_HDR_DX9, "Help for Sky_HDR_DX9 shader" )
 				}
 				else
 				{
-					BindTexture( SHADER_SAMPLER0, HDRBASETEXTURE, FRAME );
+					BindTexture( SHADER_SAMPLER0, TEXTURE_BINDFLAGS_SRGBREAD, HDRBASETEXTURE, FRAME );
 					ITexture *txtr=params[HDRBASETEXTURE]->GetTextureValue();
 					ImageFormat fmt=txtr->GetImageFormat();
 					if (

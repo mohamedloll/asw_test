@@ -35,3 +35,18 @@ public:
 	}
 };
 #define shaderDynamicTest_lightshafts_vs30 0
+static const ShaderComboSemantics_t lightshafts_vs30_combos =
+{
+	"lightshafts_vs30", NULL, 0, NULL, 0 
+};
+
+class ConstructMe_lightshafts_vs30
+{
+public:
+	ConstructMe_lightshafts_vs30()
+	{
+		GetShaderDLL()->AddShaderComboInformation( &lightshafts_vs30_combos );
+	}
+};
+
+static ConstructMe_lightshafts_vs30 s_ConstructMe_lightshafts_vs30;

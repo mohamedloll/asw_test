@@ -5,10 +5,10 @@
 // $NoKeywords: $
 //=============================================================================
 
-#include "worldvertexTransition_DX8_helper.h"
+#include "worldvertextransition_dx8_helper.h"
 #include "BaseVSShader.h"
 
-#include "worldvertextransition.inc"
+#include "WorldVertexTransition.inc"
 
 
 // memdbgon must be the last include file in a .cpp file!!!
@@ -53,11 +53,11 @@ void DrawWorldVertexTransitionEditor_DX8( CBaseVSShader *pShader, IMaterialVar**
 	}
 	DYNAMIC_STATE
 	{
-		pShader->BindTexture( SHADER_SAMPLER0, info.m_nBaseTextureVar, info.m_nBaseTextureFrameVar );
-		pShader->BindTexture( SHADER_SAMPLER1, info.m_nBaseTexture2Var, info.m_nBaseTexture2FrameVar );
+		pShader->BindTexture( SHADER_SAMPLER0, TEXTURE_BINDFLAGS_NONE, info.m_nBaseTextureVar, info.m_nBaseTextureFrameVar );
+		pShader->BindTexture( SHADER_SAMPLER1, TEXTURE_BINDFLAGS_NONE, info.m_nBaseTexture2Var, info.m_nBaseTexture2FrameVar );
 
 		// Texture 3 = lightmap
-		pShaderAPI->BindStandardTexture( SHADER_SAMPLER2, TEXTURE_LIGHTMAP );
+		pShaderAPI->BindStandardTexture( SHADER_SAMPLER2, TEXTURE_BINDFLAGS_NONE, TEXTURE_LIGHTMAP );
 		
 		pShader->EnablePixelShaderOverbright( 0, true, true );
 		

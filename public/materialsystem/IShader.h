@@ -1,4 +1,4 @@
-//===== Copyright © 1996-2005, Valve Corporation, All rights reserved. ======//
+//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -12,6 +12,21 @@
 #ifdef _WIN32
 #pragma once
 #endif
+
+//==================================================================================================
+// **this goes into both platforms which run the translator, either the real Mac client or
+// the Windows client running with r_emulategl mode **
+//
+// size of the VS register bank in ARB / GLSL we expose
+#define	DXABSTRACT_VS_PARAM_SLOTS	256
+#define DXABSTRACT_VS_FIRST_BONE_SLOT VERTEX_SHADER_MODEL
+#define DXABSTRACT_VS_LAST_BONE_SLOT (VERTEX_SHADER_SHADER_SPECIFIC_CONST_13-1)
+
+// user clip plane 0 goes in DXABSTRACT_VS_CLIP_PLANE_BASE... plane 1 goes in the slot after that
+// dxabstract uses these constants to check plane index limit and to deliver planes to shader for DP4 -> oCLP[n]
+#define	DXABSTRACT_VS_CLIP_PLANE_BASE (DXABSTRACT_VS_PARAM_SLOTS-2)
+
+//==================================================================================================
 
 
 #include "materialsystem/imaterialsystem.h"
@@ -89,6 +104,9 @@ public:
 class CBasePerInstanceContextData
 {
 public:
+
+	virtual unsigned char* GetInstanceCommandBuffer() = 0;
+
 	// virtual destructor so that derived classes can have their own data
 	// to be cleaned up on delete of material
 	virtual ~CBasePerInstanceContextData( void )
@@ -133,7 +151,16 @@ enum
 	//
 	// We reserve up through 217 for the 53 bones supported on DX9
 	//
+	VERTEX_SHADER_SHADER_SPECIFIC_CONST_CSM = 37,	// to match the define in common_vs_fxc.h
 
+    VERTEX_SHADER_SHADER_SPECIFIC_CONST_13 = 217,
+	VERTEX_SHADER_SHADER_SPECIFIC_CONST_14 = 219,
+	VERTEX_SHADER_SHADER_SPECIFIC_CONST_15 = 221,
+	VERTEX_SHADER_SHADER_SPECIFIC_CONST_16 = 223,
+
+    // 254		ClipPlane0				|------ OpenGL will jam clip planes into these two
+    // 255		ClipPlane1				|
+    
 	VERTEX_SHADER_FLEX_WEIGHTS = 1024,
 	VERTEX_SHADER_MAX_FLEX_WEIGHT_COUNT = 512,
 };
@@ -182,6 +209,14 @@ public:
 	virtual void DrawElements( IMaterialVar **params, int nModulationFlags,
 		IShaderShadow* pShaderShadow, IShaderDynamicAPI* pShaderAPI, 
 		VertexCompressionType_t vertexCompression, CBasePerMaterialContextData **pContextDataPtr, CBasePerInstanceContextData** pInstanceDataPtr ) = 0;
+	
+	virtual void ExecuteFastPath( int * vsDynIndex, int *psDynIndex, IMaterialVar** params, 
+		IShaderDynamicAPI * pShaderAPI, VertexCompressionType_t vertexCompression, CBasePerMaterialContextData **pContextDataPtr,
+		BOOL bCSMEnabled )
+	{
+		*vsDynIndex = -1;
+		*psDynIndex = -1;
+	}
 
 	// FIXME: Figure out a better way to do this?
 	virtual int ComputeModulationFlags( IMaterialVar** params, IShaderDynamicAPI* pShaderAPI ) = 0;
@@ -190,6 +225,9 @@ public:
 	virtual bool IsTranslucent( IMaterialVar **params ) const = 0;
 
 	virtual int GetFlags() const = 0;
+
+	virtual void SetPPParams( IMaterialVar **params ) = 0;
+	virtual void SetModulationFlags( int modulationFlags ) = 0;
 };
 
 

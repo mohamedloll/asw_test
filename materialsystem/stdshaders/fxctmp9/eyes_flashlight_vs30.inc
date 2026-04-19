@@ -21,6 +21,7 @@ public:
 	}
 	void SetDOPIXELFOG( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nDOPIXELFOG = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bDOPIXELFOG = true;
@@ -42,6 +43,7 @@ public:
 	}
 	void SetHARDWAREFOGBLEND( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 0 );
 		m_nHARDWAREFOGBLEND = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bHARDWAREFOGBLEND = true;
@@ -68,7 +70,7 @@ public:
 		bool bAllStaticVarsDefined = m_bDOPIXELFOG && m_bHARDWAREFOGBLEND;
 		Assert( bAllStaticVarsDefined );
 #endif // _DEBUG
-		return ( 16 * m_nDOPIXELFOG ) + ( 32 * m_nHARDWAREFOGBLEND ) + 0;
+		return ( 8 * m_nDOPIXELFOG ) + ( 16 * m_nHARDWAREFOGBLEND ) + 0;
 	}
 };
 #define shaderStaticTest_eyes_flashlight_vs30 0
@@ -90,6 +92,7 @@ public:
 	}
 	void SetCOMPRESSED_VERTS( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nCOMPRESSED_VERTS = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bCOMPRESSED_VERTS = true;
@@ -111,6 +114,7 @@ public:
 	}
 	void SetSKINNING( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nSKINNING = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bSKINNING = true;
@@ -132,6 +136,7 @@ public:
 	}
 	void SetDOWATERFOG( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nDOWATERFOG = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bDOWATERFOG = true;
@@ -145,7 +150,7 @@ private:
 public:
 	void SetMORPHING( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		Assert( i >= 0 && i <= 0 );
 		m_nMORPHING = i;
 #ifdef _DEBUG
 		m_bMORPHING = true;
@@ -153,6 +158,7 @@ public:
 	}
 	void SetMORPHING( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 0 );
 		m_nMORPHING = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bMORPHING = true;
@@ -177,7 +183,7 @@ public:
 #ifdef _DEBUG
 		m_bMORPHING = true;
 #endif // _DEBUG
-		m_nMORPHING = pShaderAPI->IsHWMorphingEnabled() ;
+		m_nMORPHING = false ;
 	}
 	int GetIndex()
 	{
@@ -191,3 +197,32 @@ public:
 	}
 };
 #define shaderDynamicTest_eyes_flashlight_vs30 vsh_forgot_to_set_dynamic_COMPRESSED_VERTS + vsh_forgot_to_set_dynamic_SKINNING + 0
+
+static const ShaderComboInformation_t s_DynamicComboArray_eyes_flashlight_vs30[4] = 
+{
+	{ "COMPRESSED_VERTS", 0, 1 },
+	{ "SKINNING", 0, 1 },
+	{ "DOWATERFOG", 0, 1 },
+	{ "MORPHING", 0, 0 },
+};
+
+static const ShaderComboInformation_t s_StaticComboArray_eyes_flashlight_vs30[2] = 
+{
+	{ "DOPIXELFOG", 0, 1 },
+	{ "HARDWAREFOGBLEND", 0, 0 },
+};
+static const ShaderComboSemantics_t eyes_flashlight_vs30_combos =
+{
+	"eyes_flashlight_vs30", s_DynamicComboArray_eyes_flashlight_vs30, 4, s_StaticComboArray_eyes_flashlight_vs30, 2 
+};
+
+class ConstructMe_eyes_flashlight_vs30
+{
+public:
+	ConstructMe_eyes_flashlight_vs30()
+	{
+		GetShaderDLL()->AddShaderComboInformation( &eyes_flashlight_vs30_combos );
+	}
+};
+
+static ConstructMe_eyes_flashlight_vs30 s_ConstructMe_eyes_flashlight_vs30;

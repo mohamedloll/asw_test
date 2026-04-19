@@ -1,7 +1,7 @@
-//========= Copyright © 1996-2007, Valve Corporation, All rights reserved. ============//
+//========= Copyright (c) 1996-2007, Valve Corporation, All rights reserved. ============//
 
 #include "BaseVSShader.h"
-#include "shaderlib/CShader.h"
+#include "shaderlib/cshader.h"
 
 #include "debugtextureview_vs20.inc"
 #include "debugtextureview_ps20.inc"
@@ -64,7 +64,7 @@ BEGIN_VS_SHADER( DebugTextureView_dx9, "Help for DebugTextureView" )
 
 		DYNAMIC_STATE
 		{
-			BindTexture( SHADER_SAMPLER0, BASETEXTURE, FRAME );
+			BindTexture( SHADER_SAMPLER0, TEXTURE_BINDFLAGS_NONE, BASETEXTURE, FRAME );
 			//pShaderAPI->BindStandardTexture( SHADER_SAMPLER1, TEXTURE_LIGHTMAP );
 
 			ITexture *pTexture = params[BASETEXTURE]->GetTextureValue();
@@ -80,6 +80,15 @@ BEGIN_VS_SHADER( DebugTextureView_dx9, "Help for DebugTextureView" )
 				else
 					cPsConst0[1] = 1.0f;
 			}
+
+			if ( pTexture->IsVolumeTexture() )
+			{
+				int nSlices = pTexture->GetMappingDepth();
+				int nDesiredSlice = int( Plat_FloatTime() ) % nSlices;
+
+				cPsConst0[2] = float( nDesiredSlice * 2 + 1 ) / ( nSlices * 2 );
+			}
+			
 			pShaderAPI->SetPixelShaderConstant( 0, cPsConst0 );
 
 			DECLARE_DYNAMIC_VERTEX_SHADER( debugtextureview_vs20 );
@@ -90,12 +99,14 @@ BEGIN_VS_SHADER( DebugTextureView_dx9, "Help for DebugTextureView" )
 			{
 				DECLARE_DYNAMIC_PIXEL_SHADER( debugtextureview_ps20b );
 				SET_DYNAMIC_PIXEL_SHADER_COMBO( ISCUBEMAP, pTexture->IsCubeMap() );
+				SET_DYNAMIC_PIXEL_SHADER_COMBO( ISVOLUME, pTexture->IsVolumeTexture() );
 				SET_DYNAMIC_PIXEL_SHADER( debugtextureview_ps20b );
 			}
 			else
 			{
 				DECLARE_DYNAMIC_PIXEL_SHADER( debugtextureview_ps20 );
 				SET_DYNAMIC_PIXEL_SHADER_COMBO( ISCUBEMAP, pTexture->IsCubeMap() );
+				SET_DYNAMIC_PIXEL_SHADER_COMBO( ISVOLUME, pTexture->IsVolumeTexture() );
 				SET_DYNAMIC_PIXEL_SHADER( debugtextureview_ps20 );
 			}
 		}

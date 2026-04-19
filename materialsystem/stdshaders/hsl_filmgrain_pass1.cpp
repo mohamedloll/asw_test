@@ -75,8 +75,8 @@ BEGIN_VS_SHADER( hsl_filmgrain_pass1, "Help for Film Grain" )
 
 		DYNAMIC_STATE
 		{
-			BindTexture( SHADER_SAMPLER0, INPUT, -1 );
-			BindTexture( SHADER_SAMPLER1, GRAIN, -1 );
+			BindTexture( SHADER_SAMPLER0, TEXTURE_BINDFLAGS_NONE, INPUT, -1 );
+			BindTexture( SHADER_SAMPLER1, TEXTURE_BINDFLAGS_NONE, GRAIN, -1 );
 
 			SetVertexShaderConstant( VERTEX_SHADER_SHADER_SPECIFIC_CONST_0, SCALEBIAS );
 

@@ -1,10 +1,4 @@
 // ALL SKIP STATEMENTS THAT AFFECT THIS SHADER!!!
-// ( $FLASHLIGHT == 0 ) && ( $FLASHLIGHTSHADOWS == 1 )
-// defined $PIXELFOGTYPE && defined $WRITEWATERFOGTODESTALPHA && ( $PIXELFOGTYPE != 1 ) && $WRITEWATERFOGTODESTALPHA
-// defined $LIGHTING_PREVIEW && defined $FASTPATHENVMAPTINT && $LIGHTING_PREVIEW && $FASTPATHENVMAPTINT
-// defined $LIGHTING_PREVIEW && defined $FASTPATHENVMAPCONTRAST && $LIGHTING_PREVIEW && $FASTPATHENVMAPCONTRAST
-// defined $LIGHTING_PREVIEW && defined $FASTPATH && $LIGHTING_PREVIEW && $FASTPATH
-// ($FLASHLIGHT || $FLASHLIGHTSHADOWS) && $LIGHTING_PREVIEW
 // defined $PIXELFOGTYPE && defined $WRITEWATERFOGTODESTALPHA && ( $PIXELFOGTYPE != 1 ) && $WRITEWATERFOGTODESTALPHA
 // defined $LIGHTING_PREVIEW && defined $FASTPATHENVMAPTINT && $LIGHTING_PREVIEW && $FASTPATHENVMAPTINT
 // defined $LIGHTING_PREVIEW && defined $FASTPATHENVMAPCONTRAST && $LIGHTING_PREVIEW && $FASTPATHENVMAPCONTRAST
@@ -29,30 +23,10 @@ public:
 	}
 	void SetLIGHTING_PREVIEW( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nLIGHTING_PREVIEW = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bLIGHTING_PREVIEW = true;
-#endif
-	}
-private:
-	int m_nFOW;
-#ifdef _DEBUG
-	bool m_bFOW;
-#endif
-public:
-	void SetFOW( int i )
-	{
-		Assert( i >= 0 && i <= 1 );
-		m_nFOW = i;
-#ifdef _DEBUG
-		m_bFOW = true;
-#endif
-	}
-	void SetFOW( bool i )
-	{
-		m_nFOW = i ? 1 : 0;
-#ifdef _DEBUG
-		m_bFOW = true;
 #endif
 	}
 public:
@@ -63,23 +37,19 @@ public:
 		m_bLIGHTING_PREVIEW = false;
 #endif // _DEBUG
 		m_nLIGHTING_PREVIEW = 0;
-#ifdef _DEBUG
-		m_bFOW = false;
-#endif // _DEBUG
-		m_nFOW = 0;
 	}
 	int GetIndex()
 	{
 		// Asserts to make sure that we aren't using any skipped combinations.
 		// Asserts to make sure that we are setting all of the combination vars.
 #ifdef _DEBUG
-		bool bAllStaticVarsDefined = m_bLIGHTING_PREVIEW && m_bFOW;
+		bool bAllStaticVarsDefined = m_bLIGHTING_PREVIEW;
 		Assert( bAllStaticVarsDefined );
 #endif // _DEBUG
-		return ( 2 * m_nLIGHTING_PREVIEW ) + ( 4 * m_nFOW ) + 0;
+		return ( 2 * m_nLIGHTING_PREVIEW ) + 0;
 	}
 };
-#define shaderStaticTest_multiblend_ps20 psh_forgot_to_set_static_LIGHTING_PREVIEW + psh_forgot_to_set_static_FOW + 0
+#define shaderStaticTest_multiblend_ps20 psh_forgot_to_set_static_LIGHTING_PREVIEW + 0
 class multiblend_ps20_Dynamic_Index
 {
 private:
@@ -98,6 +68,7 @@ public:
 	}
 	void SetPIXELFOGTYPE( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nPIXELFOGTYPE = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bPIXELFOGTYPE = true;
@@ -124,3 +95,28 @@ public:
 	}
 };
 #define shaderDynamicTest_multiblend_ps20 0
+
+static const ShaderComboInformation_t s_DynamicComboArray_multiblend_ps20[1] = 
+{
+	{ "PIXELFOGTYPE", 0, 1 },
+};
+
+static const ShaderComboInformation_t s_StaticComboArray_multiblend_ps20[1] = 
+{
+	{ "LIGHTING_PREVIEW", 0, 1 },
+};
+static const ShaderComboSemantics_t multiblend_ps20_combos =
+{
+	"multiblend_ps20", s_DynamicComboArray_multiblend_ps20, 1, s_StaticComboArray_multiblend_ps20, 1 
+};
+
+class ConstructMe_multiblend_ps20
+{
+public:
+	ConstructMe_multiblend_ps20()
+	{
+		GetShaderDLL()->AddShaderComboInformation( &multiblend_ps20_combos );
+	}
+};
+
+static ConstructMe_multiblend_ps20 s_ConstructMe_multiblend_ps20;

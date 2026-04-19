@@ -1,4 +1,5 @@
 // ALL SKIP STATEMENTS THAT AFFECT THIS SHADER!!!
+// ( $SFM == 0 ) && ( $UBERLIGHT == 1 )
 // !$WORLDVERTEXTRANSITION && $NORMALMAP2
 // !$NORMALMAP && $NORMALMAP2
 // !$DETAILTEXTURE && ( $DETAIL_BLEND_MODE != 0 )
@@ -16,6 +17,28 @@
 class flashlight_ps30_Static_Index
 {
 private:
+	int m_nSFM;
+#ifdef _DEBUG
+	bool m_bSFM;
+#endif
+public:
+	void SetSFM( int i )
+	{
+		Assert( i >= 0 && i <= 1 );
+		m_nSFM = i;
+#ifdef _DEBUG
+		m_bSFM = true;
+#endif
+	}
+	void SetSFM( bool i )
+	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		m_nSFM = i ? 1 : 0;
+#ifdef _DEBUG
+		m_bSFM = true;
+#endif
+	}
+private:
 	int m_nNORMALMAP;
 #ifdef _DEBUG
 	bool m_bNORMALMAP;
@@ -31,6 +54,7 @@ public:
 	}
 	void SetNORMALMAP( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 2 );
 		m_nNORMALMAP = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bNORMALMAP = true;
@@ -52,6 +76,7 @@ public:
 	}
 	void SetNORMALMAP2( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nNORMALMAP2 = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bNORMALMAP2 = true;
@@ -73,6 +98,7 @@ public:
 	}
 	void SetWORLDVERTEXTRANSITION( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nWORLDVERTEXTRANSITION = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bWORLDVERTEXTRANSITION = true;
@@ -94,6 +120,7 @@ public:
 	}
 	void SetSEAMLESS( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nSEAMLESS = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bSEAMLESS = true;
@@ -115,6 +142,7 @@ public:
 	}
 	void SetDETAILTEXTURE( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nDETAILTEXTURE = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bDETAILTEXTURE = true;
@@ -136,6 +164,7 @@ public:
 	}
 	void SetDETAIL_BLEND_MODE( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 11 );
 		m_nDETAIL_BLEND_MODE = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bDETAIL_BLEND_MODE = true;
@@ -157,6 +186,7 @@ public:
 	}
 	void SetFLASHLIGHTDEPTHFILTERMODE( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 2 );
 		m_nFLASHLIGHTDEPTHFILTERMODE = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bFLASHLIGHTDEPTHFILTERMODE = true;
@@ -178,6 +208,7 @@ public:
 	}
 	void SetDOPIXELFOG( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nDOPIXELFOG = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bDOPIXELFOG = true;
@@ -187,6 +218,10 @@ public:
 	// CONSTRUCTOR
 	flashlight_ps30_Static_Index( IShaderShadow *pShaderShadow, IMaterialVar **params )
 	{
+#ifdef _DEBUG
+		m_bSFM = false;
+#endif // _DEBUG
+		m_nSFM = 0;
 #ifdef _DEBUG
 		m_bNORMALMAP = false;
 #endif // _DEBUG
@@ -225,13 +260,13 @@ public:
 		// Asserts to make sure that we aren't using any skipped combinations.
 		// Asserts to make sure that we are setting all of the combination vars.
 #ifdef _DEBUG
-		bool bAllStaticVarsDefined = m_bNORMALMAP && m_bNORMALMAP2 && m_bWORLDVERTEXTRANSITION && m_bSEAMLESS && m_bDETAILTEXTURE && m_bDETAIL_BLEND_MODE && m_bFLASHLIGHTDEPTHFILTERMODE && m_bDOPIXELFOG;
+		bool bAllStaticVarsDefined = m_bSFM && m_bNORMALMAP && m_bNORMALMAP2 && m_bWORLDVERTEXTRANSITION && m_bSEAMLESS && m_bDETAILTEXTURE && m_bDETAIL_BLEND_MODE && m_bFLASHLIGHTDEPTHFILTERMODE && m_bDOPIXELFOG;
 		Assert( bAllStaticVarsDefined );
 #endif // _DEBUG
-		return ( 8 * m_nNORMALMAP ) + ( 24 * m_nNORMALMAP2 ) + ( 48 * m_nWORLDVERTEXTRANSITION ) + ( 96 * m_nSEAMLESS ) + ( 192 * m_nDETAILTEXTURE ) + ( 384 * m_nDETAIL_BLEND_MODE ) + ( 4608 * m_nFLASHLIGHTDEPTHFILTERMODE ) + ( 13824 * m_nDOPIXELFOG ) + 0;
+		return ( 8 * m_nSFM ) + ( 16 * m_nNORMALMAP ) + ( 48 * m_nNORMALMAP2 ) + ( 96 * m_nWORLDVERTEXTRANSITION ) + ( 192 * m_nSEAMLESS ) + ( 384 * m_nDETAILTEXTURE ) + ( 768 * m_nDETAIL_BLEND_MODE ) + ( 9216 * m_nFLASHLIGHTDEPTHFILTERMODE ) + ( 27648 * m_nDOPIXELFOG ) + 0;
 	}
 };
-#define shaderStaticTest_flashlight_ps30 psh_forgot_to_set_static_NORMALMAP + psh_forgot_to_set_static_NORMALMAP2 + psh_forgot_to_set_static_WORLDVERTEXTRANSITION + psh_forgot_to_set_static_SEAMLESS + psh_forgot_to_set_static_DETAILTEXTURE + psh_forgot_to_set_static_DETAIL_BLEND_MODE + psh_forgot_to_set_static_FLASHLIGHTDEPTHFILTERMODE + 0
+#define shaderStaticTest_flashlight_ps30 psh_forgot_to_set_static_SFM + psh_forgot_to_set_static_NORMALMAP + psh_forgot_to_set_static_NORMALMAP2 + psh_forgot_to_set_static_WORLDVERTEXTRANSITION + psh_forgot_to_set_static_SEAMLESS + psh_forgot_to_set_static_DETAILTEXTURE + psh_forgot_to_set_static_DETAIL_BLEND_MODE + psh_forgot_to_set_static_FLASHLIGHTDEPTHFILTERMODE + 0
 class flashlight_ps30_Dynamic_Index
 {
 private:
@@ -250,6 +285,7 @@ public:
 	}
 	void SetFLASHLIGHTSHADOWS( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nFLASHLIGHTSHADOWS = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bFLASHLIGHTSHADOWS = true;
@@ -271,6 +307,7 @@ public:
 	}
 	void SetUBERLIGHT( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nUBERLIGHT = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bUBERLIGHT = true;
@@ -292,6 +329,7 @@ public:
 	}
 	void SetPIXELFOGTYPE( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nPIXELFOGTYPE = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bPIXELFOGTYPE = true;
@@ -326,3 +364,38 @@ public:
 	}
 };
 #define shaderDynamicTest_flashlight_ps30 psh_forgot_to_set_dynamic_FLASHLIGHTSHADOWS + psh_forgot_to_set_dynamic_UBERLIGHT + 0
+
+static const ShaderComboInformation_t s_DynamicComboArray_flashlight_ps30[3] = 
+{
+	{ "FLASHLIGHTSHADOWS", 0, 1 },
+	{ "UBERLIGHT", 0, 1 },
+	{ "PIXELFOGTYPE", 0, 1 },
+};
+
+static const ShaderComboInformation_t s_StaticComboArray_flashlight_ps30[9] = 
+{
+	{ "SFM", 0, 1 },
+	{ "NORMALMAP", 0, 2 },
+	{ "NORMALMAP2", 0, 1 },
+	{ "WORLDVERTEXTRANSITION", 0, 1 },
+	{ "SEAMLESS", 0, 1 },
+	{ "DETAILTEXTURE", 0, 1 },
+	{ "DETAIL_BLEND_MODE", 0, 11 },
+	{ "FLASHLIGHTDEPTHFILTERMODE", 0, 2 },
+	{ "DOPIXELFOG", 0, 1 },
+};
+static const ShaderComboSemantics_t flashlight_ps30_combos =
+{
+	"flashlight_ps30", s_DynamicComboArray_flashlight_ps30, 3, s_StaticComboArray_flashlight_ps30, 9 
+};
+
+class ConstructMe_flashlight_ps30
+{
+public:
+	ConstructMe_flashlight_ps30()
+	{
+		GetShaderDLL()->AddShaderComboInformation( &flashlight_ps30_combos );
+	}
+};
+
+static ConstructMe_flashlight_ps30 s_ConstructMe_flashlight_ps30;

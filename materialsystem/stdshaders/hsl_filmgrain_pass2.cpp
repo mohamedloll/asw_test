@@ -67,7 +67,7 @@ BEGIN_VS_SHADER( hsl_filmgrain_pass2, "Help for Film Grain" )
 
 		DYNAMIC_STATE
 		{
-			BindTexture( SHADER_SAMPLER0, INPUT, -1 );
+			BindTexture( SHADER_SAMPLER0, TEXTURE_BINDFLAGS_NONE, INPUT, -1 );
 
 			DECLARE_DYNAMIC_VERTEX_SHADER( filmgrain_vs20 );
 			SET_DYNAMIC_VERTEX_SHADER( filmgrain_vs20 );

@@ -1,6 +1,7 @@
 // ALL SKIP STATEMENTS THAT AFFECT THIS SHADER!!!
 // ( $DOWATERFOG == 0 ) && ( $DOPIXELFOG && $HARDWAREFOGBLEND )
 // ( $DOWATERFOG == 0 ) && ( $HARDWAREFOGBLEND == 0 ) && ( $DOPIXELFOG == 0 )
+// ( $FLATTEN_STATIC_CONTROL_FLOW == 0 )&& ( $NUM_LIGHTS > 0 )  [PC]
 // defined $LIGHTING_PREVIEW && defined $FASTPATH && $LIGHTING_PREVIEW && $FASTPATH
 #include "shaderlib/cshader.h"
 class cloak_vs20_Static_Index
@@ -21,9 +22,32 @@ public:
 	}
 	void SetMODEL( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nMODEL = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bMODEL = true;
+#endif
+	}
+private:
+	int m_nFLATTEN_STATIC_CONTROL_FLOW;
+#ifdef _DEBUG
+	bool m_bFLATTEN_STATIC_CONTROL_FLOW;
+#endif
+public:
+	void SetFLATTEN_STATIC_CONTROL_FLOW( int i )
+	{
+		Assert( i >= 0 && i <= 1 );
+		m_nFLATTEN_STATIC_CONTROL_FLOW = i;
+#ifdef _DEBUG
+		m_bFLATTEN_STATIC_CONTROL_FLOW = true;
+#endif
+	}
+	void SetFLATTEN_STATIC_CONTROL_FLOW( bool i )
+	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		m_nFLATTEN_STATIC_CONTROL_FLOW = i ? 1 : 0;
+#ifdef _DEBUG
+		m_bFLATTEN_STATIC_CONTROL_FLOW = true;
 #endif
 	}
 private:
@@ -42,6 +66,7 @@ public:
 	}
 	void SetDOPIXELFOG( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nDOPIXELFOG = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bDOPIXELFOG = true;
@@ -63,6 +88,7 @@ public:
 	}
 	void SetHARDWAREFOGBLEND( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nHARDWAREFOGBLEND = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bHARDWAREFOGBLEND = true;
@@ -77,6 +103,10 @@ public:
 #endif // _DEBUG
 		m_nMODEL = 0;
 #ifdef _DEBUG
+		m_bFLATTEN_STATIC_CONTROL_FLOW = false;
+#endif // _DEBUG
+		m_nFLATTEN_STATIC_CONTROL_FLOW = 0;
+#ifdef _DEBUG
 		m_bDOPIXELFOG = true;
 #endif // _DEBUG
 		m_nDOPIXELFOG = g_pHardwareConfig->SupportsPixelShaders_2_b() ;
@@ -90,13 +120,13 @@ public:
 		// Asserts to make sure that we aren't using any skipped combinations.
 		// Asserts to make sure that we are setting all of the combination vars.
 #ifdef _DEBUG
-		bool bAllStaticVarsDefined = m_bMODEL && m_bDOPIXELFOG && m_bHARDWAREFOGBLEND;
+		bool bAllStaticVarsDefined = m_bMODEL && m_bFLATTEN_STATIC_CONTROL_FLOW && m_bDOPIXELFOG && m_bHARDWAREFOGBLEND;
 		Assert( bAllStaticVarsDefined );
 #endif // _DEBUG
-		return ( 8 * m_nMODEL ) + ( 16 * m_nDOPIXELFOG ) + ( 32 * m_nHARDWAREFOGBLEND ) + 0;
+		return ( 24 * m_nMODEL ) + ( 48 * m_nFLATTEN_STATIC_CONTROL_FLOW ) + ( 96 * m_nDOPIXELFOG ) + ( 192 * m_nHARDWAREFOGBLEND ) + 0;
 	}
 };
-#define shaderStaticTest_cloak_vs20 vsh_forgot_to_set_static_MODEL + 0
+#define shaderStaticTest_cloak_vs20 vsh_forgot_to_set_static_MODEL + vsh_forgot_to_set_static_FLATTEN_STATIC_CONTROL_FLOW + 0
 class cloak_vs20_Dynamic_Index
 {
 private:
@@ -115,6 +145,7 @@ public:
 	}
 	void SetCOMPRESSED_VERTS( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nCOMPRESSED_VERTS = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bCOMPRESSED_VERTS = true;
@@ -136,6 +167,7 @@ public:
 	}
 	void SetDOWATERFOG( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nDOWATERFOG = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bDOWATERFOG = true;
@@ -157,9 +189,54 @@ public:
 	}
 	void SetSKINNING( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nSKINNING = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bSKINNING = true;
+#endif
+	}
+private:
+	int m_nMORPHING;
+#ifdef _DEBUG
+	bool m_bMORPHING;
+#endif
+public:
+	void SetMORPHING( int i )
+	{
+		Assert( i >= 0 && i <= 0 );
+		m_nMORPHING = i;
+#ifdef _DEBUG
+		m_bMORPHING = true;
+#endif
+	}
+	void SetMORPHING( bool i )
+	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 0 );
+		m_nMORPHING = i ? 1 : 0;
+#ifdef _DEBUG
+		m_bMORPHING = true;
+#endif
+	}
+private:
+	int m_nNUM_LIGHTS;
+#ifdef _DEBUG
+	bool m_bNUM_LIGHTS;
+#endif
+public:
+	void SetNUM_LIGHTS( int i )
+	{
+		Assert( i >= 0 && i <= 2 );
+		m_nNUM_LIGHTS = i;
+#ifdef _DEBUG
+		m_bNUM_LIGHTS = true;
+#endif
+	}
+	void SetNUM_LIGHTS( bool i )
+	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 2 );
+		m_nNUM_LIGHTS = i ? 1 : 0;
+#ifdef _DEBUG
+		m_bNUM_LIGHTS = true;
 #endif
 	}
 public:
@@ -178,16 +255,56 @@ public:
 		m_bSKINNING = false;
 #endif // _DEBUG
 		m_nSKINNING = 0;
+#ifdef _DEBUG
+		m_bMORPHING = true;
+#endif // _DEBUG
+		m_nMORPHING = false ;
+#ifdef _DEBUG
+		m_bNUM_LIGHTS = false;
+#endif // _DEBUG
+		m_nNUM_LIGHTS = 0;
 	}
 	int GetIndex()
 	{
 		// Asserts to make sure that we aren't using any skipped combinations.
 		// Asserts to make sure that we are setting all of the combination vars.
 #ifdef _DEBUG
-		bool bAllDynamicVarsDefined = m_bCOMPRESSED_VERTS && m_bDOWATERFOG && m_bSKINNING;
+		bool bAllDynamicVarsDefined = m_bCOMPRESSED_VERTS && m_bDOWATERFOG && m_bSKINNING && m_bMORPHING && m_bNUM_LIGHTS;
 		Assert( bAllDynamicVarsDefined );
 #endif // _DEBUG
-		return ( 1 * m_nCOMPRESSED_VERTS ) + ( 2 * m_nDOWATERFOG ) + ( 4 * m_nSKINNING ) + 0;
+		return ( 1 * m_nCOMPRESSED_VERTS ) + ( 2 * m_nDOWATERFOG ) + ( 4 * m_nSKINNING ) + ( 8 * m_nMORPHING ) + ( 8 * m_nNUM_LIGHTS ) + 0;
 	}
 };
-#define shaderDynamicTest_cloak_vs20 vsh_forgot_to_set_dynamic_COMPRESSED_VERTS + vsh_forgot_to_set_dynamic_SKINNING + 0
+#define shaderDynamicTest_cloak_vs20 vsh_forgot_to_set_dynamic_COMPRESSED_VERTS + vsh_forgot_to_set_dynamic_SKINNING + vsh_forgot_to_set_dynamic_NUM_LIGHTS + 0
+
+static const ShaderComboInformation_t s_DynamicComboArray_cloak_vs20[5] = 
+{
+	{ "COMPRESSED_VERTS", 0, 1 },
+	{ "DOWATERFOG", 0, 1 },
+	{ "SKINNING", 0, 1 },
+	{ "MORPHING", 0, 0 },
+	{ "NUM_LIGHTS", 0, 2 },
+};
+
+static const ShaderComboInformation_t s_StaticComboArray_cloak_vs20[4] = 
+{
+	{ "MODEL", 0, 1 },
+	{ "FLATTEN_STATIC_CONTROL_FLOW", 0, 1 },
+	{ "DOPIXELFOG", 0, 1 },
+	{ "HARDWAREFOGBLEND", 0, 1 },
+};
+static const ShaderComboSemantics_t cloak_vs20_combos =
+{
+	"cloak_vs20", s_DynamicComboArray_cloak_vs20, 5, s_StaticComboArray_cloak_vs20, 4 
+};
+
+class ConstructMe_cloak_vs20
+{
+public:
+	ConstructMe_cloak_vs20()
+	{
+		GetShaderDLL()->AddShaderComboInformation( &cloak_vs20_combos );
+	}
+};
+
+static ConstructMe_cloak_vs20 s_ConstructMe_cloak_vs20;

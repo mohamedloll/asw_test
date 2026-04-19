@@ -8,8 +8,8 @@
 #include "BaseVSShader.h"
 #include "common_hlsl_cpp_consts.h"
 
-#include "hdrselectrange_ps20.inc"
-#include "hdrselectrange_ps20b.inc"
+#include "HDRSelectRange_ps20.inc"
+#include "HDRSelectRange_ps20b.inc"
 
 // NOTE: This has to be the last file included!
 #include "tier0/memdbgon.h"
@@ -60,7 +60,7 @@ BEGIN_VS_SHADER_FLAGS( HDRSelectRange, "Help for HDRSelectRange", SHADER_NOT_EDI
 
 		DYNAMIC_STATE
 		{
-			BindTexture( SHADER_SAMPLER0, SOURCEMRTRENDERTARGET, -1 );
+			BindTexture( SHADER_SAMPLER0, TEXTURE_BINDFLAGS_NONE, SOURCEMRTRENDERTARGET, -1 );
 			pShaderAPI->SetVertexShaderIndex( 0 );
 
 			if( g_pHardwareConfig->SupportsPixelShaders_2_b() )

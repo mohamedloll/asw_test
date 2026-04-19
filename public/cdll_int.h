@@ -876,17 +876,6 @@ public:
 
 #define CLIENT_DLL_SHARED_APPSYSTEMS		"VClientDllSharedAppSystems001"
 
-
-//-----------------------------------------------------------------------------
-// Purpose: Interface exposed from client back to materialsystem, currently just for recording into tools
-//-----------------------------------------------------------------------------
-abstract_class IClientMaterialSystem
-{
-public:
-	virtual HTOOLHANDLE GetCurrentRecordingEntity() = 0;
-	virtual void PostToolMessage( HTOOLHANDLE hEntity, KeyValues *pMsg ) = 0;
-};
-
 #define VCLIENTMATERIALSYSTEM_INTERFACE_VERSION "VCLIENTMATERIALSYSTEM001"
 
 

@@ -1,4 +1,4 @@
-//===== Copyright © 1996-2005, Valve Corporation, All rights reserved. ======//
+//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
 //
 // Purpose: 
 //
@@ -13,7 +13,7 @@
 #include "unlitgeneric_ps20.inc"
 #include "unlitgeneric_ps20b.inc"
 
-#if !defined( _X360 )
+#if !defined( _X360 ) && !defined( _PS3 )
 	#include "unlitgeneric_ps30.inc"
 	#include "unlitgeneric_vs30.inc"
 #endif
@@ -57,7 +57,7 @@ BEGIN_VS_SHADER_FLAGS( DebugNormalMap, "Help for DebugNormalMap", SHADER_NOT_EDI
 			int userDataSize = 0;
 			pShaderShadow->VertexShaderVertexFormat( flags, nTexCoordCount, NULL, userDataSize );
 
-#ifndef _X360
+#if !defined( _X360 ) && !defined( _PS3 )
 			if ( !g_pHardwareConfig->HasFastVertexTextures() )
 #endif
 			{
@@ -76,7 +76,7 @@ BEGIN_VS_SHADER_FLAGS( DebugNormalMap, "Help for DebugNormalMap", SHADER_NOT_EDI
 					SET_STATIC_PIXEL_SHADER( unlitgeneric_ps20 );
 				}
 			}
-#ifndef _X360
+#if !defined( _X360 ) && !defined( _PS3 )
 			else
 			{
 				DECLARE_STATIC_VERTEX_SHADER( unlitgeneric_vs30 );
@@ -93,15 +93,15 @@ BEGIN_VS_SHADER_FLAGS( DebugNormalMap, "Help for DebugNormalMap", SHADER_NOT_EDI
 		{
 			if ( params[BUMPMAP]->IsTexture() )
 			{
-				BindTexture( SHADER_SAMPLER0, BUMPMAP, BUMPFRAME );
+				BindTexture( SHADER_SAMPLER0, TEXTURE_BINDFLAGS_NONE, BUMPMAP, BUMPFRAME );
 			}
 			else
 			{
-				pShaderAPI->BindStandardTexture( SHADER_SAMPLER0, TEXTURE_NORMALMAP_FLAT );
+				pShaderAPI->BindStandardTexture( SHADER_SAMPLER0, TEXTURE_BINDFLAGS_NONE, TEXTURE_NORMALMAP_FLAT );
 			}
 			SetVertexShaderTextureTransform( VERTEX_SHADER_SHADER_SPECIFIC_CONST_0, BUMPTRANSFORM );
 
-#ifndef _X360
+#if !defined( _X360 ) && !defined( _PS3 )
 			if ( !g_pHardwareConfig->HasFastVertexTextures() )
 #endif
 			{
@@ -122,7 +122,7 @@ BEGIN_VS_SHADER_FLAGS( DebugNormalMap, "Help for DebugNormalMap", SHADER_NOT_EDI
 					SET_DYNAMIC_PIXEL_SHADER( unlitgeneric_ps20 );
 				}
 			}
-#ifndef _X360
+#if !defined( _X360 ) && !defined( _PS3 )
 			else
 			{
 				TessellationMode_t nTessellationMode = pShaderAPI->GetTessellationMode();

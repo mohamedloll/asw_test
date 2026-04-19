@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
+//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: A shader that builds the shadow using render-to-texture
 //
@@ -8,13 +8,13 @@
 
 #include "BaseVSShader.h"
 #include "convar.h"
-#include "mathlib/VMatrix.h"
+#include "mathlib/vmatrix.h"
 
 #include "unlitgeneric_vs20.inc"
 #include "shadowbuildtexture_ps20.inc"
 #include "shadowbuildtexture_ps20b.inc"
 
-#if !defined( _X360 )
+#if !defined( _X360 ) && !defined( _PS3 )
 	#include "shadowbuildtexture_ps30.inc"
 	#include "unlitgeneric_vs30.inc"
 #endif
@@ -47,34 +47,58 @@ BEGIN_VS_SHADER_FLAGS( ShadowBuild_DX9, "Help for ShadowBuild", SHADER_NOT_EDITA
 	{
 		if (params[BASETEXTURE]->IsDefined())
 		{
-			LoadTexture(BASETEXTURE);
+			LoadTexture( BASETEXTURE, TEXTUREFLAGS_SRGB );
 		}
 	}
 
 	SHADER_DRAW
 	{
+		bool bHDR = g_pHardwareConfig->GetHDRType() != HDR_TYPE_NONE;
+		
+		// Snack important parameters from the original material
+		// FIXME: What about alpha modulation? Need a solution for that
+		ITexture *pTexture = NULL;
+		IMaterialVar **ppTranslucentParams = NULL;
+		if (params[TRANSLUCENT_MATERIAL]->IsDefined())
+		{
+			IMaterial *pMaterial = params[TRANSLUCENT_MATERIAL]->GetMaterialValue();
+			if (pMaterial)
+			{
+				ppTranslucentParams = pMaterial->GetShaderParams();
+				if ( ppTranslucentParams[BASETEXTURE]->IsTexture() )
+				{
+					pTexture = ppTranslucentParams[BASETEXTURE]->GetTextureValue();
+				}
+			}
+		}
+		
 		SHADOW_STATE
 		{
 			// Add the alphas into the frame buffer
 			EnableAlphaBlending( SHADER_BLEND_ONE, SHADER_BLEND_ONE );
 
-			// base texture.  We just use this for alpha, but enable SRGB read to make everything consistent.
+			// Base texture.  We just use this for alpha, but enable SRGB read to make everything consistent.
 			pShaderShadow->EnableTexture( SHADER_SAMPLER0, true );
-			pShaderShadow->EnableSRGBRead( SHADER_SAMPLER0, true );
+			pShaderShadow->EnableSRGBRead( SHADER_SAMPLER0, pTexture || !bHDR );
 
 			pShaderShadow->EnableSRGBWrite( true );
 
 			pShaderShadow->EnableAlphaWrites( true );
 			pShaderShadow->EnableDepthWrites( false );
-			pShaderShadow->DepthFunc( SHADER_DEPTHFUNC_ALWAYS );
+	//		pShaderShadow->DepthFunc( SHADER_DEPTHFUNC_ALWAYS );
+		pShaderShadow->EnableDepthTest( false );
 
+#if defined( _PS3 )
+			pShaderShadow->EnableDepthTest( false );
+#else
+#endif
 			// Specify vertex format (note that this shader supports compression)
 			unsigned int flags = VERTEX_POSITION | VERTEX_FORMAT_COMPRESSED;
 			unsigned int nTexCoordCount = 1;
 			unsigned int userDataSize = 0;
 			pShaderShadow->VertexShaderVertexFormat( flags, nTexCoordCount, NULL, userDataSize );
 
-#ifndef _X360
+#if !defined( _X360 ) && !defined( _PS3 )
 			if ( !g_pHardwareConfig->HasFastVertexTextures() )
 #endif
 			{
@@ -93,7 +117,7 @@ BEGIN_VS_SHADER_FLAGS( ShadowBuild_DX9, "Help for ShadowBuild", SHADER_NOT_EDITA
 					SET_STATIC_PIXEL_SHADER( shadowbuildtexture_ps20 );
 				}
 			}
-#ifndef _X360
+#if !defined( _X360 ) && !defined( _PS3 )
 			else
 			{
 				SET_FLAGS2( MATERIAL_VAR2_USES_VERTEXID );
@@ -113,27 +137,9 @@ BEGIN_VS_SHADER_FLAGS( ShadowBuild_DX9, "Help for ShadowBuild", SHADER_NOT_EDITA
 		}
 		DYNAMIC_STATE
 		{
-
-			// Snack important parameters from the original material
-			// FIXME: What about alpha modulation? Need a solution for that
-			ITexture *pTexture = NULL;
-			IMaterialVar **ppTranslucentParams = NULL;
-			if (params[TRANSLUCENT_MATERIAL]->IsDefined())
+			if ( pTexture )
 			{
-				IMaterial *pMaterial = params[TRANSLUCENT_MATERIAL]->GetMaterialValue();
-				if (pMaterial)
-				{
-					ppTranslucentParams = pMaterial->GetShaderParams();
-					if ( ppTranslucentParams[BASETEXTURE]->IsTexture() )
-					{
-						pTexture = ppTranslucentParams[BASETEXTURE]->GetTextureValue();
-					}
-				}
-			}
-
-			if (pTexture)
-			{
-				BindTexture( SHADER_SAMPLER0, pTexture, ppTranslucentParams[FRAME]->GetIntValue() );
+				BindTexture( SHADER_SAMPLER0, TEXTURE_BINDFLAGS_SRGBREAD, pTexture, ppTranslucentParams[FRAME]->GetIntValue() );
 
 				Vector4D transformation[2];
 				const VMatrix &mat = ppTranslucentParams[BASETEXTURETRANSFORM]->GetMatrixValue();
@@ -143,10 +149,10 @@ BEGIN_VS_SHADER_FLAGS( ShadowBuild_DX9, "Help for ShadowBuild", SHADER_NOT_EDITA
 			}
 			else
 			{
-				pShaderAPI->BindStandardTexture( SHADER_SAMPLER0, TEXTURE_LIGHTMAP_FULLBRIGHT );
+				pShaderAPI->BindStandardTexture( SHADER_SAMPLER0, bHDR ? TEXTURE_BINDFLAGS_NONE : TEXTURE_BINDFLAGS_SRGBREAD, TEXTURE_LIGHTMAP_FULLBRIGHT );
 			}
 
-#ifndef _X360
+#if !defined( _X360 ) && !defined( _PS3 )
 			TessellationMode_t nTessellationMode = TESSELLATION_MODE_DISABLED;
 			if ( !g_pHardwareConfig->HasFastVertexTextures() )
 #endif
@@ -169,7 +175,7 @@ BEGIN_VS_SHADER_FLAGS( ShadowBuild_DX9, "Help for ShadowBuild", SHADER_NOT_EDITA
 					SET_DYNAMIC_PIXEL_SHADER( shadowbuildtexture_ps20 );
 				}
 			}
-#ifndef _X360
+#if !defined( _X360 ) && !defined( _PS3 )
 			else
 			{
 				nTessellationMode = pShaderAPI->GetTessellationMode();

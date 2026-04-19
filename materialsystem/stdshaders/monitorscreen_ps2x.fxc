@@ -5,7 +5,7 @@
 
 #include "common_fog_ps_fxc.h"
 // DYNAMIC: "WRITE_DEPTH_TO_DESTALPHA"	"0..1"	[ps20b] [PC]
-// DYNAMIC: "WRITE_DEPTH_TO_DESTALPHA"	"0..0"	[ps20b] [XBOX]
+// DYNAMIC: "WRITE_DEPTH_TO_DESTALPHA"	"0..0"	[ps20b] [CONSOLE]
 
 #if defined( SHADER_MODEL_PS_2_0 )
 #	define WRITE_DEPTH_TO_DESTALPHA 0
@@ -36,7 +36,7 @@ struct PS_INPUT
 	float4 worldPos_projPosZ		: TEXCOORD7;
 };
 
-float4 main( PS_INPUT i ) : COLOR
+float4_color_return_type main( PS_INPUT i ) : COLOR
 {	
 	float4 resultColor = tex2D( BaseTextureSampler, i.vTexCoord0 ) * i.vColor; // base texture modulated with vertex color
 		
@@ -46,7 +46,7 @@ float4 main( PS_INPUT i ) : COLOR
 
 	float3 tempColor = resultColor.rgb * resultColor.rgb;								//base * base
 	resultColor.rgb = lerp( resultColor.rgb, tempColor.rgb, g_Contrast.rgb );			// blend between color and color * color
-	tempColor = dot( resultColor.rgb, g_Grey );						// color greyscaled
+	tempColor = dot( resultColor.rgb, g_Grey.rgb );										// color greyscaled
 	resultColor.rgb = lerp( tempColor.rgb, resultColor.rgb, g_Saturation.rgb );			// blend between color and greyscale
 	resultColor.rgb = resultColor.rgb * g_Tint.rgb;										// tint
 	

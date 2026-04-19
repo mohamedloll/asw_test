@@ -15,7 +15,7 @@
 #include "tier0/basetypes.h"
 #include "bitmap/imageformat.h"
 
-typedef unsigned int ColorCorrectionHandle_t;
+typedef uintptr_t ColorCorrectionHandle_t;
 struct ShaderColorCorrectionInfo_t;
 
 abstract_class IColorCorrectionSystem
@@ -69,6 +69,8 @@ public:
 	virtual void GetCurrentColorCorrection( ShaderColorCorrectionInfo_t* pInfo ) = 0;
 
 	virtual void OnProceduralRegenComplete( ColorCorrectionHandle_t handle ) = 0;
+
+	virtual ColorCorrectionHandle_t FindLookup( const char *pName ) = 0;
 };
 
 #endif

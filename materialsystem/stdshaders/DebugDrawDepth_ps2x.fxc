@@ -11,7 +11,7 @@ struct PS_INPUT
 const float3 g_ZFilter				: register( c1 );
 const float3 g_ModulationColor		: register( c2 );
 
-float4 main( PS_INPUT i ) : COLOR
+float4_color_return_type main( PS_INPUT i ) : COLOR
 {
 	float z = dot( i.zValue, g_ZFilter );
 	z = saturate(  z );

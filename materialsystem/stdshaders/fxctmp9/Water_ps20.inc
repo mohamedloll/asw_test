@@ -1,5 +1,7 @@
 // ALL SKIP STATEMENTS THAT AFFECT THIS SHADER!!!
 // $MULTITEXTURE && $BASETEXTURE
+// $SIMPLEOVERLAY && $BASETEXTURE
+// $SIMPLEOVERLAY && !$FLOWMAP
 // $FLOWMAP && $MULTITEXTURE
 // ( $FLASHLIGHT == 0 ) && ( $FLASHLIGHTSHADOWS == 1 )
 // ( $FLASHLIGHT || $LIGHTMAPWATERFOG ) && ( ( $BASETEXTURE && !$FLOWMAP ) || $MULTITEXTURE )
@@ -37,6 +39,7 @@ public:
 	}
 	void SetBASETEXTURE( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nBASETEXTURE = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bBASETEXTURE = true;
@@ -58,6 +61,7 @@ public:
 	}
 	void SetMULTITEXTURE( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nMULTITEXTURE = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bMULTITEXTURE = true;
@@ -79,6 +83,7 @@ public:
 	}
 	void SetREFLECT( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nREFLECT = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bREFLECT = true;
@@ -100,6 +105,7 @@ public:
 	}
 	void SetREFRACT( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nREFRACT = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bREFRACT = true;
@@ -121,6 +127,7 @@ public:
 	}
 	void SetABOVEWATER( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nABOVEWATER = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bABOVEWATER = true;
@@ -142,6 +149,7 @@ public:
 	}
 	void SetFLOWMAP( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 0 );
 		m_nFLOWMAP = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bFLOWMAP = true;
@@ -163,6 +171,7 @@ public:
 	}
 	void SetFLOW_DEBUG( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 2 );
 		m_nFLOW_DEBUG = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bFLOW_DEBUG = true;
@@ -184,6 +193,7 @@ public:
 	}
 	void SetFLASHLIGHT( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 0 );
 		m_nFLASHLIGHT = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bFLASHLIGHT = true;
@@ -205,6 +215,7 @@ public:
 	}
 	void SetLIGHTMAPWATERFOG( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 0 );
 		m_nLIGHTMAPWATERFOG = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bLIGHTMAPWATERFOG = true;
@@ -226,9 +237,32 @@ public:
 	}
 	void SetFORCEFRESNEL( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nFORCEFRESNEL = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bFORCEFRESNEL = true;
+#endif
+	}
+private:
+	int m_nSIMPLEOVERLAY;
+#ifdef _DEBUG
+	bool m_bSIMPLEOVERLAY;
+#endif
+public:
+	void SetSIMPLEOVERLAY( int i )
+	{
+		Assert( i >= 0 && i <= 1 );
+		m_nSIMPLEOVERLAY = i;
+#ifdef _DEBUG
+		m_bSIMPLEOVERLAY = true;
+#endif
+	}
+	void SetSIMPLEOVERLAY( bool i )
+	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		m_nSIMPLEOVERLAY = i ? 1 : 0;
+#ifdef _DEBUG
+		m_bSIMPLEOVERLAY = true;
 #endif
 	}
 public:
@@ -275,19 +309,23 @@ public:
 		m_bFORCEFRESNEL = false;
 #endif // _DEBUG
 		m_nFORCEFRESNEL = 0;
+#ifdef _DEBUG
+		m_bSIMPLEOVERLAY = false;
+#endif // _DEBUG
+		m_nSIMPLEOVERLAY = 0;
 	}
 	int GetIndex()
 	{
 		// Asserts to make sure that we aren't using any skipped combinations.
 		// Asserts to make sure that we are setting all of the combination vars.
 #ifdef _DEBUG
-		bool bAllStaticVarsDefined = m_bBASETEXTURE && m_bMULTITEXTURE && m_bREFLECT && m_bREFRACT && m_bABOVEWATER && m_bFLOWMAP && m_bFLOW_DEBUG && m_bFLASHLIGHT && m_bLIGHTMAPWATERFOG && m_bFORCEFRESNEL;
+		bool bAllStaticVarsDefined = m_bBASETEXTURE && m_bMULTITEXTURE && m_bREFLECT && m_bREFRACT && m_bABOVEWATER && m_bFLOWMAP && m_bFLOW_DEBUG && m_bFLASHLIGHT && m_bLIGHTMAPWATERFOG && m_bFORCEFRESNEL && m_bSIMPLEOVERLAY;
 		Assert( bAllStaticVarsDefined );
 #endif // _DEBUG
-		return ( 2 * m_nBASETEXTURE ) + ( 4 * m_nMULTITEXTURE ) + ( 8 * m_nREFLECT ) + ( 16 * m_nREFRACT ) + ( 32 * m_nABOVEWATER ) + ( 64 * m_nFLOWMAP ) + ( 64 * m_nFLOW_DEBUG ) + ( 192 * m_nFLASHLIGHT ) + ( 192 * m_nLIGHTMAPWATERFOG ) + ( 192 * m_nFORCEFRESNEL ) + 0;
+		return ( 4 * m_nBASETEXTURE ) + ( 8 * m_nMULTITEXTURE ) + ( 16 * m_nREFLECT ) + ( 32 * m_nREFRACT ) + ( 64 * m_nABOVEWATER ) + ( 128 * m_nFLOWMAP ) + ( 128 * m_nFLOW_DEBUG ) + ( 384 * m_nFLASHLIGHT ) + ( 384 * m_nLIGHTMAPWATERFOG ) + ( 384 * m_nFORCEFRESNEL ) + ( 768 * m_nSIMPLEOVERLAY ) + 0;
 	}
 };
-#define shaderStaticTest_water_ps20 psh_forgot_to_set_static_BASETEXTURE + psh_forgot_to_set_static_MULTITEXTURE + psh_forgot_to_set_static_REFLECT + psh_forgot_to_set_static_REFRACT + psh_forgot_to_set_static_ABOVEWATER + psh_forgot_to_set_static_FLOW_DEBUG + psh_forgot_to_set_static_FORCEFRESNEL + 0
+#define shaderStaticTest_water_ps20 psh_forgot_to_set_static_BASETEXTURE + psh_forgot_to_set_static_MULTITEXTURE + psh_forgot_to_set_static_REFLECT + psh_forgot_to_set_static_REFRACT + psh_forgot_to_set_static_ABOVEWATER + psh_forgot_to_set_static_FLOW_DEBUG + psh_forgot_to_set_static_FORCEFRESNEL + psh_forgot_to_set_static_SIMPLEOVERLAY + 0
 class water_ps20_Dynamic_Index
 {
 private:
@@ -306,9 +344,32 @@ public:
 	}
 	void SetFLASHLIGHTSHADOWS( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 0 );
 		m_nFLASHLIGHTSHADOWS = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bFLASHLIGHTSHADOWS = true;
+#endif
+	}
+private:
+	int m_nBUILDWORLDIMPOSTER;
+#ifdef _DEBUG
+	bool m_bBUILDWORLDIMPOSTER;
+#endif
+public:
+	void SetBUILDWORLDIMPOSTER( int i )
+	{
+		Assert( i >= 0 && i <= 1 );
+		m_nBUILDWORLDIMPOSTER = i;
+#ifdef _DEBUG
+		m_bBUILDWORLDIMPOSTER = true;
+#endif
+	}
+	void SetBUILDWORLDIMPOSTER( bool i )
+	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		m_nBUILDWORLDIMPOSTER = i ? 1 : 0;
+#ifdef _DEBUG
+		m_bBUILDWORLDIMPOSTER = true;
 #endif
 	}
 private:
@@ -327,6 +388,7 @@ public:
 	}
 	void SetPIXELFOGTYPE( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nPIXELFOGTYPE = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bPIXELFOGTYPE = true;
@@ -341,6 +403,10 @@ public:
 #endif // _DEBUG
 		m_nFLASHLIGHTSHADOWS = 0; ;
 #ifdef _DEBUG
+		m_bBUILDWORLDIMPOSTER = true;
+#endif // _DEBUG
+		m_nBUILDWORLDIMPOSTER = r_buildingmapforworld.GetBool() ? 1 : 0 ;
+#ifdef _DEBUG
 		m_bPIXELFOGTYPE = true;
 #endif // _DEBUG
 		m_nPIXELFOGTYPE = ( pShaderAPI->GetSceneFogMode() == MATERIAL_FOG_LINEAR_BELOW_FOG_Z ) ;
@@ -350,10 +416,47 @@ public:
 		// Asserts to make sure that we aren't using any skipped combinations.
 		// Asserts to make sure that we are setting all of the combination vars.
 #ifdef _DEBUG
-		bool bAllDynamicVarsDefined = m_bFLASHLIGHTSHADOWS && m_bPIXELFOGTYPE;
+		bool bAllDynamicVarsDefined = m_bFLASHLIGHTSHADOWS && m_bBUILDWORLDIMPOSTER && m_bPIXELFOGTYPE;
 		Assert( bAllDynamicVarsDefined );
 #endif // _DEBUG
-		return ( 1 * m_nFLASHLIGHTSHADOWS ) + ( 1 * m_nPIXELFOGTYPE ) + 0;
+		return ( 1 * m_nFLASHLIGHTSHADOWS ) + ( 1 * m_nBUILDWORLDIMPOSTER ) + ( 2 * m_nPIXELFOGTYPE ) + 0;
 	}
 };
 #define shaderDynamicTest_water_ps20 0
+
+static const ShaderComboInformation_t s_DynamicComboArray_water_ps20[3] = 
+{
+	{ "FLASHLIGHTSHADOWS", 0, 0 },
+	{ "BUILDWORLDIMPOSTER", 0, 1 },
+	{ "PIXELFOGTYPE", 0, 1 },
+};
+
+static const ShaderComboInformation_t s_StaticComboArray_water_ps20[11] = 
+{
+	{ "BASETEXTURE", 0, 1 },
+	{ "MULTITEXTURE", 0, 1 },
+	{ "REFLECT", 0, 1 },
+	{ "REFRACT", 0, 1 },
+	{ "ABOVEWATER", 0, 1 },
+	{ "FLOWMAP", 0, 0 },
+	{ "FLOW_DEBUG", 0, 2 },
+	{ "FLASHLIGHT", 0, 0 },
+	{ "LIGHTMAPWATERFOG", 0, 0 },
+	{ "FORCEFRESNEL", 0, 1 },
+	{ "SIMPLEOVERLAY", 0, 1 },
+};
+static const ShaderComboSemantics_t water_ps20_combos =
+{
+	"water_ps20", s_DynamicComboArray_water_ps20, 3, s_StaticComboArray_water_ps20, 11 
+};
+
+class ConstructMe_water_ps20
+{
+public:
+	ConstructMe_water_ps20()
+	{
+		GetShaderDLL()->AddShaderComboInformation( &water_ps20_combos );
+	}
+};
+
+static ConstructMe_water_ps20 s_ConstructMe_water_ps20;

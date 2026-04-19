@@ -23,6 +23,7 @@ public:
 	}
 	void SetDEFERRED_SHADOWS( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 0 );
 		m_nDEFERRED_SHADOWS = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bDEFERRED_SHADOWS = true;
@@ -44,6 +45,7 @@ public:
 	}
 	void SetBLOBBY_SHADOWS( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nBLOBBY_SHADOWS = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bBLOBBY_SHADOWS = true;
@@ -92,6 +94,7 @@ public:
 	}
 	void SetPIXELFOGTYPE( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nPIXELFOGTYPE = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bPIXELFOGTYPE = true;
@@ -118,3 +121,29 @@ public:
 	}
 };
 #define shaderDynamicTest_shadow_ps20b 0
+
+static const ShaderComboInformation_t s_DynamicComboArray_shadow_ps20b[1] = 
+{
+	{ "PIXELFOGTYPE", 0, 1 },
+};
+
+static const ShaderComboInformation_t s_StaticComboArray_shadow_ps20b[2] = 
+{
+	{ "DEFERRED_SHADOWS", 0, 0 },
+	{ "BLOBBY_SHADOWS", 0, 1 },
+};
+static const ShaderComboSemantics_t shadow_ps20b_combos =
+{
+	"shadow_ps20b", s_DynamicComboArray_shadow_ps20b, 1, s_StaticComboArray_shadow_ps20b, 2 
+};
+
+class ConstructMe_shadow_ps20b
+{
+public:
+	ConstructMe_shadow_ps20b()
+	{
+		GetShaderDLL()->AddShaderComboInformation( &shadow_ps20b_combos );
+	}
+};
+
+static ConstructMe_shadow_ps20b s_ConstructMe_shadow_ps20b;

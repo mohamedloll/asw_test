@@ -23,6 +23,7 @@ public:
 	}
 	void SetBUMPMAP( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nBUMPMAP = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bBUMPMAP = true;
@@ -66,3 +67,23 @@ public:
 	}
 };
 #define shaderDynamicTest_cloak_blended_pass_ps30 0
+
+static const ShaderComboInformation_t s_StaticComboArray_cloak_blended_pass_ps30[1] = 
+{
+	{ "BUMPMAP", 0, 1 },
+};
+static const ShaderComboSemantics_t cloak_blended_pass_ps30_combos =
+{
+	"cloak_blended_pass_ps30", NULL, 0, s_StaticComboArray_cloak_blended_pass_ps30, 1 
+};
+
+class ConstructMe_cloak_blended_pass_ps30
+{
+public:
+	ConstructMe_cloak_blended_pass_ps30()
+	{
+		GetShaderDLL()->AddShaderComboInformation( &cloak_blended_pass_ps30_combos );
+	}
+};
+
+static ConstructMe_cloak_blended_pass_ps30 s_ConstructMe_cloak_blended_pass_ps30;

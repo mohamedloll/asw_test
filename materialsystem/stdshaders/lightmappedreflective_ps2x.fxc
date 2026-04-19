@@ -7,7 +7,7 @@
 
 #include "common_fog_ps_fxc.h"
 // DYNAMIC: "WRITE_DEPTH_TO_DESTALPHA"	"0..1"	[ps20b] [PC]
-// DYNAMIC: "WRITE_DEPTH_TO_DESTALPHA"	"0..0"	[ps20b] [XBOX]
+// DYNAMIC: "WRITE_DEPTH_TO_DESTALPHA"	"0..0"	[ps20b] [CONSOLE]
 
 #if defined( SHADER_MODEL_PS_2_0 )
 	#define WRITE_DEPTH_TO_DESTALPHA 0
@@ -47,14 +47,12 @@ struct PS_INPUT
 	float3 worldPos					: TEXCOORD5;
 
 #if BASETEXTURE
-// CENTROID: TEXCOORD6
-	float4 lightmapTexCoord1And2		: TEXCOORD6;
-// CENTROID: TEXCOORD7
-	float4 lightmapTexCoord3			: TEXCOORD7;
+	float4 lightmapTexCoord1And2		: TEXCOORD6_centroid;
+	float4 lightmapTexCoord3			: TEXCOORD7_centroid;
 #endif
 };
 
-float4 main( PS_INPUT i ) : COLOR
+float4_color_return_type main( PS_INPUT i ) : COLOR
 {
 	// Load normal and expand range
 	float4 vNormalTexel = tex2D( NormalSampler, i.vBumpTexCoordXY_vTexCoordXY.xy );
@@ -92,7 +90,7 @@ float4 main( PS_INPUT i ) : COLOR
 	float3 vRefractColor = float3( 0.0f, 0.0f, 0.0f );
 	#if ( REFRACT )
 	{
-		vRefractColor = tex2D( RefractSampler, vRefractTexCoord );
+		vRefractColor = tex2D( RefractSampler, vRefractTexCoord ).rgb;
 		vRefractColor.rgb *= g_vRefractTint.rgb;
 	}
 	#endif
@@ -117,8 +115,8 @@ float4 main( PS_INPUT i ) : COLOR
 
 		float4 lightmapSample1 = tex2D( LightmapSampler, bumpCoord1 );
 		float3 lightmapColor1 = lightmapSample1.rgb;
-		float3 lightmapColor2 = tex2D( LightmapSampler, bumpCoord2 );
-		float3 lightmapColor3 = tex2D( LightmapSampler, bumpCoord3 );
+		float3 lightmapColor2 = tex2D( LightmapSampler, bumpCoord2 ).rgb;
+		float3 lightmapColor3 = tex2D( LightmapSampler, bumpCoord3 ).rgb;
 
 		float3 dp;
 		dp.x = saturate( dot( vNormalTs, bumpBasis[0] ) );

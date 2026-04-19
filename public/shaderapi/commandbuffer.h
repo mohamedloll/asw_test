@@ -18,6 +18,9 @@
 #pragma once
 #endif
 
+#ifdef _PS3
+#define CBCMD_MAX_PS3TEX 8			// Max PS3 textures set in an ECB
+#endif
 
 //-----------------------------------------------------------------------------
 // Commands used by the per-pass command buffers
@@ -31,6 +34,13 @@ enum CommandBufferCommand_t
 													// non-sequentially allocated storage
 	CBCMD_JSR,										// int cmd, void *adr. subroutine call to another stream.
 
+#ifdef _PS3
+	CBCMD_PS3TEX,									// Textures. This command stores pointers to the BIND_TEXTURE commands
+													// Will fill in the Bind Texture commands just before issueing the ECB to the SPU
+													// This better emulates what happens on DX platforms, and so allows the weaponcache to function
+													// whilst still allowing the VRAM defrag feature om PS3
+	CBCMD_LENGTH,									// Length of command buffer
+#endif
 	// constant setting commands
 	CBCMD_SET_PIXEL_SHADER_FLOAT_CONST,				// int cmd,int first_reg, int nregs, float values[nregs*4]
 
@@ -41,9 +51,14 @@ enum CommandBufferCommand_t
 	CBCMD_STORE_EYE_POS_IN_PSCONST,					// int cmd, int regdest
 	CBCMD_SET_DEPTH_FEATHERING_CONST,				// int cmd, int constant register, float blend scale
 
-	// texture binding
+	// texture binding. sampler indices have TEXTURECMD_BINDFLAGS_xxx flags OR'd into them.
+
 	CBCMD_BIND_STANDARD_TEXTURE,					// cmd, sampler, texture id
 	CBCMD_BIND_SHADERAPI_TEXTURE_HANDLE,			// cmd, sampler, texture handle
+#ifdef _PS3
+	CBCMD_BIND_PS3_TEXTURE,							// cmd, CPs3BindTexture_t
+	CBCMD_BIND_PS3_STANDARD_TEXTURE,				// cmd, idx
+#endif
 
 	// shaders
 	CBCMD_SET_PSHINDEX,								// cmd, idx
@@ -91,9 +106,9 @@ enum CommandBufferInstanceCommand_t
 	CBICMD_BIND_ENV_CUBEMAP_TEXTURE,					// cmd, sampler
 
 	CBICMD_SETMODULATIONPIXELSHADERDYNAMICSTATE,
-	CBICMD_SETMODULATIONPIXELSHADERDYNAMICSTATE_LINEARCOLORSPACE_LINEARSCALE, // int cmd, int constant register, Vector color2
-	CBICMD_SETMODULATIONPIXELSHADERDYNAMICSTATE_LINEARCOLORSPACE,			// int cmd, int constant register, Vector color2
-	CBICMD_SETMODULATIONPIXELSHADERDYNAMICSTATE_LINEARSCALE,				// int cmd, int constant register, Vector color2, float scale
+	CBICMD_SETMODULATIONPIXELSHADERDYNAMICSTATE_LINEARCOLORSPACE_LINEARSCALE, // int cmd, int constant register, Vector color2, scale
+	CBICMD_SETMODULATIONPIXELSHADERDYNAMICSTATE_LINEARCOLORSPACE,			// int cmd, int constant register, Vector4d( color2, 1.0 )
+	CBICMD_SETMODULATIONPIXELSHADERDYNAMICSTATE_LINEARSCALE,				// int cmd, int constant register, Vector4d( color2, 1.0 ) float scale
 	CBICMD_SETMODULATIONPIXELSHADERDYNAMICSTATE_LINEARSCALE_SCALEINW,		// int cmd, int constant register, Vector color2, float scale
 	CBICMD_SETMODULATIONVERTEXSHADERDYNAMICSTATE,							// int cmd, int constant register, Vector color2
 	CBICMD_SETMODULATIONPIXELSHADERDYNAMICSTATE_IDENTITY,					// int cmd, int constant register

@@ -62,7 +62,7 @@ BEGIN_VS_SHADER_FLAGS( Shadow, "Help for Shadow", SHADER_NOT_EDITABLE )
 
 	SHADER_INIT
 	{
-		LoadTexture( BASETEXTURE );
+		LoadTexture( BASETEXTURE, TEXTUREFLAGS_SRGB );
 	}
 
 	SHADER_DRAW
@@ -151,11 +151,11 @@ BEGIN_VS_SHADER_FLAGS( Shadow, "Help for Shadow", SHADER_NOT_EDITABLE )
 		{
 			bool bDeferredShadows = ( params[DEFERREDSHADOWS]->GetIntValue() != 0 );
 
-			BindTexture( SHADER_SAMPLER0, BASETEXTURE, FRAME );
+			BindTexture( SHADER_SAMPLER0, TEXTURE_BINDFLAGS_SRGBREAD, BASETEXTURE, FRAME );
 
 			if ( bDeferredShadows )
 			{
-				BindTexture( SHADER_SAMPLER1, DEPTHTEXTURE );
+				BindTexture( SHADER_SAMPLER1, TEXTURE_BINDFLAGS_NONE, DEPTHTEXTURE );
 				//pShaderAPI->BindStandardTexture( SHADER_SAMPLER1, TEXTURE_FRAME_BUFFER_FULL_DEPTH );
 			}
 

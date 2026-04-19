@@ -21,6 +21,7 @@ public:
 	}
 	void SetDOPIXELFOG( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nDOPIXELFOG = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bDOPIXELFOG = true;
@@ -42,6 +43,7 @@ public:
 	}
 	void SetHARDWAREFOGBLEND( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nHARDWAREFOGBLEND = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bHARDWAREFOGBLEND = true;
@@ -90,6 +92,7 @@ public:
 	}
 	void SetDOWATERFOG( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nDOWATERFOG = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bDOWATERFOG = true;
@@ -111,6 +114,7 @@ public:
 	}
 	void SetCOMPRESSED_VERTS( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nCOMPRESSED_VERTS = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bCOMPRESSED_VERTS = true;
@@ -132,6 +136,7 @@ public:
 	}
 	void SetSKINNING( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nSKINNING = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bSKINNING = true;
@@ -166,3 +171,31 @@ public:
 	}
 };
 #define shaderDynamicTest_fillrate_vs20 vsh_forgot_to_set_dynamic_COMPRESSED_VERTS + vsh_forgot_to_set_dynamic_SKINNING + 0
+
+static const ShaderComboInformation_t s_DynamicComboArray_fillrate_vs20[3] = 
+{
+	{ "DOWATERFOG", 0, 1 },
+	{ "COMPRESSED_VERTS", 0, 1 },
+	{ "SKINNING", 0, 1 },
+};
+
+static const ShaderComboInformation_t s_StaticComboArray_fillrate_vs20[2] = 
+{
+	{ "DOPIXELFOG", 0, 1 },
+	{ "HARDWAREFOGBLEND", 0, 1 },
+};
+static const ShaderComboSemantics_t fillrate_vs20_combos =
+{
+	"fillrate_vs20", s_DynamicComboArray_fillrate_vs20, 3, s_StaticComboArray_fillrate_vs20, 2 
+};
+
+class ConstructMe_fillrate_vs20
+{
+public:
+	ConstructMe_fillrate_vs20()
+	{
+		GetShaderDLL()->AddShaderComboInformation( &fillrate_vs20_combos );
+	}
+};
+
+static ConstructMe_fillrate_vs20 s_ConstructMe_fillrate_vs20;

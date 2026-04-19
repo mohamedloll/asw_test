@@ -88,8 +88,8 @@ BEGIN_VS_SHADER( WorldVertexAlpha, "Help for WorldVertexAlpha" )
 			DYNAMIC_STATE
 			{
 				// Bind the base texture (Stage0) and lightmap (Stage1)
-				BindTexture( SHADER_SAMPLER0, BASETEXTURE );
-				pShaderAPI->BindStandardTexture( SHADER_SAMPLER1, TEXTURE_LIGHTMAP );
+				BindTexture( SHADER_SAMPLER0, false, BASETEXTURE );
+				pShaderAPI->BindStandardTexture( SHADER_SAMPLER1, false, TEXTURE_LIGHTMAP );
 
 				worldvertexalpha_Dynamic_Index vshIndex;
 				vshIndex.SetDOWATERFOG( pShaderAPI->GetSceneFogMode() == MATERIAL_FOG_LINEAR_BELOW_FOG_Z );
@@ -155,7 +155,7 @@ BEGIN_VS_SHADER( WorldVertexAlpha, "Help for WorldVertexAlpha" )
 			{
 				// Bind the base texture (Stage0) and lightmap (Stage1)
 				BindTexture( SHADER_SAMPLER0, BASETEXTURE );
-				pShaderAPI->BindStandardTexture( SHADER_SAMPLER1, TEXTURE_LIGHTMAP );
+				pShaderAPI->BindStandardTexture( SHADER_SAMPLER1, false, TEXTURE_LIGHTMAP );
 
 				worldvertexalpha_Dynamic_Index vshIndex;
 				vshIndex.SetDOWATERFOG( pShaderAPI->GetSceneFogMode() == MATERIAL_FOG_LINEAR_BELOW_FOG_Z );

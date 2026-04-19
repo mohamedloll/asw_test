@@ -1,19 +1,20 @@
+// STATIC: "ZOOM_ANIMATE_SEQ2"				"0..1"
 // STATIC: "DUALSEQUENCE"					"0..1"
 // STATIC: "ADDBASETEXTURE2"				"0..1"
 // STATIC: "EXTRACTGREENALPHA"				"0..1"
-// STATIC: "DEPTHBLEND"						"0..1" [XBOX]
-// STATIC: "DEPTHBLEND"						"0..0" [PC]
+// STATIC: "DEPTHBLEND"						"0..1" [CONSOLE]
+// STATIC: "DEPTHBLEND"						"0..1" [PC]
 // STATIC: "ANIMBLEND_OR_MAXLUMFRAMEBLEND1" "0..1"
 // STATIC: "CROP"							"0..1"
 // STATIC: "PACKED_INTERPOLATOR"			"0..1"
 // STATIC: "SPRITECARDVERTEXFOG"            "0..1"
 
-// STATIC: "HARDWAREFOGBLEND"				"0..0"	[XBOX]
+// STATIC: "HARDWAREFOGBLEND"				"0..0"	[CONSOLE]
 // STATIC: "HARDWAREFOGBLEND"				"0..1"	[PC] [vs20]
 // STATIC: "HARDWAREFOGBLEND"				"0..0"	[PC] [vs30]
 
 // STATIC: "PERPARTICLEOUTLINE"             "0..1"
-// DYNAMIC: "ORIENTATION"					"0..3"
+// DYNAMIC: "ORIENTATION"					"0..4"
 
 // If we aren't doing any sort of fog, then assume that HARDWAREFOGBLEND is forced to zero.
 
@@ -30,26 +31,30 @@
 // VS_OUTPUT in a common file.
 #include "common_spritecard_fxc.h"
 
-const float4x3 cModelView			: register(SHADER_SPECIFIC_CONST_0);
+const hlsl_float4x3 cModelView		: register(SHADER_SPECIFIC_CONST_0);
 const float4x4 cProj				: register(SHADER_SPECIFIC_CONST_3);
 
-#if !defined( SHADER_MODEL_VS_1_1 ) 
+#if ( ZOOM_ANIMATE_SEQ2 || SPRITECARDVERTEXFOG )
 const float4 ScaleParms             : register(SHADER_SPECIFIC_CONST_7);
 #define OLDFRM_SCALE_START (ScaleParms.x)
 #define OLDFRM_SCALE_END (ScaleParms.y)
 #define FOG_SCALE_FACTOR (ScaleParms.z)
 #endif
 
-const float4 SizeParms              : register(SHADER_SPECIFIC_CONST_8);
-const float4 SizeParms2             : register(SHADER_SPECIFIC_CONST_9);
+const float4 SizeParms			: register(SHADER_SPECIFIC_CONST_8);
+const float4 SizeParms2			: register(SHADER_SPECIFIC_CONST_9);
 
-const float4 g_vViewportMad         : register(SHADER_SPECIFIC_CONST_10);
-const float4 g_vCropFactor			: register(SHADER_SPECIFIC_CONST_11);
+const float4 g_vCropFactor		: register(SHADER_SPECIFIC_CONST_11);
+
+const float4 g_vDepthFeatherProjToViewZW[ 2 ]	: register( SHADER_SPECIFIC_CONST_12 );
 
 #if !defined( SHADER_MODEL_VS_1_1 ) 
-const bool g_bZoomAnimateSeq2		: register( SHADER_SPECIFIC_BOOL_CONST_0 );
-const bool g_bExtractGreenAlpha		: register( SHADER_SPECIFIC_BOOL_CONST_1 );
-const bool g_bUseInstancing			: register( SHADER_SPECIFIC_BOOL_CONST_2 );
+const bool g_bUseInstancing		: register( SHADER_SPECIFIC_BOOL_CONST_0 );
+#endif
+
+#if 0 // JasonM - do we want control flow? - note that we moved these slightly
+const bool g_bZoomAnimateSeq2		: register( SHADER_SPECIFIC_BOOL_CONST_1 );
+const bool g_bExtractGreenAlpha		: register( SHADER_SPECIFIC_BOOL_CONST_2 );
 #endif
 
 #define MINIMUM_SIZE_FACTOR (SizeParms.x)
@@ -90,10 +95,10 @@ struct VS_INPUT
 	float4 vParms1          : TEXCOORD7;  // second frame blend, ?,?,?
 #endif
 #if PERPARTICLEOUTLINE
-	float4 vecOutlineTint     : TEXCOORD5;
+	float4 vecOutlineTint	: TEXCOORD5;
 #endif
 #if ( ORIENTATION == 3 )									// orient to normal
-	float4 vecNormal     : TEXCOORD5;
+	float4 vecNormal		: TEXCOORD5;
 #endif
 };
 
@@ -104,7 +109,7 @@ struct VS_INPUT
 
 #define ONE_OVER_255 0.00392156863
 
-#if !defined( SHADER_MODEL_VS_1_1 ) 
+#if ( ZOOM_ANIMATE_SEQ2 ) 
 float getlerpscaled( float l_in, float s0, float s1, float ts )
 {
 	l_in = 2.0*(l_in-.5);
@@ -121,7 +126,7 @@ float getlerpscale_for_new_frame( float l_in, float ts )
 {
 	return getlerpscaled( l_in, 1.0, OLDFRM_SCALE_START, ts );
 }
-#endif
+#endif // ZOOM_ANIMATE_SEQ2
 
 #ifdef DO_INSTANCING
 void InstancedVertexRead( inout VS_INPUT v, int index )
@@ -205,13 +210,19 @@ VS_OUTPUT main( CONST_PC VS_INPUT v
 	}
 #endif
 
-#if ( ! DUALSEQUENCE )
-#if PERPARTICLEOUTLINE
-    o.vecOutlineTint = GammaToLinear( v.vecOutlineTint );
-#else
-	o.vecOutlineTint = 1;
-#endif
-#endif
+	#if ( !DUALSEQUENCE )
+	{
+		#if ( PERPARTICLEOUTLINE )
+		{
+			o.vecOutlineTint = GammaToLinear( v.vecOutlineTint );
+		}
+		#else
+		{
+			o.vecOutlineTint = 1;
+		}
+		#endif
+	}
+	#endif
 
 #if SHADER_MODEL_VS_1_1
 	float4 tint = v.vTint;
@@ -270,7 +281,7 @@ VS_OUTPUT main( CONST_PC VS_INPUT v
 		rad = 0;											// cull so we emit 0-sized sprite
 #endif
 
-    if ( SPRITECARDVERTEXFOG )
+   	#if ( SPRITECARDVERTEXFOG )
 	{
 		// fade tint.a based upon fog amount
 		float ffactor = 0.0f;
@@ -292,6 +303,7 @@ VS_OUTPUT main( CONST_PC VS_INPUT v
 		ffactor = lerp( 1, ffactor, FOG_SCALE_FACTOR );
 		tint.a *= ffactor;
 	}
+	#endif
 
 	if ( tint.a < ONE_OVER_255 )
 	{
@@ -301,74 +313,92 @@ VS_OUTPUT main( CONST_PC VS_INPUT v
 
 	rad = min( rad, MAXIMUM_SIZE_FACTOR * l );
 
-#if ORIENTATION == 0
-	// Screen-aligned case
-	float3 viewPos;
-	viewPos = mul4x3( v.vPos, cModelView );
-
-	float3 disp = float3( -x1, y1, 0 );
-	
- 	float tmpx =	disp.x * sc_yaw.x + disp.z * sc_yaw.y;
- 	disp.z =		disp.z * sc_yaw.x - disp.x * sc_yaw.y;
- 	disp.x = tmpx;
-	
-	viewPos.xyz += disp * rad;
-
-	projPos  = mul( float4( viewPos, 1.0f ), cProj );
-#endif
-	
-#if ( ( ORIENTATION == 1 ) || ( ORIENTATION == 3 ) )
-	// Z-aligned case
-	if (l > rad/2)
+	#if ( ORIENTATION == 0 )
 	{
-		float3 up = float3(0,0,1);
-		float3 right = normalize(cross(up, v2p));
-		#if ( ORIENTATION == 3 )
-		{
-			float3 vNormal = v.vecNormal.xyz;
-			float3 vTrialVector = float3( 0, 0, 1 );
-			if ( abs( vNormal.z ) > 0.9 )
-			{
-				vTrialVector = float3( 1, 0, 0 );
-			}
-			up = normalize( cross( vNormal, vTrialVector ) );
-			right = cross( vNormal, up );
-		}
-		#else  // no yaw support for normal aligned
-		float tmpx = right.x * sc_yaw.x + right.y * sc_yaw.y;
-		right.y = right.y * sc_yaw.x - right.x * sc_yaw.y;
-		right.x = tmpx;
-		#endif
+		// Screen-aligned case
+		float3 viewPos;
+		viewPos = mul4x3( v.vPos, cModelView );
+				
+		float3 disp = float3( -x1, y1, 0 );
+	
+	 	float tmpx =	disp.x * sc_yaw.x + disp.z * sc_yaw.y;
+	 	disp.z =		disp.z * sc_yaw.x - disp.x * sc_yaw.y;
+	 	disp.x = tmpx;
+	
+		viewPos.xyz += disp * rad;
 
-		worldPos += ( x1 * rad ) * right;
-		worldPos += ( y1 * rad ) * up;
+		projPos  = mul( float4( viewPos, 1.0f ), cProj );
+	}
+	#endif
+	
+	#if ( ( ORIENTATION == 1 ) || ( ORIENTATION == 3 ) || ( ORIENTATION == 4 ) )
+	{
+		// Z-aligned case
+		if (l > rad/2)
+		{
+			float3 up = float3(0,0,1);
+			float3 right = normalize(cross(up, v2p));
+
+			#if ( ORIENTATION == 4 )
+			{
+				up = normalize(cross(right, v2p));
+			}
+			#endif
+
+			#if ( ORIENTATION == 3 )
+			{
+				float3 vNormal = v.vecNormal.xyz;
+				float3 vTrialVector = float3( 0, 0, 1 );
+				if ( abs( vNormal.z ) > 0.9 )
+				{
+					vTrialVector = float3( 1, 0, 0 );
+				}
+				up = normalize( cross( vNormal, vTrialVector ) );
+				right = cross( vNormal, up );
+			}
+			#else  // no yaw support for normal aligned
+			{
+				float tmpx = right.x * sc_yaw.x + right.y * sc_yaw.y;
+				right.y = right.y * sc_yaw.x - right.x * sc_yaw.y;
+				right.x = tmpx;
+			}
+			#endif
+
+			worldPos += ( x1 * rad ) * right;
+			worldPos += ( y1 * rad ) * up;
 		
 #ifndef SHADER_MODEL_VS_1_1
-		if (l < rad*2 )
-		{
-			tint *= smoothstep(rad/2,rad,l);
+			if (l < rad*2 )
+			{
+				tint *= smoothstep(rad/2,rad,l);
+			}
+#endif
+
 		}
-#endif
-
+		
+		projPos  = mul( float4(worldPos, 1.0f), cViewProj );
 	}
-	projPos  = mul( float4(worldPos, 1.0f), cViewProj );
-#endif
+	#endif // ( ( ORIENTATION == 1 ) || ( ORIENTATION == 3 ) || ( ORIENTATION == 4 ) )
 
-#if ORIENTATION == 2
-	// aligned with z plane case - easy
-	// Need to rotate it into the space of the control point though
-	// We're using cModelView to store that transformation since it's
-	// only used as cModelView in ORIENTATION mode 0.
-	float3 vOffset;
-	vOffset = mul3x3( float3( y1, x1, 0 ), cModelView );
+	#if ( ORIENTATION == 2 )
+	{
+		// aligned with z plane case - easy
+		// Need to rotate it into the space of the control point though
+		// We're using cModelView to store that transformation since it's
+		// only used as cModelView in ORIENTATION mode 0.
+		float3 vOffset = mul3x3( float3( y1, x1, 0 ), ( float3x3 )cModelView );
 
-	float3 wpos = v.vPos + RADIUS * vOffset;
-	projPos  = mul( float4(wpos, 1.0f), cModelViewProj );
-#endif
+		float3 wpos = v.vPos.xyz + RADIUS * vOffset;
+		projPos  = mul( float4(wpos, 1.0f), cModelViewProj );
+	}
+	#endif
 
-#if HAS_BLENDFACTOR0
-	o.blendfactor0 = float4( v.vParms.x, 0, 0, 0 );
-#endif
+	#if ( HAS_BLENDFACTOR0 )
+	{
+		o.blendfactor0 = float4( v.vParms.x, 0, 0, 0 );
+	}
+	#endif
+	
 	o.projPos		= projPos;
 	
 	#if ( CROP )
@@ -383,27 +413,32 @@ VS_OUTPUT main( CONST_PC VS_INPUT v
 	}
 	#endif
 
-#if ADDBASETEXTURE2
-	o.texCoord2.xy	= lerp( v.vTexCoord2.zw, v.vTexCoord2.xy, v.vCornerID.xy );
-#endif
-
-#if DUALSEQUENCE
-	float2 lerpold = v.vCornerID.xy;
-	float2 lerpnew = v.vCornerID.xy;
-
-	if ( g_bZoomAnimateSeq2 )
+	#if ( ADDBASETEXTURE2 )
 	{
-		lerpold.x = getlerpscale_for_old_frame( v.vCornerID.x, v.vParms1.x );
-		lerpold.y = getlerpscale_for_old_frame( v.vCornerID.y, v.vParms1.x );
-		lerpnew.x = getlerpscale_for_new_frame( v.vCornerID.x, v.vParms1.x );
-		lerpnew.y = getlerpscale_for_new_frame( v.vCornerID.y, v.vParms1.x );
+		o.texCoord2.xy	= lerp( v.vTexCoord2.zw, v.vTexCoord2.xy, v.vCornerID.xy );
 	}
+	#endif
 
-	o.vSeq2TexCoord0_1.xy	= lerp( v.vSeq2TexCoord0.zw, v.vSeq2TexCoord0.xy, lerpold.xy );
-	o.vSeq2TexCoord0_1.wz	= lerp( v.vSeq2TexCoord1.zw, v.vSeq2TexCoord1.xy, lerpnew.xy );
+	#if ( DUALSEQUENCE )
+	{
+		float2 lerpold = v.vCornerID.xy;
+		float2 lerpnew = v.vCornerID.xy;
 
-	o.blendfactor0.z = v.vParms1.x;
-#endif
+		#if ( ZOOM_ANIMATE_SEQ2 )
+		{
+			lerpold.x = getlerpscale_for_old_frame( v.vCornerID.x, v.vParms1.x );
+			lerpold.y = getlerpscale_for_old_frame( v.vCornerID.y, v.vParms1.x );
+			lerpnew.x = getlerpscale_for_new_frame( v.vCornerID.x, v.vParms1.x );
+			lerpnew.y = getlerpscale_for_new_frame( v.vCornerID.y, v.vParms1.x );
+		}
+		#endif
+
+		o.vSeq2TexCoord0_1.xy	= lerp( v.vSeq2TexCoord0.zw, v.vSeq2TexCoord0.xy, lerpold.xy );
+		o.vSeq2TexCoord0_1.wz	= lerp( v.vSeq2TexCoord1.zw, v.vSeq2TexCoord1.xy, lerpnew.xy );
+
+		o.blendfactor0.z = v.vParms1.x;
+	}
+	#endif
 
 	#if ( EXTRACTGREENALPHA )
 	{
@@ -427,21 +462,11 @@ VS_OUTPUT main( CONST_PC VS_INPUT v
 	}
 	#endif
 
-	// Map projected position to the refraction texture
-	float2 vScreenPos;
-	vScreenPos.x = projPos.x;
-	vScreenPos.y = -projPos.y; // invert Y
-	vScreenPos = (vScreenPos + projPos.w) * 0.5f;
-
-	// Adjust for current viewport
-	vScreenPos.xy = ( ( ( vScreenPos.xy / projPos.w ) * g_vViewportMad.xy ) + g_vViewportMad.zw ) * projPos.w;
-
 	#if DEPTHBLEND
-		#if defined( _X360 )
-			o.vScreenPos_ReverseZ = float4(vScreenPos.x, vScreenPos.y, projPos.w - projPos.z, projPos.w );
-		#else
-			o.vScreenPos = float4(vScreenPos.x, vScreenPos.y, projPos.z, projPos.w );
-		#endif
+		o.vProjPos = projPos;
+		// Compute fragment's viewspace Z from its projection space coord, saves PS 
+		o.vProjPos.z = dot( projPos, g_vDepthFeatherProjToViewZW[0] ); 
+		o.vProjPos.z /= dot( projPos, g_vDepthFeatherProjToViewZW[1] );
 	#endif
 
 	#if ( PACKED_INTERPOLATOR == 1 )
@@ -454,11 +479,17 @@ VS_OUTPUT main( CONST_PC VS_INPUT v
 	}
 	#endif
 
-	#if !defined( _X360 ) && !defined( SHADER_MODEL_VS_3_0 )
+	#if ( !defined( _X360 ) && !defined( SHADER_MODEL_VS_3_0 ) )
 	{
 		o.fog = 1.0f;
 	}
 	#endif
+
+#ifdef _PS3
+	// Account for OpenGL's flipped y coordinate and expanded z range [-1,1] instead of [0,1]
+	o.projPos.y = -o.projPos.y;
+	o.projPos.z = 2.0f * o.projPos.z - o.projPos.w;
+#endif // _PS3
 
 	return o;
 }

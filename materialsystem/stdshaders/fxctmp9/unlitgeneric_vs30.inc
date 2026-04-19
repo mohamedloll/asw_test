@@ -22,6 +22,7 @@ public:
 	}
 	void SetVERTEXCOLOR( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nVERTEXCOLOR = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bVERTEXCOLOR = true;
@@ -43,6 +44,7 @@ public:
 	}
 	void SetDOPIXELFOG( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nDOPIXELFOG = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bDOPIXELFOG = true;
@@ -64,6 +66,7 @@ public:
 	}
 	void SetHARDWAREFOGBLEND( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 0 );
 		m_nHARDWAREFOGBLEND = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bHARDWAREFOGBLEND = true;
@@ -94,7 +97,7 @@ public:
 		bool bAllStaticVarsDefined = m_bVERTEXCOLOR && m_bDOPIXELFOG && m_bHARDWAREFOGBLEND;
 		Assert( bAllStaticVarsDefined );
 #endif // _DEBUG
-		return ( 24 * m_nVERTEXCOLOR ) + ( 48 * m_nDOPIXELFOG ) + ( 96 * m_nHARDWAREFOGBLEND ) + 0;
+		return ( 8 * m_nVERTEXCOLOR ) + ( 16 * m_nDOPIXELFOG ) + ( 32 * m_nHARDWAREFOGBLEND ) + 0;
 	}
 };
 #define shaderStaticTest_unlitgeneric_vs30 vsh_forgot_to_set_static_VERTEXCOLOR + 0
@@ -116,6 +119,7 @@ public:
 	}
 	void SetCOMPRESSED_VERTS( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nCOMPRESSED_VERTS = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bCOMPRESSED_VERTS = true;
@@ -137,6 +141,7 @@ public:
 	}
 	void SetSKINNING( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nSKINNING = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bSKINNING = true;
@@ -150,7 +155,7 @@ private:
 public:
 	void SetTESSELLATION( int i )
 	{
-		Assert( i >= 0 && i <= 2 );
+		Assert( i >= 0 && i <= 0 );
 		m_nTESSELLATION = i;
 #ifdef _DEBUG
 		m_bTESSELLATION = true;
@@ -158,6 +163,7 @@ public:
 	}
 	void SetTESSELLATION( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 0 );
 		m_nTESSELLATION = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bTESSELLATION = true;
@@ -179,6 +185,7 @@ public:
 	}
 	void SetDOWATERFOG( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nDOWATERFOG = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bDOWATERFOG = true;
@@ -213,7 +220,37 @@ public:
 		bool bAllDynamicVarsDefined = m_bCOMPRESSED_VERTS && m_bSKINNING && m_bTESSELLATION && m_bDOWATERFOG;
 		Assert( bAllDynamicVarsDefined );
 #endif // _DEBUG
-		return ( 1 * m_nCOMPRESSED_VERTS ) + ( 2 * m_nSKINNING ) + ( 4 * m_nTESSELLATION ) + ( 12 * m_nDOWATERFOG ) + 0;
+		return ( 1 * m_nCOMPRESSED_VERTS ) + ( 2 * m_nSKINNING ) + ( 4 * m_nTESSELLATION ) + ( 4 * m_nDOWATERFOG ) + 0;
 	}
 };
 #define shaderDynamicTest_unlitgeneric_vs30 vsh_forgot_to_set_dynamic_COMPRESSED_VERTS + vsh_forgot_to_set_dynamic_SKINNING + vsh_forgot_to_set_dynamic_TESSELLATION + 0
+
+static const ShaderComboInformation_t s_DynamicComboArray_unlitgeneric_vs30[4] = 
+{
+	{ "COMPRESSED_VERTS", 0, 1 },
+	{ "SKINNING", 0, 1 },
+	{ "TESSELLATION", 0, 0 },
+	{ "DOWATERFOG", 0, 1 },
+};
+
+static const ShaderComboInformation_t s_StaticComboArray_unlitgeneric_vs30[3] = 
+{
+	{ "VERTEXCOLOR", 0, 1 },
+	{ "DOPIXELFOG", 0, 1 },
+	{ "HARDWAREFOGBLEND", 0, 0 },
+};
+static const ShaderComboSemantics_t unlitgeneric_vs30_combos =
+{
+	"unlitgeneric_vs30", s_DynamicComboArray_unlitgeneric_vs30, 4, s_StaticComboArray_unlitgeneric_vs30, 3 
+};
+
+class ConstructMe_unlitgeneric_vs30
+{
+public:
+	ConstructMe_unlitgeneric_vs30()
+	{
+		GetShaderDLL()->AddShaderComboInformation( &unlitgeneric_vs30_combos );
+	}
+};
+
+static ConstructMe_unlitgeneric_vs30 s_ConstructMe_unlitgeneric_vs30;

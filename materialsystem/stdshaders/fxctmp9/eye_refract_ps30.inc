@@ -33,6 +33,7 @@ public:
 	}
 	void SetFLASHLIGHT( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nFLASHLIGHT = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bFLASHLIGHT = true;
@@ -54,6 +55,7 @@ public:
 	}
 	void SetLIGHTWARPTEXTURE( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nLIGHTWARPTEXTURE = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bLIGHTWARPTEXTURE = true;
@@ -75,6 +77,7 @@ public:
 	}
 	void SetSPHERETEXKILLCOMBO( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nSPHERETEXKILLCOMBO = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bSPHERETEXKILLCOMBO = true;
@@ -96,6 +99,7 @@ public:
 	}
 	void SetRAYTRACESPHERE( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nRAYTRACESPHERE = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bRAYTRACESPHERE = true;
@@ -117,6 +121,7 @@ public:
 	}
 	void SetFLASHLIGHTDEPTHFILTERMODE( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 2 );
 		m_nFLASHLIGHTDEPTHFILTERMODE = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bFLASHLIGHTDEPTHFILTERMODE = true;
@@ -138,6 +143,7 @@ public:
 	}
 	void SetWORLD_NORMAL( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nWORLD_NORMAL = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bWORLD_NORMAL = true;
@@ -202,6 +208,7 @@ public:
 	}
 	void SetPIXELFOGTYPE( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nPIXELFOGTYPE = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bPIXELFOGTYPE = true;
@@ -223,6 +230,7 @@ public:
 	}
 	void SetNUM_LIGHTS( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 4 );
 		m_nNUM_LIGHTS = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bNUM_LIGHTS = true;
@@ -244,6 +252,7 @@ public:
 	}
 	void SetFLASHLIGHTSHADOWS( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nFLASHLIGHTSHADOWS = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bFLASHLIGHTSHADOWS = true;
@@ -265,6 +274,7 @@ public:
 	}
 	void SetUBERLIGHT( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nUBERLIGHT = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bUBERLIGHT = true;
@@ -303,3 +313,36 @@ public:
 	}
 };
 #define shaderDynamicTest_eye_refract_ps30 psh_forgot_to_set_dynamic_NUM_LIGHTS + psh_forgot_to_set_dynamic_FLASHLIGHTSHADOWS + psh_forgot_to_set_dynamic_UBERLIGHT + 0
+
+static const ShaderComboInformation_t s_DynamicComboArray_eye_refract_ps30[4] = 
+{
+	{ "PIXELFOGTYPE", 0, 1 },
+	{ "NUM_LIGHTS", 0, 4 },
+	{ "FLASHLIGHTSHADOWS", 0, 1 },
+	{ "UBERLIGHT", 0, 1 },
+};
+
+static const ShaderComboInformation_t s_StaticComboArray_eye_refract_ps30[6] = 
+{
+	{ "FLASHLIGHT", 0, 1 },
+	{ "LIGHTWARPTEXTURE", 0, 1 },
+	{ "SPHERETEXKILLCOMBO", 0, 1 },
+	{ "RAYTRACESPHERE", 0, 1 },
+	{ "FLASHLIGHTDEPTHFILTERMODE", 0, 2 },
+	{ "WORLD_NORMAL", 0, 1 },
+};
+static const ShaderComboSemantics_t eye_refract_ps30_combos =
+{
+	"eye_refract_ps30", s_DynamicComboArray_eye_refract_ps30, 4, s_StaticComboArray_eye_refract_ps30, 6 
+};
+
+class ConstructMe_eye_refract_ps30
+{
+public:
+	ConstructMe_eye_refract_ps30()
+	{
+		GetShaderDLL()->AddShaderComboInformation( &eye_refract_ps30_combos );
+	}
+};
+
+static ConstructMe_eye_refract_ps30 s_ConstructMe_eye_refract_ps30;

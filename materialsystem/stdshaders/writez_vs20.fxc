@@ -31,9 +31,17 @@ VS_OUTPUT main( const VS_INPUT v )
 	}
 #	else
 	{
-		o.vProjPos = mul( v.vPos, cModelViewProj );
+		float3 worldPos;
+		worldPos = mul4x3( v.vPos, cModel[0] );
+		o.vProjPos = mul( float4( worldPos, 1 ), cViewProj );
 	}
 #	endif
 	
+#ifdef _PS3
+	// Account for OpenGL's flipped y coordinate and expanded z range [-1,1] instead of [0,1]
+	o.vProjPos.y = -o.vProjPos.y;
+	o.vProjPos.z = 2.0f * o.vProjPos.z - o.vProjPos.w;
+#endif // _PS3
+
 	return o;
 }

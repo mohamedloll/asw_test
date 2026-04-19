@@ -20,6 +20,7 @@ public:
 	}
 	void SetTEETH( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nTEETH = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bTEETH = true;
@@ -41,6 +42,7 @@ public:
 	}
 	void SetDOPIXELFOG( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nDOPIXELFOG = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bDOPIXELFOG = true;
@@ -62,6 +64,7 @@ public:
 	}
 	void SetHARDWAREFOGBLEND( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nHARDWAREFOGBLEND = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bHARDWAREFOGBLEND = true;
@@ -114,6 +117,7 @@ public:
 	}
 	void SetSKINNING( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nSKINNING = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bSKINNING = true;
@@ -135,6 +139,7 @@ public:
 	}
 	void SetDOWATERFOG( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nDOWATERFOG = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bDOWATERFOG = true;
@@ -165,3 +170,31 @@ public:
 	}
 };
 #define shaderDynamicTest_vertexlitgeneric_flashlight_vs20 vsh_forgot_to_set_dynamic_SKINNING + 0
+
+static const ShaderComboInformation_t s_DynamicComboArray_vertexlitgeneric_flashlight_vs20[2] = 
+{
+	{ "SKINNING", 0, 1 },
+	{ "DOWATERFOG", 0, 1 },
+};
+
+static const ShaderComboInformation_t s_StaticComboArray_vertexlitgeneric_flashlight_vs20[3] = 
+{
+	{ "TEETH", 0, 1 },
+	{ "DOPIXELFOG", 0, 1 },
+	{ "HARDWAREFOGBLEND", 0, 1 },
+};
+static const ShaderComboSemantics_t vertexlitgeneric_flashlight_vs20_combos =
+{
+	"vertexlitgeneric_flashlight_vs20", s_DynamicComboArray_vertexlitgeneric_flashlight_vs20, 2, s_StaticComboArray_vertexlitgeneric_flashlight_vs20, 3 
+};
+
+class ConstructMe_vertexlitgeneric_flashlight_vs20
+{
+public:
+	ConstructMe_vertexlitgeneric_flashlight_vs20()
+	{
+		GetShaderDLL()->AddShaderComboInformation( &vertexlitgeneric_flashlight_vs20_combos );
+	}
+};
+
+static ConstructMe_vertexlitgeneric_flashlight_vs20 s_ConstructMe_vertexlitgeneric_flashlight_vs20;

@@ -6,10 +6,10 @@ sampler TexSampler	: register( s0 );
 
 struct PS_INPUT
 {
-	HALF2 baseTexCoord				: TEXCOORD0;		// Base texture coordinate
+	float2 baseTexCoord				: TEXCOORD0;		// Base texture coordinate
 };
 
-float4 main( PS_INPUT i ) : COLOR
+float4_color_return_type main( PS_INPUT i ) : COLOR
 {
 	float4 result = tex2D( TexSampler, i.baseTexCoord );
 	

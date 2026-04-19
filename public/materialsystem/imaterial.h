@@ -28,54 +28,50 @@ class Vector;
 //-----------------------------------------------------------------------------
 // Flags for GetVertexFormat
 //-----------------------------------------------------------------------------
-enum VertexFormatFlags_t
-{
-	// Indicates an uninitialized VertexFormat_t value
-	VERTEX_FORMAT_INVALID = 0xFFFFFFFFFFFFFFFFull,
+#define	VERTEX_POSITION					0x0001
+#define	VERTEX_NORMAL					0x0002
+#define	VERTEX_COLOR					0x0004
+#define	VERTEX_SPECULAR					0x0008
 
-	VERTEX_POSITION	= 0x0001,
-	VERTEX_NORMAL	= 0x0002,
-	VERTEX_COLOR	= 0x0004,
-	VERTEX_SPECULAR = 0x0008,
+#define	VERTEX_TANGENT_S				0x0010
+#define	VERTEX_TANGENT_T				0x0020
+#define	VERTEX_TANGENT_SPACE			( VERTEX_TANGENT_S | VERTEX_TANGENT_T )
 
-	VERTEX_TANGENT_S	= 0x0010,
-	VERTEX_TANGENT_T	= 0x0020,
-	VERTEX_TANGENT_SPACE= VERTEX_TANGENT_S | VERTEX_TANGENT_T,
+// Indicates we're using wrinkle
+#define	VERTEX_WRINKLE					0x0040
 
-	// Indicates we're using wrinkle
-	VERTEX_WRINKLE	= 0x0040,
-
-	// Indicates we're using bone indices
-	VERTEX_BONE_INDEX = 0x0080,
+// Indicates we're using bone indices
+#define	VERTEX_BONE_INDEX				0x0080
 
 	// Indicates this expects a color stream on stream 1
-	VERTEX_COLOR_STREAM_1 = 0x0100,
+#define VERTEX_COLOR_STREAM_1			0x0100
 
-	// Indicates this format shouldn't be bloated to cache align it
-	// (only used for VertexUsage)
-	VERTEX_FORMAT_USE_EXACT_FORMAT = 0x0200,
+// Indicates this format shouldn't be bloated to cache align it
+// (only used for VertexUsage)
+#define	VERTEX_FORMAT_USE_EXACT_FORMAT	0x0200
 
-	// Indicates that compressed vertex elements are to be used (see also VertexCompressionType_t)
-	VERTEX_FORMAT_COMPRESSED = 0x400,
+// Indicates that compressed vertex elements are to be used (see also VertexCompressionType_t)
+#define	VERTEX_FORMAT_COMPRESSED		0x400
 
-	// Position or normal (if present) should be 4D not 3D
-	VERTEX_FORMAT_PAD_POS_NORM = 0x800,
+// Position or normal (if present) should be 4D not 3D
+#define VERTEX_FORMAT_PAD_POS_NORM		0x800
 
-	// Update this if you add or remove bits...
-	VERTEX_LAST_BIT = 11,
+// Update this if you add or remove bits...
+#define	VERTEX_LAST_BIT					11
 
-	VERTEX_BONE_WEIGHT_BIT = VERTEX_LAST_BIT + 1,
-	USER_DATA_SIZE_BIT = VERTEX_LAST_BIT + 4,
-	TEX_COORD_SIZE_BIT = VERTEX_LAST_BIT + 7,
+#define	VERTEX_BONE_WEIGHT_BIT			(VERTEX_LAST_BIT + 1)
+#define	USER_DATA_SIZE_BIT				(VERTEX_LAST_BIT + 4)
+#define	TEX_COORD_SIZE_BIT				(VERTEX_LAST_BIT + 7)
 
-	VERTEX_BONE_WEIGHT_MASK = ( 0x7 << VERTEX_BONE_WEIGHT_BIT ),
-	USER_DATA_SIZE_MASK = ( 0x7 << USER_DATA_SIZE_BIT ),
+#define	VERTEX_BONE_WEIGHT_MASK			( 0x7 << VERTEX_BONE_WEIGHT_BIT )
+#define	USER_DATA_SIZE_MASK				( 0x7 << USER_DATA_SIZE_BIT )
 
-	VERTEX_FORMAT_FIELD_MASK = 0x0FF,
+#define	VERTEX_FORMAT_FIELD_MASK		0x0FF
 
-	// If everything is off, it's an unknown vertex format
-	VERTEX_FORMAT_UNKNOWN = 0,
-};
+// If everything is off, it's an unknown vertex format
+#define	VERTEX_FORMAT_UNKNOWN			0
+
+
 
 //-----------------------------------------------------------------------------
 // Macros for construction..
@@ -370,7 +366,7 @@ enum MaterialVarFlags_t
 	MATERIAL_VAR_SELFILLUM				  = (1 << 6),
 	MATERIAL_VAR_ADDITIVE				  = (1 << 7),
 	MATERIAL_VAR_ALPHATEST				  = (1 << 8),
-//	MATERIAL_VAR_UNUSED					  = (1 << 9),
+	MATERIAL_VAR_PSEUDO_TRANSLUCENT		  = (1 << 9), // used to mark water materials for rendering after opaques but before translucents (with alpha blending but also with depth writes)
 	MATERIAL_VAR_ZNEARER				  = (1 << 10),
 	MATERIAL_VAR_MODEL					  = (1 << 11),
 	MATERIAL_VAR_FLAT					  = (1 << 12),
@@ -379,14 +375,14 @@ enum MaterialVarFlags_t
 	MATERIAL_VAR_IGNOREZ				  = (1 << 15),
 	MATERIAL_VAR_DECAL					  = (1 << 16),
 	MATERIAL_VAR_ENVMAPSPHERE			  = (1 << 17), // OBSOLETE
-//	MATERIAL_VAR_UNUSED					  = (1 << 18),
+	MATERIAL_VAR_AOPREPASS				  = (1 << 18),
 	MATERIAL_VAR_ENVMAPCAMERASPACE	      = (1 << 19), // OBSOLETE
 	MATERIAL_VAR_BASEALPHAENVMAPMASK	  = (1 << 20),
 	MATERIAL_VAR_TRANSLUCENT              = (1 << 21),
 	MATERIAL_VAR_NORMALMAPALPHAENVMAPMASK = (1 << 22),
 	MATERIAL_VAR_NEEDS_SOFTWARE_SKINNING  = (1 << 23), // OBSOLETE
 	MATERIAL_VAR_OPAQUETEXTURE			  = (1 << 24),
-	MATERIAL_VAR_ENVMAPMODE				  = (1 << 25), // OBSOLETE
+	MATERIAL_VAR_MULTIPLY				  = (1 << 25),
 	MATERIAL_VAR_SUPPRESS_DECALS		  = (1 << 26),
 	MATERIAL_VAR_HALFLAMBERT			  = (1 << 27),
 	MATERIAL_VAR_WIREFRAME                = (1 << 28),
@@ -424,9 +420,8 @@ enum MaterialVarFlags2_t
 	MATERIAL_VAR2_NEEDS_SOFTWARE_LIGHTING					= (1 << 7),
 	// GR - HDR path puts lightmap alpha in separate texture...
 	MATERIAL_VAR2_BLEND_WITH_LIGHTMAP_ALPHA					= (1 << 8),
-	MATERIAL_VAR2_NEEDS_BAKED_LIGHTING_SNAPSHOTS			= (1 << 9),
 	MATERIAL_VAR2_USE_FLASHLIGHT							= (1 << 10),
-	MATERIAL_VAR2_USE_FIXED_FUNCTION_BAKED_LIGHTING			= (1 << 11),
+	MATERIAL_VAR2_USE_PAINT									= (1 << 11),
 	MATERIAL_VAR2_NEEDS_FIXED_FUNCTION_FLASHLIGHT			= (1 << 12),
 	MATERIAL_VAR2_USE_EDITOR								= (1 << 13),
 	MATERIAL_VAR2_NEEDS_POWER_OF_TWO_FRAME_BUFFER_TEXTURE	= (1 << 14),
@@ -585,7 +580,8 @@ public:
 	// the material can't be found.
 	virtual bool			IsErrorMaterial() const = 0;
 
-	virtual void			SetUseFixedFunctionBakedLighting( bool bEnable ) = 0;
+	// Don't want to mess with the vtable layout
+	virtual void			Unused( ) {}
 
 	// Gets the current alpha modulation
 	virtual float			GetAlphaModulation() = 0;
@@ -605,11 +601,16 @@ public:
 
 	virtual bool			IsSpriteCard() = 0;
 
-	virtual void			CallBindProxy( void *proxyData ) = 0;
+	virtual void			CallBindProxy( void *proxyData, ICallQueue *pCallQueue ) = 0;
 
 	virtual void			RefreshPreservingMaterialVars() = 0;
 
 	virtual bool			WasReloadedFromWhitelist() = 0;
+
+	// when enabled, 0 will be a pure exclude, otherwise the desired maxmip
+	virtual bool			SetTempExcluded( bool bSet, int nExcludedDimensionLimit = 0 ) = 0;
+
+	virtual int				GetReferenceCount() const = 0;
 };
 
 
@@ -643,7 +644,7 @@ struct VertexStreamSpec_t
 		MAX_UNIQUE_STREAMS = 4
 	};
 
-	VertexFormatFlags_t iVertexDataElement;
+	VertexFormat_t iVertexDataElement;
 	StreamSpec_t iStreamSpec;
 };
 

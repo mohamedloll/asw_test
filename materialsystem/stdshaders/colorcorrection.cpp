@@ -1,17 +1,17 @@
-//========= Copyright © 1996-2002, Valve LLC, All rights reserved. ============
+//========= Copyright (c) 1996-2002, Valve LLC, All rights reserved. ============
 //
 // Purpose: 
 //
 // $NoKeywords: $
 //=============================================================================
 
-#include "basevsshader.h"
+#include "BaseVSShader.h"
 
 #include "screenspaceeffect_vs20.inc"
 #include "colorcorrection_ps20.inc"
 #include "colorcorrection_ps20b.inc"
 
-#include "..\materialsystem_global.h"
+#include "../materialsystem_global.h"
 
 // NOTE: This has to be the last file included!
 #include "tier0/memdbgon.h"
@@ -80,6 +80,16 @@ BEGIN_VS_SHADER_FLAGS( ColorCorrection, "Help for ColorCorrection", SHADER_NOT_E
 			int fmt = VERTEX_POSITION;
 			pShaderShadow->VertexShaderVertexFormat( fmt, 1, 0, 0 );
 
+			if ( IsOpenGL() )
+			{
+				// JasonM...do we use this shader?  If so, it needs some sRGB adapter love
+				Assert(0);
+			}
+
+			// Render targets are always sRGB on togl OSX
+			bool bForceSRGBWrite = false;
+			pShaderShadow->EnableSRGBWrite( bForceSRGBWrite );
+
 			DECLARE_STATIC_VERTEX_SHADER( screenspaceeffect_vs20 );
 			SET_STATIC_VERTEX_SHADER( screenspaceeffect_vs20 );
 
@@ -93,18 +103,17 @@ BEGIN_VS_SHADER_FLAGS( ColorCorrection, "Help for ColorCorrection", SHADER_NOT_E
 				DECLARE_STATIC_PIXEL_SHADER( colorcorrection_ps20 );
 				SET_STATIC_PIXEL_SHADER( colorcorrection_ps20 );
 			}
-			pShaderShadow->EnableSRGBWrite( false );
 		}
 		DYNAMIC_STATE
 		{
 			if( params[ USE_FB_TEXTURE ]->GetIntValue() )
-				pShaderAPI->BindStandardTexture( SHADER_SAMPLER0, TEXTURE_FRAME_BUFFER_FULL_TEXTURE_0 );
+				pShaderAPI->BindStandardTexture( SHADER_SAMPLER0, TEXTURE_BINDFLAGS_NONE, TEXTURE_FRAME_BUFFER_FULL_TEXTURE_0 );
 			else
-				BindTexture( SHADER_SAMPLER0, INPUT_TEXTURE, -1 );
+				BindTexture( SHADER_SAMPLER0, TEXTURE_BINDFLAGS_NONE, INPUT_TEXTURE, -1 );
 
 			for( int i=0;i<params[NUM_LOOKUPS]->GetIntValue();i++ )
 			{
-				pShaderAPI->BindStandardTexture( (Sampler_t)(SHADER_SAMPLER1+i), (StandardTextureId_t)(TEXTURE_COLOR_CORRECTION_VOLUME_0+i) );
+				pShaderAPI->BindStandardTexture( (Sampler_t)(SHADER_SAMPLER1+i), TEXTURE_BINDFLAGS_NONE, (StandardTextureId_t)(TEXTURE_COLOR_CORRECTION_VOLUME_0+i) );
 			}
 
 			float default_weight = params[ WEIGHT_DEFAULT ]->GetFloatValue();

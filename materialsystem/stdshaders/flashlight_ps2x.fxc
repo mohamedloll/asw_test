@@ -8,17 +8,24 @@
 // lightmappedgeneric_flashlight_vs20
 // vertexlitgeneric_flashlight_vs20
 
+// STATIC: "SFM"						"0..0" [ps20] [ps20b] [PC]
+// STATIC: "SFM"						"0..1" [ps30] [PC]
+// STATIC: "SFM"						"0..0" [CONSOLE]
+
 // STATIC: "NORMALMAP"					"0..2"
 // STATIC: "NORMALMAP2"					"0..1"
 // STATIC: "WORLDVERTEXTRANSITION"		"0..1"
 // STATIC: "SEAMLESS"               	"0..1"
 // STATIC: "DETAILTEXTURE"             	"0..1"
 // STATIC: "DETAIL_BLEND_MODE"			"0..11"
-// STATIC: "FLASHLIGHTDEPTHFILTERMODE"	"0..2"	[ps20b] [ps30] [PC]
-// STATIC: "FLASHLIGHTDEPTHFILTERMODE"	"0..0"	[ps20b] [XBOX]
+// STATIC: "FLASHLIGHTDEPTHFILTERMODE"	"0..3"	[ps20b] [PC]
+// STATIC: "FLASHLIGHTDEPTHFILTERMODE"	"0..2"	[ps30]  [PC]
+// STATIC: "FLASHLIGHTDEPTHFILTERMODE"	"0..0"	[ps20b] [CONSOLE]
 
 // DYNAMIC: "FLASHLIGHTSHADOWS"			"0..1"	[ps20b] [ps30]
-// DYNAMIC: "UBERLIGHT"					"0..1"	[ps30] [PC]
+// DYNAMIC: "UBERLIGHT"					"0..1"	[ps30]  [PC]
+
+// SKIP: ( $SFM == 0 ) && ( $UBERLIGHT == 1 )
 
 // SKIP: !$WORLDVERTEXTRANSITION && $NORMALMAP2
 // SKIP: !$NORMALMAP && $NORMALMAP2
@@ -43,7 +50,7 @@ const float4 g_FlashlightPos				: register( PSREG_FLASHLIGHT_POSITION_RIM_BOOST 
 #define g_FlashlightPos						g_EyePos
 #endif
 
-#if UBERLIGHT && defined( SHADER_MODEL_PS_3_0 )
+#if ( UBERLIGHT )
 const float3 g_vSmoothEdge0					: register( PSREG_UBERLIGHT_SMOOTH_EDGE_0 );
 const float3 g_vSmoothEdge1					: register( PSREG_UBERLIGHT_SMOOTH_EDGE_1 );
 const float3 g_vSmoothOneOverWidth			: register( PSREG_UBERLIGHT_SMOOTH_EDGE_OOW );
@@ -54,7 +61,7 @@ const float4x4 g_FlashlightWorldToLight		: register( PSREG_UBERLIGHT_WORLD_TO_LI
 
 sampler SpotSampler							: register( s0 );
 sampler BaseTextureSampler					: register( s1 );
-sampler NormalizingCubemapSampler			: register( s2 );
+samplerCUBE NormalizingCubemapSampler		: register( s2 );
 
 // use a normalizing cube map here if we aren't normal mapping
 sampler BumpMapSampler						: register( s3 );
@@ -119,7 +126,7 @@ float4 SampleNormal( sampler s, PS_INPUT i )
 
 }
 
-float4 main( PS_INPUT i ) : COLOR
+float4_color_return_type main( PS_INPUT i ) : COLOR
 {
 	bool bBase2 = WORLDVERTEXTRANSITION ? true : false;
 	bool bBump  = (NORMALMAP != 0) ? true : false;
@@ -152,7 +159,7 @@ float4 main( PS_INPUT i ) : COLOR
 		else
 		{
 #else
-	spotColor = tex2D( SpotSampler, vProjCoords );
+	spotColor = tex2D( SpotSampler, vProjCoords ).rgb;
 
 #if ( defined(SHADER_MODEL_PS_2_B) || defined(SHADER_MODEL_PS_3_0) )
 	spotColor *= i.spotTexCoord.www > float3(0,0,0);	// Catch back projection (PC-only at the moment)
@@ -160,9 +167,9 @@ float4 main( PS_INPUT i ) : COLOR
 
 #endif
 
-	float4 baseColor = 0.0f;
-	float4 baseColor2 = 0.0f;
-	float4 vNormal = float4(0, 0, 1, 1);
+	HALF4 baseColor = 0.0f;
+	HALF4 baseColor2 = 0.0f;
+	HALF4 vNormal = float4(0, 0, 1, 1);
 	float3 baseTexCoords = float3(0,0,0);
 	float3 normalTexCoords = float3( 0, 0, 0 );
 
@@ -179,7 +186,7 @@ float4 main( PS_INPUT i ) : COLOR
 #endif
 
 	GetBaseTextureAndNormal( BaseTextureSampler, BaseTextureSampler2, BumpMapSampler, bBase2, bBump,
-							 baseTexCoords, normalTexCoords, i.vNormalSqr.xyz, baseColor, baseColor2, vNormal );
+							 baseTexCoords.xyz, baseTexCoords.xyz, normalTexCoords.xy, i.vNormalSqr.xyz, baseColor.rgba, baseColor2.rgba, vNormal.xyzw );
 
 #if DETAILTEXTURE
 	float4 detailColor = float4( g_DetailConstants.xyz, 1.0f ) * tex2D( DetailSampler, i.detailCoords );
@@ -196,7 +203,7 @@ float4 main( PS_INPUT i ) : COLOR
 	vNormal.xyz = vNormal.xyz * 2.0f - 1.0f;		// signed
 
 #	if NORMALMAP2
-	float3 normal2 = SampleNormal( NormalMap2Sampler, i ) * 2.0f - 1.0f;
+	float3 normal2 = SampleNormal( NormalMap2Sampler, i ).xyz * 2.0f - 1.0f;
 	vNormal.xyz = lerp( normal2, vNormal.xyz, lerpAlpha );
 #	endif
 #endif
@@ -206,11 +213,12 @@ float4 main( PS_INPUT i ) : COLOR
 
 	
 #	if NORMALMAP2
-	float3 normal2 = SampleNormal( NormalMap2Sampler, i );
+	float3 normal2 = SampleNormal( NormalMap2Sampler, i ).xyz;
 	vNormal.xyz = lerp( normal2, vNormal.xyz, lerpAlpha );
 #	endif
 #if ( DETAILTEXTURE && ( DETAIL_BLEND_MODE == TCOMBINE_SSBUMP_BUMP ) )
-	vNormal.xyz *= 2.0 * detailColor;
+	vNormal.xyz *= lerp( float3( 1, 1, 1 ), 2.0 * detailColor.xyz, baseColor.a );
+	baseColor.a = 1;
 #endif
 
 #else
@@ -229,13 +237,13 @@ float4 main( PS_INPUT i ) : COLOR
 	float flAtten = saturate(endFalloffFactor * dot( g_FlashlightAttenuation.xyz, float3( 1.0f, 1.0f/dist, 1.0f/distSquared ) ) );
 
 #if FLASHLIGHTSHADOWS && ( defined( SHADER_MODEL_PS_2_B ) || defined( SHADER_MODEL_PS_3_0 ) )
-	float flShadow = DoFlashlightShadow( FlashlightDepthSampler, RandomRotationSampler, vProjCoords, i.projPos_fogFactorW.xy / i.projPos_fogFactorW.z, FLASHLIGHTDEPTHFILTERMODE, g_vShadowTweaks, false );
+	float flShadow = DoFlashlightShadow( FlashlightDepthSampler, RandomRotationSampler, vProjCoords, i.projPos_fogFactorW.xy / i.projPos_fogFactorW.z, FLASHLIGHTDEPTHFILTERMODE, g_vShadowTweaks );
 	float flAttenuated = lerp( flShadow, 1.0f, g_vShadowTweaks.y );	// Blend between fully attenuated and not attenuated
 	flShadow = saturate(lerp( flAttenuated, flShadow, flAtten ));	// Blend between shadow and above, according to light attenuation
 	spotColor *= flShadow;
 #endif
 
-#if UBERLIGHT && defined( SHADER_MODEL_PS_3_0 )
+#if ( UBERLIGHT )
 	// Transform from world space position to light space position
 	float3 flashlightSpacePosition = mul( float4( i.worldPos_worldTransition.xyz, 1.0f ), g_FlashlightWorldToLight ).yzx;
 	spotColor *= uberlight( flashlightSpacePosition, g_vSmoothEdge0, g_vSmoothEdge1,
@@ -253,13 +261,13 @@ float4 main( PS_INPUT i ) : COLOR
 #endif
 
 #if NORMALMAP == 0
-	float3 worldPosToLightVector = texCUBE( NormalizingCubemapSampler, i.worldPosToLightVector ) * 2.0f - 1.0f;
+	float3 worldPosToLightVector = texCUBE( NormalizingCubemapSampler, i.worldPosToLightVector ).rgb * 2.0f - 1.0f;
 	float nDotL = dot( worldPosToLightVector, vNormal.xyz );
 #endif
 
 #if NORMALMAP == 1
 	// flashlightfixme: wrap this!
-	float3 tangentPosToLightVector = texCUBE( NormalizingCubemapSampler, i.tangentPosToLightVector ) * 2.0f - 1.0f;
+	float3 tangentPosToLightVector = texCUBE( NormalizingCubemapSampler, i.tangentPosToLightVector ).rgb * 2.0f - 1.0f;
 	float nDotL = dot( tangentPosToLightVector, vNormal.xyz );
 #endif
 

@@ -1,7 +1,7 @@
 //========= Copyright © 1996-2006, Valve Corporation, All rights reserved. ============//
 
 #include "BaseVSShader.h"
-#include "mathlib/VMatrix.h"
+#include "mathlib/vmatrix.h"
 #include "prototype_helper.h"
 #include "convar.h"
 
@@ -59,9 +59,12 @@ void DrawPrototype( CBaseVSShader *pShader, IMaterialVar** params, IShaderDynami
 		int userDataSize = 0;
 		pShaderShadow->VertexShaderVertexFormat( flags, nTexCoordCount, NULL, userDataSize );
 
+		bool bFlattenStaticControlFlow = !g_pHardwareConfig->SupportsStaticControlFlow();
+
 		// Vertex Shader
 		DECLARE_STATIC_VERTEX_SHADER( prototype_vs20 );
 		SET_STATIC_VERTEX_SHADER_COMBO( VERTEXCOLOR, bHasVertexColor || bHasVertexAlpha );
+		SET_STATIC_VERTEX_SHADER_COMBO( FLATTEN_STATIC_CONTROL_FLOW, bFlattenStaticControlFlow );
 		SET_STATIC_VERTEX_SHADER( prototype_vs20 );
 	
 		// Pixel Shader
@@ -92,6 +95,8 @@ void DrawPrototype( CBaseVSShader *pShader, IMaterialVar** params, IShaderDynami
 	DYNAMIC_STATE
 	{
 		LightState_t lightState = { 0, false, false };
+		
+		bool bUseStaticControlFlow = g_pHardwareConfig->SupportsStaticControlFlow();
 
 		// Set Vertex Shader Combos
 		DECLARE_DYNAMIC_VERTEX_SHADER( prototype_vs20 );
@@ -99,7 +104,7 @@ void DrawPrototype( CBaseVSShader *pShader, IMaterialVar** params, IShaderDynami
 		SET_DYNAMIC_VERTEX_SHADER_COMBO( COMPRESSED_VERTS, (int)vertexCompression );
 		SET_DYNAMIC_VERTEX_SHADER_COMBO( DYNAMIC_LIGHT, lightState.HasDynamicLight() );
 		SET_DYNAMIC_VERTEX_SHADER_COMBO( STATIC_LIGHT, lightState.m_bStaticLight ? 1 : 0 );
-		SET_DYNAMIC_VERTEX_SHADER_COMBO( NUM_LIGHTS, lightState.m_nNumLights );
+		SET_DYNAMIC_VERTEX_SHADER_COMBO( NUM_LIGHTS, bUseStaticControlFlow ? 0 : lightState.m_nNumLights );
 		SET_DYNAMIC_VERTEX_SHADER( prototype_vs20 );
 
 		// Set Vertex Shader Constants 
@@ -112,12 +117,12 @@ void DrawPrototype( CBaseVSShader *pShader, IMaterialVar** params, IShaderDynami
 		SET_DYNAMIC_PIXEL_SHADER( prototype_ps20b );
 
 		// Bind textures
-		pShader->BindTexture( SHADER_SAMPLER0, info.m_nBaseTexture, info.m_nBaseTextureFrame );
+		pShader->BindTexture( SHADER_SAMPLER0, TEXTURE_BINDFLAGS_SRGBREAD, info.m_nBaseTexture, info.m_nBaseTextureFrame );
 
 		bool bBumpMapping = ( ( info.m_nBumpmap == -1 ) || !params[info.m_nBumpmap]->IsTexture() ) ? false : true;
 		if ( bBumpMapping )
 		{
-			pShader->BindTexture( SHADER_SAMPLER1, info.m_nBumpmap, info.m_nBumpFrame );
+			pShader->BindTexture( SHADER_SAMPLER1, TEXTURE_BINDFLAGS_NONE, info.m_nBumpmap, info.m_nBumpFrame );
 		}
 
 		// Set c0 and c1 to contain first two rows of ViewProj matrix

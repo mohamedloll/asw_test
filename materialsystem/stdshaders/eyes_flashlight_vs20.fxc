@@ -15,7 +15,7 @@
 //	DYNAMIC: "SKINNING"				"0..1"
 #include "common_fog_vs_fxc.h"
 
-// DYNAMIC: "MORPHING"				"0..1" [vs30] [ = pShaderAPI->IsHWMorphingEnabled() ]
+// DYNAMIC: "MORPHING"				"0..0" [ = false ]
 
 #include "common_vs_fxc.h"
 
@@ -37,7 +37,7 @@ const float4 cIrisProjectionV	:  register( SHADER_SPECIFIC_CONST_9 );
 const float3 cMorphTargetTextureDim : register( SHADER_SPECIFIC_CONST_10 );
 const float4 cMorphSubrect		: register( SHADER_SPECIFIC_CONST_11 );
 
-sampler2D morphSampler			: register( D3DVERTEXTEXTURESAMPLER0, s0 );
+sampler2D morphSampler			: register( s0 );
 #endif
 
 struct VS_INPUT
@@ -105,6 +105,13 @@ VS_OUTPUT main( const VS_INPUT v )
 	// Transform into projection space
 	float4 projPos = mul( float4( worldPos, 1 ), cViewProj );
 	o.projPos    = projPos;
+	
+#ifdef _PS3
+	// Account for OpenGL's flipped y coordinate and expanded z range [-1,1] instead of [0,1]
+	o.projPos.y = -o.projPos.y;
+	o.projPos.z = 2.0f * o.projPos.z - o.projPos.w;
+#endif // _PS3
+
 	o.projPosXYZ = projPos.xyz;
 	o.worldPos   = worldPos.xyz;
 

@@ -36,7 +36,6 @@ struct Multiblend_DX9_Vars_t
 	int			m_nSpecTexture3;
 	int			m_nBaseTexture4;
 	int			m_nSpecTexture4;
-	int			m_nFoW;
 	int 		m_nRotation;
 	int 		m_nRotation2;
 	int 		m_nRotation3;
@@ -45,15 +44,12 @@ struct Multiblend_DX9_Vars_t
 	int			m_nScale2;
 	int			m_nScale3;
 	int			m_nScale4;
-	int			m_nFlashlightTexture;
-	int			m_nFlashlightTextureFrame;
 };
 
 void InitParamsMultiblend_DX9( CBaseVSShader *pShader, IMaterialVar** params, const char *pMaterialName, 
 						   Multiblend_DX9_Vars_t &info );
 void InitMultiblend_DX9( CBaseVSShader *pShader, IMaterialVar** params, Multiblend_DX9_Vars_t &info );
 void DrawMultiblend_DX9( CBaseVSShader *pShader, IMaterialVar** params, IShaderDynamicAPI *pShaderAPI,
-				   IShaderShadow* pShaderShadow, Multiblend_DX9_Vars_t &info, VertexCompressionType_t vertexCompression,
-				   CBasePerMaterialContextData **pContextDataPtr );
+				   IShaderShadow* pShaderShadow, Multiblend_DX9_Vars_t &info, VertexCompressionType_t vertexCompression );
 
 #endif // MULTIBLEND_DX9_HELPER_H

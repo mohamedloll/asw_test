@@ -1,26 +1,22 @@
 //========== Copyright (c) Valve Corporation, All rights reserved. ==========//
 
-// STATIC: "INTRO"				"0..1"
 // STATIC: "HALFLAMBERT"		"0..1"
 // STATIC: "FLASHLIGHT"			"0..1"
 // STATIC: "LIGHTWARPTEXTURE"	"0..1"
 // STATIC: "WORLD_NORMAL"		"0..0"	[vs20] [PC]
 // STATIC: "WORLD_NORMAL"		"0..1"	[vs30] [PC]
-// STATIC: "WORLD_NORMAL"		"0..0"	[XBOX]
+// STATIC: "WORLD_NORMAL"		"0..0"	[CONSOLE]
 
 // DYNAMIC: "COMPRESSED_VERTS"	"0..1"
 // DYNAMIC: "SKINNING"			"0..1"
 #include "common_fog_vs_fxc.h"
 // DYNAMIC: "DYNAMIC_LIGHT"		"0..1"
 // DYNAMIC: "NUM_LIGHTS"		"0..4"
-// DYNAMIC: "TESSELLATION"		"0..2" [vs30] [PC]
-// DYNAMIC: "TESSELLATION"		"0..0" [XBOX]
+// DYNAMIC: "TESSELLATION"		"0..0" [vs30] [PC]
+// DYNAMIC: "TESSELLATION"		"0..0" [CONSOLE]
 // DYNAMIC: "TESSELLATION"		"0..0" [vs20] [PC]
 
-// DYNAMIC: "MORPHING"			"0..1" [vs30] [ = pShaderAPI->IsHWMorphingEnabled() ]
-
-// These are mutually exclusive (constant collision)
-// SKIP: ( $WORLD_NORMAL ) && $INTRO
+// DYNAMIC: "MORPHING"			"0..0" [ = false ]
 
 // SKIP: ( $MORPHING || $SKINNING || $COMPRESSED_VERTS ) && $TESSELLATION
 
@@ -35,11 +31,7 @@ const float4 g_vIrisProjectionU		:  register( SHADER_SPECIFIC_CONST_2 );
 const float4 g_vIrisProjectionV		:  register( SHADER_SPECIFIC_CONST_3 );
 const float4 g_vFlashlightPosition	:  register( SHADER_SPECIFIC_CONST_4 );
 
-#if ( INTRO )
-	const float4 g_vConst4				:  register( SHADER_SPECIFIC_CONST_5 );
-	#define g_vModelOrigin g_vConst4.xyz
-	#define g_flTime       g_vConst4.w
-#elif ( WORLD_NORMAL )
+#if ( WORLD_NORMAL )
 	const float4 g_vEyeVector			: register( SHADER_SPECIFIC_CONST_5 );
 #endif
 
@@ -49,7 +41,7 @@ const float4x4 g_vFlashlightMatrix		:  register( SHADER_SPECIFIC_CONST_6 ); // 6
 //		 cMorphTargetTextureDim.z = 4tuples/morph
 const float3 cMorphTargetTextureDim	: register( SHADER_SPECIFIC_CONST_10 );
 const float4 cMorphSubrect			: register( SHADER_SPECIFIC_CONST_11 );
-sampler2D morphSampler				: register( D3DVERTEXTEXTURESAMPLER0, s0 );
+sampler2D morphSampler				: register( s0 );
 #endif
 
 
@@ -141,13 +133,6 @@ VS_OUTPUT main( const VS_INPUT v )
 	float3 vEyeSocketUpVector = normalize( -g_vIrisProjectionV.xyz );
 	float3 vEyeSocketLeftVector = normalize( -g_vIrisProjectionU.xyz );
 
-	#if ( INTRO )
-	{
-		float3 dummy = float3( 0.0f, 0.0f, 0.0f );
-		WorldSpaceVertexProcess( g_flTime, g_vModelOrigin, vWorldPosition, dummy, dummy, dummy );
-	}
-	#endif
-
 	o.vWorldPosition_ProjPosZ.xyz = vWorldPosition.xyz;
 
 	// Transform into projection space
@@ -163,6 +148,12 @@ VS_OUTPUT main( const VS_INPUT v )
 		o.projPos = vProjPos;
 	}
 	#endif
+
+#ifdef _PS3
+	// Account for OpenGL's flipped y coordinate and expanded z range [-1,1] instead of [0,1]
+	o.projPos.y = -o.projPos.y;
+	o.projPos.z = 2.0f * o.projPos.z - o.projPos.w;
+#endif // _PS3
 
 #if ( WORLD_NORMAL )
 	o.vWorldPosition_ProjPosZ.w = dot( g_vEyeVector, vWorldPosition.xyz - cEyePos.xyz );	// Linear depth

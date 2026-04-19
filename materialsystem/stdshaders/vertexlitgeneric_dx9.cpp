@@ -42,8 +42,13 @@ BEGIN_VS_SHADER( VertexLitGeneric, "Help for VertexLitGeneric" )
 		SHADER_PARAM( SELFILLUMFRESNEL, SHADER_PARAM_TYPE_BOOL, "0", "Self illum fresnel" )
 		SHADER_PARAM( SELFILLUMFRESNELMINMAXEXP, SHADER_PARAM_TYPE_VEC4, "0", "Self illum fresnel min, max, exp" )
 		SHADER_PARAM( SELFILLUMMASKSCALE, SHADER_PARAM_TYPE_FLOAT, "0", "Scale self illum effect strength" )
+		SHADER_PARAM( SELFILLUMFRESNELENABLEDTHISFRAME, SHADER_PARAM_TYPE_BOOL, "0", "Self illum fresnel" )
+
 		SHADER_PARAM( ALPHATESTREFERENCE, SHADER_PARAM_TYPE_FLOAT, "0.0", "" )	
+		SHADER_PARAM( ALLOWFENCERENDERSTATEHACK, SHADER_PARAM_TYPE_BOOL, "0", "" )
 		SHADER_PARAM( FLASHLIGHTNOLAMBERT, SHADER_PARAM_TYPE_BOOL, "0", "Flashlight pass sets N.L=1.0" )
+		SHADER_PARAM( LOWQUALITYFLASHLIGHTSHADOWS, SHADER_PARAM_TYPE_BOOL, "0", "Force low quality flashlight shadows (faster)" )
+		SHADER_PARAM( DISABLECSMLOOKUP, SHADER_PARAM_TYPE_BOOL, "0", "Force no CSM lookup/filter (faster)" )
 
 		// Debugging term for visualizing ambient data on its own
 		SHADER_PARAM( AMBIENTONLY, SHADER_PARAM_TYPE_INTEGER, "0", "Control drawing of non-ambient light ()" )
@@ -55,8 +60,10 @@ BEGIN_VS_SHADER( VertexLitGeneric, "Help for VertexLitGeneric" )
 		SHADER_PARAM( PHONGWARPTEXTURE, SHADER_PARAM_TYPE_TEXTURE, "shadertest/BaseTexture", "warp the specular term" )
 		SHADER_PARAM( PHONGFRESNELRANGES, SHADER_PARAM_TYPE_VEC3, "[0  0.5  1]", "Parameters for remapping fresnel output" )
 		SHADER_PARAM( PHONGBOOST, SHADER_PARAM_TYPE_FLOAT, "1.0", "Phong overbrightening factor (specular mask channel should be authored to account for this)" )
+		SHADER_PARAM( PHONGALBEDOBOOST, SHADER_PARAM_TYPE_FLOAT, "1.0", "Phong albedo overbrightening factor (specular mask channel should be authored to account for this)" )
 		SHADER_PARAM( PHONGEXPONENTTEXTURE, SHADER_PARAM_TYPE_TEXTURE, "shadertest/BaseTexture", "Phong Exponent map" )
 		SHADER_PARAM( PHONG, SHADER_PARAM_TYPE_BOOL, "0", "enables phong lighting" )
+		SHADER_PARAM( FORCEPHONG, SHADER_PARAM_TYPE_BOOL, "0", "forces Phong lighting, even at low GPU levels (Phong must already be enabled)" )
 		SHADER_PARAM( BASEMAPALPHAPHONGMASK, SHADER_PARAM_TYPE_INTEGER, "0", "indicates that there is no normal map and that the phong mask is in base alpha" )
 		SHADER_PARAM( INVERTPHONGMASK, SHADER_PARAM_TYPE_INTEGER, "0", "invert the phong mask (0=full phong, 1=no phong)" )
 		SHADER_PARAM( ENVMAPFRESNEL, SHADER_PARAM_TYPE_FLOAT, "0", "Degree to which Fresnel should be applied to env map" )
@@ -121,7 +128,11 @@ BEGIN_VS_SHADER( VertexLitGeneric, "Help for VertexLitGeneric" )
 		SHADER_PARAM( SEPARATEDETAILUVS, SHADER_PARAM_TYPE_BOOL, "0", "Use texcoord1 for detail texture" )
 		SHADER_PARAM( LINEARWRITE, SHADER_PARAM_TYPE_INTEGER, "0", "Disables SRGB conversion of shader results." )
 
+#if defined( CSTRIKE15 )
+		SHADER_PARAM( SHADERSRGBREAD360, SHADER_PARAM_TYPE_BOOL, "1", "Simulate srgb read in shader code")
+#else
 		SHADER_PARAM( SHADERSRGBREAD360, SHADER_PARAM_TYPE_BOOL, "0", "Simulate srgb read in shader code")
+#endif
 
 		SHADER_PARAM( AMBIENTOCCLUSION, SHADER_PARAM_TYPE_FLOAT, "0.0", "Amount of screen space ambient occlusion to use (0..1 range)")
 
@@ -129,6 +140,7 @@ BEGIN_VS_SHADER( VertexLitGeneric, "Help for VertexLitGeneric" )
 		SHADER_PARAM( DISPLACEMENTWRINKLE, SHADER_PARAM_TYPE_BOOL, "0", "Displacement map contains wrinkle displacements")
 
 		SHADER_PARAM( BLENDTINTBYBASEALPHA, SHADER_PARAM_TYPE_BOOL, "0", "Use the base alpha to blend in the $color modulation")
+		SHADER_PARAM( NOTINT, SHADER_PARAM_TYPE_BOOL, "0", "Disable tinting" )
 
 		SHADER_PARAM( DESATURATEWITHBASEALPHA, SHADER_PARAM_TYPE_FLOAT, "0.0", "Use the base alpha to desaturate the base texture.  Set to non-zero to enable, value gets multiplied into the alpha channel before desaturating.")
 
@@ -142,8 +154,6 @@ BEGIN_VS_SHADER( VertexLitGeneric, "Help for VertexLitGeneric" )
 		// so the only safe way to allow artists to disable half lambert is to create this param that disables the
 		// default behavior of forcing half lambert on.
 		SHADER_PARAM( PHONGDISABLEHALFLAMBERT, SHADER_PARAM_TYPE_BOOL, "0", "Disable half lambert for phong")
-
-		SHADER_PARAM( FOW, SHADER_PARAM_TYPE_TEXTURE, "", "FoW Render Target" )
 
 		// vertexlitgeneric tree sway animation control
 		SHADER_PARAM( TREESWAY, SHADER_PARAM_TYPE_INTEGER, "0", "" );
@@ -161,6 +171,23 @@ BEGIN_VS_SHADER( VertexLitGeneric, "Help for VertexLitGeneric" )
 		SHADER_PARAM( TREESWAYSCRUMBLEFALLOFFEXP, SHADER_PARAM_TYPE_FLOAT, "1.0", "" );
 		SHADER_PARAM( TREESWAYSPEEDLERPSTART, SHADER_PARAM_TYPE_FLOAT, "3", "" );
 		SHADER_PARAM( TREESWAYSPEEDLERPEND, SHADER_PARAM_TYPE_FLOAT, "6", "" );
+		SHADER_PARAM( TREESWAYSTATIC, SHADER_PARAM_TYPE_BOOL, "0", "" );
+
+		SHADER_PARAM( DECALTEXTURE, SHADER_PARAM_TYPE_TEXTURE, "", "Decal texture" )
+		SHADER_PARAM( DECALBLENDMODE, SHADER_PARAM_TYPE_INTEGER, "0", "mode for combining decal texture with base. 0=normal(decal*srca + base*(1-srca), 1= mod, 2=mod2x, 3=additive" )
+
+		SHADER_PARAM( ENVMAPLIGHTSCALE, SHADER_PARAM_TYPE_FLOAT, "0.0", "How much the lightmap effects environment map reflection, 0.0 is off, 1.0 will allow complete blackness of the environment map if the lightmap is black" )
+		SHADER_PARAM( ENVMAPLIGHTSCALEMINMAX, SHADER_PARAM_TYPE_VEC2, "[0.0 1.0]", "Thresholds for the lightmap envmap effect.  Setting the min higher increases the minimum light amount at which the envmap gets nerfed to nothing." )
+
+		SHADER_PARAM( BLENDWITHSMOKEGRENADE, SHADER_PARAM_TYPE_BOOL, "0", "" );
+		SHADER_PARAM( BLENDWITHSMOKEGRENADEPOSENTITY, SHADER_PARAM_TYPE_VEC3, "[0 0 0]", "" );
+		SHADER_PARAM( BLENDWITHSMOKEGRENADEPOSSMOKE, SHADER_PARAM_TYPE_VEC3, "[0 0 0]", "" );
+
+		SHADER_PARAM( MODELDECALIGNOREZ, SHADER_PARAM_TYPE_BOOL, "0", "" );
+
+		SHADER_PARAM( TINTMASKTEXTURE, SHADER_PARAM_TYPE_TEXTURE, "", "Separate tint mask texture (as opposed to using basetexture alpha)" )
+		SHADER_PARAM( ENVMAPMASKINTINTMASKTEXTURE, SHADER_PARAM_TYPE_BOOL, "0", "Envmap mask is stored in ting mask texture (instead of normal map alpha)" )
+
 	END_SHADER_PARAMS
 
 	void SetupVars( VertexLitGeneric_DX9_Vars_t& info )
@@ -189,7 +216,10 @@ BEGIN_VS_SHADER( VertexLitGeneric, "Help for VertexLitGeneric" )
 		info.m_nEnvmapContrast = ENVMAPCONTRAST;
 		info.m_nEnvmapSaturation = ENVMAPSATURATION;
 		info.m_nAlphaTestReference = ALPHATESTREFERENCE;
+		info.m_nAllowFenceRenderStateHack = ALLOWFENCERENDERSTATEHACK;
 		info.m_nFlashlightNoLambert = FLASHLIGHTNOLAMBERT;
+		info.m_nLowQualityFlashlightShadows = LOWQUALITYFLASHLIGHTSHADOWS;
+		info.m_nDisableCSMLookup = DISABLECSMLOOKUP;
 
 		info.m_nFlashlightTexture = FLASHLIGHTTEXTURE;
 		info.m_nFlashlightTextureFrame = FLASHLIGHTTEXTUREFRAME;
@@ -197,6 +227,7 @@ BEGIN_VS_SHADER( VertexLitGeneric, "Help for VertexLitGeneric" )
 		info.m_nSelfIllumFresnel = SELFILLUMFRESNEL;
 		info.m_nSelfIllumFresnelMinMaxExp = SELFILLUMFRESNELMINMAXEXP;
 		info.m_nSelfIllumMaskScale = SELFILLUMMASKSCALE;
+		info.m_nSelfIllumFresnelEnabledThisFrame = SELFILLUMFRESNELENABLEDTHISFRAME;
 
 		info.m_nAmbientOnly = AMBIENTONLY;
 		info.m_nPhongExponent = PHONGEXPONENT;
@@ -206,8 +237,10 @@ BEGIN_VS_SHADER( VertexLitGeneric, "Help for VertexLitGeneric" )
 		info.m_nDiffuseWarpTexture = LIGHTWARPTEXTURE;
 		info.m_nPhongWarpTexture = PHONGWARPTEXTURE;
 		info.m_nPhongBoost = PHONGBOOST;
+		info.m_nPhongAlbedoBoost = PHONGALBEDOBOOST;
 		info.m_nPhongFresnelRanges = PHONGFRESNELRANGES;
 		info.m_nPhong = PHONG;
+		info.m_nForcePhong = FORCEPHONG;
 		info.m_nBaseMapAlphaPhongMask = BASEMAPALPHAPHONGMASK;
 		info.m_nEnvmapFresnel = ENVMAPFRESNEL;
 		info.m_nDetailTextureCombineMode = DETAILBLENDMODE;
@@ -240,6 +273,7 @@ BEGIN_VS_SHADER( VertexLitGeneric, "Help for VertexLitGeneric" )
 		info.m_nAmbientOcclusion = AMBIENTOCCLUSION;
 
 		info.m_nBlendTintByBaseAlpha = BLENDTINTBYBASEALPHA;
+		info.m_nNoTint = NOTINT;
 
 		info.m_nDesaturateWithBaseAlpha = DESATURATEWITHBASEALPHA;
 
@@ -253,8 +287,6 @@ BEGIN_VS_SHADER( VertexLitGeneric, "Help for VertexLitGeneric" )
 
 		info.m_nPhongDisableHalfLambert = PHONGDISABLEHALFLAMBERT;
 
-		info.m_nFoW = FOW;
-		
 		info.m_nTreeSway = TREESWAY;
 		info.m_nTreeSwayHeight = TREESWAYHEIGHT;
 		info.m_nTreeSwayStartHeight = TREESWAYSTARTHEIGHT;
@@ -270,6 +302,22 @@ BEGIN_VS_SHADER( VertexLitGeneric, "Help for VertexLitGeneric" )
 		info.m_nTreeSwayScrumbleFalloffExp = TREESWAYSCRUMBLEFALLOFFEXP;		
 		info.m_nTreeSwaySpeedLerpStart = TREESWAYSPEEDLERPSTART;
 		info.m_nTreeSwaySpeedLerpEnd = TREESWAYSPEEDLERPEND;
+		info.m_nTreeSwayStatic = TREESWAYSTATIC;
+
+		info.m_nDecalTexture = DECALTEXTURE;
+		info.m_nDecalTextureCombineMode = DECALBLENDMODE;
+		
+		info.m_nEnvMapLightScale = ENVMAPLIGHTSCALE;
+		info.m_nEnvMapLightScaleMinMax = ENVMAPLIGHTSCALEMINMAX;
+
+		info.m_nBlendWithSmokeGrenade = BLENDWITHSMOKEGRENADE;
+		info.m_nBlendWithSmokeGrenadePosEntity = BLENDWITHSMOKEGRENADEPOSENTITY;
+		info.m_nBlendWithSmokeGrenadePosSmoke = BLENDWITHSMOKEGRENADEPOSSMOKE;
+
+		info.m_nModelDecalIgnoreZ = MODELDECALIGNOREZ;
+
+		info.m_nTintMaskTexture = TINTMASKTEXTURE;
+		info.m_nEnvMapMaskInTintMaskTexture = ENVMAPMASKINTINTMASKTEXTURE;
 	}
 
 	// Cloak Pass
@@ -355,6 +403,29 @@ BEGIN_VS_SHADER( VertexLitGeneric, "Help for VertexLitGeneric" )
 
 	SHADER_INIT_PARAMS()
 	{
+		bool bDisableTreeSway = false; 
+		
+		// Disable tree swaying on consoles, or on "cheap" shadow filter modes (which are too pixelated).
+		if ( IsGameConsole() || IsPlatformOSX() )
+#if defined( CSTRIKE15 ) 
+			if( IsPlatformOSX() || IsPS3() )
+			{
+				bDisableTreeSway = true;
+			}
+#else
+			bDisableTreeSway = true;
+#endif
+		else if ( g_pHardwareConfig->GetShadowFilterMode( false /* bForceLowQuality */, g_pHardwareConfig->SupportsPixelShaders_3_0() /* bPS30 */ ) >= SHADOWFILTERMODE_FIRST_CHEAP_MODE )
+		{
+			bDisableTreeSway = true;
+		}
+
+		
+		if ( bDisableTreeSway )
+		{
+			params[TREESWAY]->SetIntValue( 0 );
+		}
+
 		VertexLitGeneric_DX9_Vars_t vars;
 		SetupVars( vars );
 		InitParamsVertexLitGeneric_DX9( this, params, pMaterialName, true, vars );
@@ -393,6 +464,28 @@ BEGIN_VS_SHADER( VertexLitGeneric, "Help for VertexLitGeneric" )
 			FleshInteriorBlendedPassVars_t info;
 			SetupVarsFleshInteriorBlendedPass( info );
 			InitParamsFleshInteriorBlendedPass( this, params, pMaterialName, info );
+		}
+		
+		if ( !params[PHONGBOOST]->IsDefined() )
+		{
+			params[PHONGBOOST]->SetFloatValue( 1.0f );
+		}
+
+		if ( !params[PHONGFRESNELRANGES]->IsDefined() )
+		{
+			params[PHONGFRESNELRANGES]->SetVecValue( 1.0f, 1.0f, 1.0f );
+		}
+
+		if ( !params[PHONGALBEDOBOOST]->IsDefined() )
+		{
+			if ( params[PHONGBOOST]->IsDefined() )
+			{
+				params[PHONGALBEDOBOOST]->SetFloatValue( params[PHONGBOOST]->GetFloatValue() );
+			}
+			else
+			{
+				params[PHONGALBEDOBOOST]->SetFloatValue( 1.0f );
+			}
 		}
 	}
 
@@ -510,4 +603,28 @@ BEGIN_VS_SHADER( VertexLitGeneric, "Help for VertexLitGeneric" )
 			}
 		}
 	}
+
+
+	void ExecuteFastPath( int *dynVSIdx, int *dynPSIdx,  IMaterialVar** params, IShaderDynamicAPI * pShaderAPI, 
+		VertexCompressionType_t vertexCompression, CBasePerMaterialContextData **pContextDataPtr, BOOL bCSMEnabled )
+	{
+		*dynVSIdx = -1;
+		*dynPSIdx = -1;
+
+		VertexLitGeneric_DX9_Vars_t vars;
+		SetupVars( vars );
+
+		if ( params[CLOAKPASSENABLED]->GetIntValue() || params[EMISSIVEBLENDENABLED]->GetIntValue() || 
+			 params[FLESHINTERIORENABLED]->GetIntValue() )
+		{
+			return;
+		}
+				
+		// Only draw standard pass for now
+		// GS_TODO: Other passes
+		DrawVertexLitGeneric_DX9_ExecuteFastPath( dynVSIdx, dynPSIdx, this, params, pShaderAPI, vars, vertexCompression, 
+			pContextDataPtr, bCSMEnabled );
+
+	}
+
 END_SHADER

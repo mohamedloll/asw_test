@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
+//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -67,8 +67,8 @@ BEGIN_SHADER_FLAGS( Decal, "Help for Decal", SHADER_NOT_EDITABLE )
 		DYNAMIC_STATE
 		{
 			pShaderAPI->Color3f( 0.5f, 0.5f, 0.5f );
-			BindTexture( SHADER_SAMPLER0, BASETEXTURE, FRAME );
-			pShaderAPI->BindStandardTexture( SHADER_SAMPLER1, TEXTURE_LIGHTMAP );
+			BindTexture( SHADER_SAMPLER0, false, BASETEXTURE, FRAME );
+			pShaderAPI->BindStandardTexture( SHADER_SAMPLER1, false, TEXTURE_LIGHTMAP );
 		}
 		Draw();
 

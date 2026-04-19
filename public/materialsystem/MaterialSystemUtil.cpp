@@ -1,4 +1,4 @@
-//===== Copyright © 1996-2005, Valve Corporation, All rights reserved. ======//
+//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
 //
 // Purpose: 
 //
@@ -10,7 +10,7 @@
 #include "materialsystem/imaterial.h"
 #include "materialsystem/itexture.h"
 #include "materialsystem/imaterialsystem.h"
-#include "tier1/KeyValues.h"
+#include "tier1/keyvalues.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -48,6 +48,14 @@ CMaterialReference::~CMaterialReference()
 void CMaterialReference::Init( char const* pMaterialName, const char *pTextureGroupName, bool bComplain )
 {
 	IMaterial *pMaterial = materials->FindMaterial( pMaterialName, pTextureGroupName, bComplain);
+	if( IsErrorMaterial( pMaterial ) )
+	{
+		if (IsOSX())
+		{
+			printf("\n ##### CMaterialReference::Init got error material for %s in tex group %s", pMaterialName, pTextureGroupName );
+		}
+	}
+
 	Assert( pMaterial );
 	Init( pMaterial );
 }
@@ -139,10 +147,10 @@ CTextureReference::~CTextureReference( )
 //-----------------------------------------------------------------------------
 // Attach to a texture
 //-----------------------------------------------------------------------------
-void CTextureReference::Init( char const* pTextureName, const char *pTextureGroupName, bool bComplain )
+void CTextureReference::Init( char const* pTextureName, const char *pTextureGroupName, bool bComplain /* = false */, int nAdditionalCreationFlags /* = 0 */ )
 {
 	Shutdown();
-	m_pTexture = materials->FindTexture( pTextureName, pTextureGroupName, bComplain );
+	m_pTexture = materials->FindTexture( pTextureName, pTextureGroupName, bComplain, nAdditionalCreationFlags );
 	if ( m_pTexture )
 	{
 		m_pTexture->IncrementReferenceCount();
@@ -216,13 +224,11 @@ void CTextureReference::Shutdown( bool bDeleteIfUnReferenced )
 // The paired EDRAM surface can be built in an alternate format.
 //-----------------------------------------------------------------------------
 #if defined( _X360 )
-void CTextureReference::InitRenderTargetTexture( int w, int h, RenderTargetSizeMode_t sizeMode, ImageFormat fmt, MaterialRenderTargetDepth_t depth, bool bHDR, char *pStrOptionalName )
+void CTextureReference::InitRenderTargetTexture( int w, int h, RenderTargetSizeMode_t sizeMode, ImageFormat fmt, MaterialRenderTargetDepth_t depth, bool bHDR, char *pStrOptionalName, int nRenderTargetFlags )
 {
 	// other variants not implemented yet
 	Assert( depth == MATERIAL_RT_DEPTH_NONE || depth == MATERIAL_RT_DEPTH_SHARED );
 	Assert( !bHDR );
-
-	int renderTargetFlags = CREATERENDERTARGETFLAGS_NOEDRAM;
 
 	m_pTexture = materials->CreateNamedRenderTargetTextureEx( 
 		pStrOptionalName, 
@@ -232,7 +238,7 @@ void CTextureReference::InitRenderTargetTexture( int w, int h, RenderTargetSizeM
 		fmt, 
 		depth, 
 		TEXTUREFLAGS_CLAMPS | TEXTUREFLAGS_CLAMPT, 
-		renderTargetFlags );
+		CREATERENDERTARGETFLAGS_NOEDRAM | nRenderTargetFlags );
 	Assert( m_pTexture );
 }
 #endif

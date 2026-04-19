@@ -54,7 +54,8 @@ void DrawLightShafts( CBaseVSShader *pShader, IMaterialVar** params, IShaderDyna
 		SET_STATIC_VERTEX_SHADER( lightshafts_vs30 );
 	
 		DECLARE_STATIC_PIXEL_SHADER( lightshafts_ps30 );
-		SET_STATIC_PIXEL_SHADER_COMBO( FLASHLIGHTDEPTHFILTERMODE, IsPC() ? g_pHardwareConfig->GetShadowFilterMode() : 0 );
+		
+		SET_STATIC_PIXEL_SHADER_COMBO( FLASHLIGHTDEPTHFILTERMODE, IsPC() ? g_pHardwareConfig->GetShadowFilterMode( false /* bForceLowQuality */, true /* bPS30 */ ) : SHADOWFILTERMODE_DEFAULT );
 		SET_STATIC_PIXEL_SHADER( lightshafts_ps30 );
 
 		pShaderShadow->EnableTexture( SHADER_SAMPLER0, true );					// Cookie texture
@@ -62,7 +63,7 @@ void DrawLightShafts( CBaseVSShader *pShader, IMaterialVar** params, IShaderDyna
 
 		pShaderShadow->EnableTexture( SHADER_SAMPLER1, true );					// Shadow depth texture
 		pShaderShadow->EnableSRGBRead( SHADER_SAMPLER1, false );
-		pShaderShadow->SetShadowDepthFiltering( SHADER_SAMPLER1 );
+		//pShaderShadow->SetShadowDepthFiltering( SHADER_SAMPLER1 );
 
 		pShaderShadow->EnableTexture( SHADER_SAMPLER2, true );					// Screen-space noise map for shadow filtering
 		pShaderShadow->EnableSRGBRead( SHADER_SAMPLER2, false );
@@ -181,22 +182,23 @@ void DrawLightShafts( CBaseVSShader *pShader, IMaterialVar** params, IShaderDyna
 		{
 			ITexture *pCookieTexture = params[info.m_nCookieTexture]->GetTextureValue();
 			int nFrameNumber = params[info.m_nCookieFrameNum]->GetIntValue();
-			pShader->BindTexture( SHADER_SAMPLER0, pCookieTexture, nFrameNumber );
+			pShader->BindTexture( SHADER_SAMPLER0, TEXTURE_BINDFLAGS_SRGBREAD, pCookieTexture, nFrameNumber );
 		}
 
+		ITexture *pFlashlightDepthTexture = NULL;
 		if( (info.m_nShadowDepthTexture != -1) && params[info.m_nShadowDepthTexture]->IsDefined() &&
 			 g_pConfig->ShadowDepthTexture() && flashlightState.m_bEnableShadows )
 		{
-			ITexture *pFlashlightDepthTexture = params[info.m_nShadowDepthTexture]->GetTextureValue();
-			pShader->BindTexture( SHADER_SAMPLER1, pFlashlightDepthTexture );
+			pFlashlightDepthTexture = params[info.m_nShadowDepthTexture]->GetTextureValue();
+			pShader->BindTexture( SHADER_SAMPLER1, TEXTURE_BINDFLAGS_SHADOWDEPTH, pFlashlightDepthTexture );
 
-			pShaderAPI->BindStandardTexture( SHADER_SAMPLER2, TEXTURE_SHADOW_NOISE_2D );
+			pShaderAPI->BindStandardTexture( SHADER_SAMPLER2, TEXTURE_BINDFLAGS_NONE, TEXTURE_SHADOW_NOISE_2D );
 		}
 
 		if( (info.m_nNoiseTexture != -1) && params[info.m_nNoiseTexture]->IsDefined() )
 		{
 			ITexture *pNoiseTexture = params[info.m_nNoiseTexture]->GetTextureValue();
-			pShader->BindTexture( SHADER_SAMPLER3, pNoiseTexture );
+			pShader->BindTexture( SHADER_SAMPLER3, TEXTURE_BINDFLAGS_NONE, pNoiseTexture );
 		}
 
 		//
@@ -302,7 +304,7 @@ void DrawLightShafts( CBaseVSShader *pShader, IMaterialVar** params, IShaderDyna
 		pShaderAPI->SetPixelShaderConstant( PSREG_FLASHLIGHT_SCREEN_SCALE, vScreenScale, 1 );
 
 		DECLARE_DYNAMIC_PIXEL_SHADER( lightshafts_ps30 );
-		SET_DYNAMIC_PIXEL_SHADER_COMBO( FLASHLIGHTSHADOWS, flashlightState.m_bEnableShadows );
+		SET_DYNAMIC_PIXEL_SHADER_COMBO( FLASHLIGHTSHADOWS, flashlightState.m_bEnableShadows && ( pFlashlightDepthTexture != NULL ) );
 		SET_DYNAMIC_PIXEL_SHADER_COMBO( UBERLIGHT, flashlightState.m_bUberlight );
 		SET_DYNAMIC_PIXEL_SHADER( lightshafts_ps30 );
 	}

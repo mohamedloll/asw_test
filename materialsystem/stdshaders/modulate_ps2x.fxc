@@ -4,7 +4,7 @@
 #include "common_fog_ps_fxc.h"
 // DYNAMIC: "WRITE_DEPTH_TO_DESTALPHA"	"0..1" [ps20b] [PC]
 // DYNAMIC: "WRITE_DEPTH_TO_DESTALPHA"	"0..1" [ps30] [PC]
-// DYNAMIC: "WRITE_DEPTH_TO_DESTALPHA"	"0..0" [ps20b] [XBOX]
+// DYNAMIC: "WRITE_DEPTH_TO_DESTALPHA"	"0..0" [ps20b] [CONSOLE]
 
 #if defined( SHADER_MODEL_PS_2_0 )
 	#define WRITE_DEPTH_TO_DESTALPHA 0
@@ -27,7 +27,7 @@ struct PS_INPUT
 	float4 worldPos_projPosZ		: TEXCOORD7;		// Necessary for pixel fog
 };
 
-float4 main( PS_INPUT i ) : COLOR
+float4_color_return_type main( PS_INPUT i ) : COLOR
 {
 	float4 textureColor = tex2D( BaseTextureSampler, i.vTexCoord0 );
 

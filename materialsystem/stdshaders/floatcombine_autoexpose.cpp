@@ -99,9 +99,9 @@ BEGIN_VS_SHADER( floatcombine_autoexpose, "Help for floatcombine_autoexpose" )
 			pShaderAPI->SetPixelShaderConstant( 0, c0, 1 );
 			pShaderAPI->SetPixelShaderConstant( 1, c1, 1 );
 			pShaderAPI->SetPixelShaderConstant( 2, c2, 1 );
-			BindTexture( SHADER_SAMPLER0, BASETEXTURE, -1 );
-			BindTexture( SHADER_SAMPLER1, BLOOMTEXTURE, -1 );
-			BindTexture( SHADER_SAMPLER2, EXPOSURE_TEXTURE, -1 );
+			BindTexture( SHADER_SAMPLER0, TEXTURE_BINDFLAGS_NONE, BASETEXTURE, -1 );
+			BindTexture( SHADER_SAMPLER1, TEXTURE_BINDFLAGS_NONE, BLOOMTEXTURE, -1 );
+			BindTexture( SHADER_SAMPLER2, TEXTURE_BINDFLAGS_NONE, EXPOSURE_TEXTURE, -1 );
 			DECLARE_DYNAMIC_VERTEX_SHADER( screenspaceeffect_vs20 );
 			SET_DYNAMIC_VERTEX_SHADER( screenspaceeffect_vs20 );
 

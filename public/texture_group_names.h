@@ -1,4 +1,4 @@
-//===== Copyright © 1996-2005, Valve Corporation, All rights reserved. ======//
+//===== Copyright ï¿½ 1996-2005, Valve Corporation, All rights reserved. ======//
 //
 // Purpose: 
 //
@@ -14,6 +14,9 @@
 #define TEXTURE_GROUP_LIGHTMAP						"Lightmaps"
 #define TEXTURE_GROUP_WORLD							"World textures"
 #define TEXTURE_GROUP_MODEL							"Model textures"
+#define TEXTURE_GROUP_STATIC_PROP					"StaticProp textures"
+#define TEXTURE_GROUP_COMBINED						"Combined Textures"
+#define TEXTURE_GROUP_COMPOSITE						"Composited Textures"
 #define TEXTURE_GROUP_VGUI							"VGUI textures"
 #define TEXTURE_GROUP_PARTICLE						"Particle textures"
 #define TEXTURE_GROUP_DECAL							"Decal textures"

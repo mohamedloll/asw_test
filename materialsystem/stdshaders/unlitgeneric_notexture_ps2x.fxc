@@ -7,7 +7,7 @@ struct PS_INPUT
 	float4 vColor0		: COLOR0;
 };
 
-float4 main( PS_INPUT i ) : COLOR
+float4_color_return_type main( PS_INPUT i ) : COLOR
 {
 	return FinalOutput( i.vColor0, 0, PIXEL_FOG_TYPE_NONE, TONEMAP_SCALE_NONE );
 }

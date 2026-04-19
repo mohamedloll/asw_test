@@ -28,7 +28,7 @@ public:
 	// This should be called wherever VertexBuffers are freed
 	virtual void UnCountVB( void * buffer ) = 0;
 	// Track mesh allocations (set this before an allocation, clear it after)
-	virtual void TrackMeshAllocations( const char * allocatorName ) = 0;
+	virtual bool TrackMeshAllocations( const char * allocatorName ) = 0;
 };
 
 #endif // IVBALLOCTRACKER_H

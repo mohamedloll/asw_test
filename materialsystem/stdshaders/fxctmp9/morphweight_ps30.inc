@@ -39,3 +39,18 @@ public:
 	}
 };
 #define shaderDynamicTest_morphweight_ps30 0
+static const ShaderComboSemantics_t morphweight_ps30_combos =
+{
+	"morphweight_ps30", NULL, 0, NULL, 0 
+};
+
+class ConstructMe_morphweight_ps30
+{
+public:
+	ConstructMe_morphweight_ps30()
+	{
+		GetShaderDLL()->AddShaderComboInformation( &morphweight_ps30_combos );
+	}
+};
+
+static ConstructMe_morphweight_ps30 s_ConstructMe_morphweight_ps30;

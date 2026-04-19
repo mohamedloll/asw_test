@@ -4,40 +4,27 @@
 //
 //=============================================================================
 
-//  DYNAMIC: "COMPRESSED_VERTS"	"0..1"
-//	DYNAMIC: "SKINNING"			"0..1"
 //  STATIC: "MODEL"				"0..1"
-//  STATIC: "FOW"				"0..1"
 
 #include "common_fog_vs_fxc.h"
+
 #include "common_vs_fxc.h"
-#include "fow_vs_fxc.h"
 
 //const float4 cBaseTexCoordTransform[ 2 ]			: register( SHADER_SPECIFIC_CONST_6 );
 
 const float4 g_flProjectedSizeRotation				: register( c49 );
 const float4 g_vProjectionOrigin					: register( c48 );
 
-static const bool g_bSkinning		= SKINNING ? true : false;
-
-#if ( FOW == 1 )
-const float4 g_vFoWWorldSize						: register( c26 );
-#endif
-
 struct VS_INPUT
 {
-	float4 vPos							: POSITION;
-	float4 vBoneWeights					: BLENDWEIGHT;
-	float4 vBoneIndices					: BLENDINDICES;
+	float3 vPos							: POSITION;
+	float4 vNormal						: NORMAL;
 };
 
 struct VS_OUTPUT
 {
 	float4 vProjPos							: POSITION;	
 	float2 vBaseTexCoord					: TEXCOORD0;
-#if ( FOW == 1 )
-	float2 vFowCoord						: TEXCOORD3;
-#endif
 };
 
 static const float3 Normal = float3( 0, 0, -1.0 );
@@ -72,20 +59,17 @@ VS_OUTPUT main( const VS_INPUT v )
 	float3 vNewPos = v.vPos;
 //	vNewPos.z += 128.0;
 	
+	float3 vObjNormal;
+	DecompressVertex_Normal( v.vNormal, vObjNormal );
+
 	float4 vProjPos;
 	float3 vWorldPos;
 
-	SkinPosition( g_bSkinning, v.vPos, v.vBoneWeights, v.vBoneIndices, vWorldPos );
-
-	// vProjPos = mul( float4( vNewPos, 1 ), cModelViewProj );
+	vWorldPos = mul( float4( vNewPos, 1 ), cModel[0] );
 	vProjPos = mul( float4( vWorldPos, 1 ), cViewProj );
 	o.vProjPos = vProjPos;
-
-//	vWorldPos = mul( float4( vNewPos, 1 ), cModel[0] );
 	
-#if ( FOW == 1 )
-	o.vFowCoord = CalcFoWCoord( g_vFoWWorldSize, vWorldPos.xy );
-#endif
+//	float3 worldNormal = mul( vObjNormal, ( float3x3 )cModel[0] );
 
 	o.vBaseTexCoord = ComputeTexCoord( vWorldPos, g_flProjectedSizeRotation.y, 1.0 );
 	

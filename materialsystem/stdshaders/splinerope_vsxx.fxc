@@ -3,9 +3,12 @@
 #include "common_vs_fxc.h"
 #include "spline_fxc.h"
 
-const float4x3 cModelView			: register(SHADER_SPECIFIC_CONST_0);
+const hlsl_float4x3 cModelView			: register(SHADER_SPECIFIC_CONST_0);
 const float4x4 cProj				: register(SHADER_SPECIFIC_CONST_3);
 const float g_MinPixelSize        : register(SHADER_SPECIFIC_CONST_7);
+const float g_Const8              : register(SHADER_SPECIFIC_CONST_8);
+
+#define g_FlTilingMultiplier g_Const8.x
 
 struct VS_INPUT
 {
@@ -62,9 +65,17 @@ VS_OUTPUT main( const VS_INPUT v )
 	float3 ofs = normalize( cross( v2p, normalize( tangent ) ) );
 	posrad.xyz += ofs * ( posrad.w * ( v.vParms.z - .5 ) );
 	o.projPos  = mul( float4(posrad.xyz, 1.0f), cViewProj );
+	
+#ifdef _PS3
+	// Account for OpenGL's flipped y coordinate and expanded z range [-1,1] instead of [0,1]
+	o.projPos.y = -o.projPos.y;
+	o.projPos.z = 2.0f * o.projPos.z - o.projPos.w;
+#endif // _PS3
+
 	o.worldPos_projPosZ.xyz = posrad.xyz;
 	o.worldPos_projPosZ.w = o.projPos.z;
 	o.texCoord.xy = float2( 1.0f - v.vParms.z, v.vParms.y );
+	o.texCoord.y *= g_FlTilingMultiplier;
 	o.argbcolor = float4( v.vTint.rgb, v.vTint.a );
 
 	#if !defined( _X360 ) && !defined( SHADER_MODEL_VS_3_0 )

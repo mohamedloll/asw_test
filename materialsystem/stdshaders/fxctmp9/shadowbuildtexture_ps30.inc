@@ -39,3 +39,18 @@ public:
 	}
 };
 #define shaderDynamicTest_shadowbuildtexture_ps30 0
+static const ShaderComboSemantics_t shadowbuildtexture_ps30_combos =
+{
+	"shadowbuildtexture_ps30", NULL, 0, NULL, 0 
+};
+
+class ConstructMe_shadowbuildtexture_ps30
+{
+public:
+	ConstructMe_shadowbuildtexture_ps30()
+	{
+		GetShaderDLL()->AddShaderComboInformation( &shadowbuildtexture_ps30_combos );
+	}
+};
+
+static ConstructMe_shadowbuildtexture_ps30 s_ConstructMe_shadowbuildtexture_ps30;

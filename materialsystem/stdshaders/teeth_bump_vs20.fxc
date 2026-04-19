@@ -1,13 +1,19 @@
 //========== Copyright (c) Valve Corporation, All rights reserved. ==========//
 
-//	STATIC: "INTRO"					"0..1"
+// STATIC: "FLATTEN_STATIC_CONTROL_FLOW"	"0..1" [vs20] [PC]
+// STATIC: "FLATTEN_STATIC_CONTROL_FLOW"	"0..0" [CONSOLE]
 
-//	DYNAMIC: "COMPRESSED_VERTS"		"0..1"
+// DYNAMIC: "COMPRESSED_VERTS"				"0..1"
 #include "common_fog_vs_fxc.h"
-//	DYNAMIC: "SKINNING"				"0..1"
-//	DYNAMIC: "STATIC_LIGHT"			"0..1"
+// DYNAMIC: "SKINNING"						"0..1"
+// DYNAMIC: "STATIC_LIGHT"					"0..1"
 
-// DYNAMIC: "MORPHING"				"0..1" [vs30] [ = pShaderAPI->IsHWMorphingEnabled() ]
+// DYNAMIC: "MORPHING"						"0..0" [ = false ]
+// DYNAMIC: "NUM_LIGHTS"					"0..2" [vs20] [PC]
+// DYNAMIC: "NUM_LIGHTS"					"0..0" [vs20] [CONSOLE]
+
+// If using static control flow on Direct3D, we should use the NUM_LIGHTS=0 combo
+//  SKIP: ( $FLATTEN_STATIC_CONTROL_FLOW == 0 ) && ( $NUM_LIGHTS > 0 ) [vs20] [PC]
 
 #include "vortwarp_vs20_helper.h"
 
@@ -15,11 +21,6 @@ static const int g_FogType			= DOWATERFOG;
 static const bool g_bSkinning		= SKINNING ? true : false;
 
 const float4 cTeethLighting			:  register( SHADER_SPECIFIC_CONST_0 );
-#if INTRO
-const float4 const4	:  register( SHADER_SPECIFIC_CONST_1 );
-#define g_Time const4.w
-#define modelOrigin const4.xyz
-#endif
 
 #ifdef SHADER_MODEL_VS_3_0
 // NOTE: cMorphTargetTextureDim.xy = target dimensions,
@@ -27,7 +28,7 @@ const float4 const4	:  register( SHADER_SPECIFIC_CONST_1 );
 const float3 cMorphTargetTextureDim			: register( SHADER_SPECIFIC_CONST_6 );
 const float4 cMorphSubrect					: register( SHADER_SPECIFIC_CONST_7 );
 
-sampler2D morphSampler : register( D3DVERTEXTEXTURESAMPLER0, s0 );
+sampler2D morphSampler : register( s0 );
 #endif
 
 struct VS_INPUT
@@ -51,7 +52,7 @@ struct VS_INPUT
 struct VS_OUTPUT
 {
     float4 projPos							: POSITION;
-#if !defined( _X360 ) && !defined( SHADER_MODEL_VS_3_0 ) && !INTRO    	
+#if !defined( _X360 ) && !defined( SHADER_MODEL_VS_3_0 )
 	float  fog								: FOG;
 #endif
 	float2 baseTexCoord						: TEXCOORD0;
@@ -85,10 +86,6 @@ VS_OUTPUT main( const VS_INPUT v )
 										v.vBoneWeights, v.vBoneIndices, worldPos,
 										worldNormal, worldTangentS, worldTangentT );
 
-#if INTRO
-	WorldSpaceVertexProcess( g_Time, modelOrigin, worldPos, worldNormal, worldTangentS, worldTangentT );
-#endif
-
 	// Always normalize since flex path is controlled by runtime
 	// constant not a shader combo and will always generate the normalization
 	worldNormal   = normalize( worldNormal );
@@ -97,10 +94,16 @@ VS_OUTPUT main( const VS_INPUT v )
 
 	// Transform into projection space
 	o.projPos = mul( float4( worldPos, 1 ), cViewProj );
+	
+#ifdef _PS3
+	// Account for OpenGL's flipped y coordinate and expanded z range [-1,1] instead of [0,1]
+	o.projPos.y = -o.projPos.y;
+	o.projPos.z = 2.0f * o.projPos.z - o.projPos.w;
+#endif // _PS3
 
 	o.worldPos_projPosZ = float4( worldPos, o.projPos.z );
 	
-#if !defined( _X360 ) && !defined( SHADER_MODEL_VS_3_0 ) && !INTRO //ran out of instruction slots in intro mode. Don't think we need it in those situations. Drop ps20 fixed function fog support.
+#if !defined( _X360 ) && !defined( SHADER_MODEL_VS_3_0 )
 	o.fog = CalcFixedFunctionFog( worldPos, g_FogType );
 #endif
 
@@ -111,10 +114,26 @@ VS_OUTPUT main( const VS_INPUT v )
 	o.worldVertToEyeVector_Darkening.w = cTeethLighting.w * saturate( dot( worldNormal, cTeethLighting.xyz ) );;
 
 	// Scalar light attenuation (mouth darkening applied in pixel shader)
-	o.lightAtten0123.x = GetVertexAttenForLight( worldPos, 0 );
-	o.lightAtten0123.y = GetVertexAttenForLight( worldPos, 1 );
-	o.lightAtten0123.z = GetVertexAttenForLight( worldPos, 2 );
-	o.lightAtten0123.w = GetVertexAttenForLight( worldPos, 3 );
+#if ( defined( SHADER_MODEL_VS_2_0 ) && FLATTEN_STATIC_CONTROL_FLOW )
+	o.lightAtten0123.xyzw = float4(0,0,0,0);
+	#if ( NUM_LIGHTS > 0 )
+		o.lightAtten0123.x = GetVertexAttenForLight( worldPos, 0, false );
+	#endif
+	#if ( NUM_LIGHTS > 1 )
+		o.lightAtten0123.y = GetVertexAttenForLight( worldPos, 1, false );
+	#endif
+	#if ( NUM_LIGHTS > 2 )
+		o.lightAtten0123.z = GetVertexAttenForLight( worldPos, 2, false );
+	#endif
+	#if ( NUM_LIGHTS > 3 )
+		o.lightAtten0123.w = GetVertexAttenForLight( worldPos, 3, false );
+	#endif
+#else
+	o.lightAtten0123.x = GetVertexAttenForLight( worldPos, 0, true );
+	o.lightAtten0123.y = GetVertexAttenForLight( worldPos, 1, true );
+	o.lightAtten0123.z = GetVertexAttenForLight( worldPos, 2, true );
+	o.lightAtten0123.w = GetVertexAttenForLight( worldPos, 3, true );
+#endif
 
 	o.baseTexCoord = v.vTexCoord0;
 

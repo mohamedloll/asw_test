@@ -1,4 +1,4 @@
-//===== Copyright © 1996-2005, Valve Corporation, All rights reserved. ======//
+//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
 //
 // Purpose: Visualize shadow z buffers.  Designed to be used when drawing a screen-aligned
 //          quad with a floating-point z-buffer so that the large z-range is divided down
@@ -10,7 +10,7 @@
 #include "convar.h"
 #include "BaseVSShader.h"
 
-#include "showz_vs11.inc"
+#include "showz_vs20.inc"
 #include "showz_ps20.inc"
 #include "showz_ps20b.inc"
 
@@ -18,7 +18,6 @@
 #include "tier0/memdbgon.h"
 
 static ConVar r_showz_power( "r_showz_power", "1.0f", FCVAR_CHEAT );
-
 
 BEGIN_VS_SHADER_FLAGS( showz, "Help for ShowZ", SHADER_NOT_EDITABLE )
 	BEGIN_SHADER_PARAMS
@@ -48,10 +47,10 @@ BEGIN_VS_SHADER_FLAGS( showz, "Help for ShowZ", SHADER_NOT_EDITABLE )
 		{
 			pShaderShadow->EnableTexture( SHADER_SAMPLER0, true );
 
-			DECLARE_STATIC_VERTEX_SHADER( showz_vs11 );
-			SET_STATIC_VERTEX_SHADER( showz_vs11 );
+			DECLARE_STATIC_VERTEX_SHADER( showz_vs20 );
+			SET_STATIC_VERTEX_SHADER( showz_vs20 );
 
-			int nShadowFilterMode = g_pHardwareConfig->GetShadowFilterMode();	// Based upon vendor and device dependent formats
+			ShadowFilterMode_t nShadowFilterMode = g_pHardwareConfig->GetShadowFilterMode( false /* bForceLowQuality */, false /* bPS30 */ );	// Based upon vendor and device dependent formats
 
 			if( g_pHardwareConfig->SupportsPixelShaders_2_b() )
 			{
@@ -69,14 +68,14 @@ BEGIN_VS_SHADER_FLAGS( showz, "Help for ShowZ", SHADER_NOT_EDITABLE )
 
 			pShaderShadow->VertexShaderVertexFormat( VERTEX_POSITION, 1, 0, 0 );
 
-			pShaderShadow->EnableSRGBWrite( false );
+			pShaderShadow->EnableSRGBWrite( true );  // The back buffer is sRGB, we should always set this true!
 		}
 		DYNAMIC_STATE
 		{
-			BindTexture( SHADER_SAMPLER0, BASETEXTURE, FRAME );	// Bind shadow depth map
+			BindTexture( SHADER_SAMPLER0, TEXTURE_BINDFLAGS_NONE, BASETEXTURE, FRAME );	// Bind shadow depth map
 
-			DECLARE_DYNAMIC_VERTEX_SHADER( showz_vs11 );
-			SET_DYNAMIC_VERTEX_SHADER( showz_vs11 );
+			DECLARE_DYNAMIC_VERTEX_SHADER( showz_vs20 );
+			SET_DYNAMIC_VERTEX_SHADER( showz_vs20 );
 
 			if( g_pHardwareConfig->SupportsPixelShaders_2_b() )
 			{

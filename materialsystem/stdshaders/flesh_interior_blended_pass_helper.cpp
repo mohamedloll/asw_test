@@ -119,7 +119,7 @@
 ==================================================================================================== */
 
 #include "BaseVSShader.h"
-#include "mathlib/VMatrix.h"
+#include "mathlib/vmatrix.h"
 #include "convar.h"
 #include "flesh_interior_blended_pass_helper.h"
 
@@ -156,12 +156,12 @@ void InitParamsFleshInteriorBlendedPass( CBaseVSShader *pShader, IMaterialVar** 
 void InitFleshInteriorBlendedPass( CBaseVSShader *pShader, IMaterialVar** params, FleshInteriorBlendedPassVars_t &info )
 {
 	// Load textures
-	pShader->LoadTexture( info.m_nFleshTexture );
+	pShader->LoadTexture( info.m_nFleshTexture, TEXTUREFLAGS_SRGB );
 	pShader->LoadTexture( info.m_nFleshNoiseTexture );
-	pShader->LoadTexture( info.m_nFleshBorderTexture1D );
+	pShader->LoadTexture( info.m_nFleshBorderTexture1D, TEXTUREFLAGS_SRGB );
 	pShader->LoadTexture( info.m_nFleshNormalTexture );
-	pShader->LoadTexture( info.m_nFleshSubsurfaceTexture );
-	pShader->LoadCubeMap( info.m_nFleshCubeTexture );
+	pShader->LoadTexture( info.m_nFleshSubsurfaceTexture, TEXTUREFLAGS_SRGB );
+	pShader->LoadCubeMap( info.m_nFleshCubeTexture, TEXTUREFLAGS_SRGB );
 }
 
 void DrawFleshInteriorBlendedPass( CBaseVSShader *pShader, IMaterialVar** params, IShaderDynamicAPI *pShaderAPI,
@@ -178,9 +178,12 @@ void DrawFleshInteriorBlendedPass( CBaseVSShader *pShader, IMaterialVar** params
 		int userDataSize = 0;
 		pShaderShadow->VertexShaderVertexFormat( flags, nTexCoordCount, NULL, userDataSize );
 
+		bool bFlattenStaticControlFlow = !g_pHardwareConfig->SupportsStaticControlFlow();
+
 		// Vertex Shader
 		DECLARE_STATIC_VERTEX_SHADER( flesh_interior_blended_pass_vs20 );
 		SET_STATIC_VERTEX_SHADER_COMBO( HALFLAMBERT, IS_FLAG_SET( MATERIAL_VAR_HALFLAMBERT ) );
+		SET_STATIC_VERTEX_SHADER_COMBO( FLATTEN_STATIC_CONTROL_FLOW, bFlattenStaticControlFlow );
 		SET_STATIC_VERTEX_SHADER( flesh_interior_blended_pass_vs20 );
 
 		// Pixel Shader
@@ -225,6 +228,8 @@ void DrawFleshInteriorBlendedPass( CBaseVSShader *pShader, IMaterialVar** params
 		// Reset render state manually since we're drawing from two materials
 		pShaderAPI->SetDefaultState();
 
+		bool bUseStaticControlFlow = g_pHardwareConfig->SupportsStaticControlFlow();
+
 		// Set Vertex Shader Combos
 		LightState_t lightState = { 0, false, false };
 		pShaderAPI->GetDX9LightState( &lightState );
@@ -233,6 +238,7 @@ void DrawFleshInteriorBlendedPass( CBaseVSShader *pShader, IMaterialVar** params
 		SET_DYNAMIC_VERTEX_SHADER_COMBO( DYNAMIC_LIGHT, lightState.HasDynamicLight() );
 		SET_DYNAMIC_VERTEX_SHADER_COMBO( STATIC_LIGHT, lightState.m_bStaticLight ? 1 : 0 );
 		SET_DYNAMIC_VERTEX_SHADER_COMBO( COMPRESSED_VERTS, (int)vertexCompression );
+		SET_DYNAMIC_VERTEX_SHADER_COMBO( NUM_LIGHTS, bUseStaticControlFlow ? 0 : lightState.m_nNumLights );
 		SET_DYNAMIC_VERTEX_SHADER( flesh_interior_blended_pass_vs20 );
 
 		// Time % 1000
@@ -286,7 +292,7 @@ void DrawFleshInteriorBlendedPass( CBaseVSShader *pShader, IMaterialVar** params
 		}
 		pShaderAPI->SetVertexShaderConstant( VERTEX_SHADER_SHADER_SPECIFIC_CONST_3, vVsConst3, 3 );
 
-		float vVsConst4[4] = { kDefaultEffectCenterRadius[0], kDefaultEffectCenterRadius[4], kDefaultEffectCenterRadius[2], kDefaultEffectCenterRadius[3] };
+		float vVsConst4[4] = { kDefaultEffectCenterRadius[0], kDefaultEffectCenterRadius[1], kDefaultEffectCenterRadius[2], kDefaultEffectCenterRadius[3] };
 		if ( IS_PARAM_DEFINED( info.m_nvEffectCenterRadius4 ) )
 		{
 			params[info.m_nvEffectCenterRadius4]->GetVecValue( vVsConst4, 4 );
@@ -309,12 +315,12 @@ void DrawFleshInteriorBlendedPass( CBaseVSShader *pShader, IMaterialVar** params
 		}
 
 		// Bind textures
-		pShader->BindTexture( SHADER_SAMPLER0, info.m_nFleshTexture );
-		pShader->BindTexture( SHADER_SAMPLER1, info.m_nFleshNoiseTexture );
-		pShader->BindTexture( SHADER_SAMPLER2, info.m_nFleshBorderTexture1D );
-		pShader->BindTexture( SHADER_SAMPLER3, info.m_nFleshNormalTexture );
-		pShader->BindTexture( SHADER_SAMPLER4, info.m_nFleshSubsurfaceTexture );
-		pShader->BindTexture( SHADER_SAMPLER5, info.m_nFleshCubeTexture );
+		pShader->BindTexture( SHADER_SAMPLER0, TEXTURE_BINDFLAGS_SRGBREAD, info.m_nFleshTexture );
+		pShader->BindTexture( SHADER_SAMPLER1, TEXTURE_BINDFLAGS_NONE, info.m_nFleshNoiseTexture );
+		pShader->BindTexture( SHADER_SAMPLER2, TEXTURE_BINDFLAGS_SRGBREAD, info.m_nFleshBorderTexture1D );
+		pShader->BindTexture( SHADER_SAMPLER3, TEXTURE_BINDFLAGS_NONE, info.m_nFleshNormalTexture );
+		pShader->BindTexture( SHADER_SAMPLER4, TEXTURE_BINDFLAGS_SRGBREAD, info.m_nFleshSubsurfaceTexture );
+		pShader->BindTexture( SHADER_SAMPLER5, TEXTURE_BINDFLAGS_SRGBREAD, info.m_nFleshCubeTexture );
 
 		// Set Pixel Shader Constants 
 

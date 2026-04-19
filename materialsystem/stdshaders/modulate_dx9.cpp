@@ -13,7 +13,7 @@
 
 #include "cpp_shader_constant_register_map.h"
 
-#if !defined( _X360 )
+#if !defined( _X360 ) && !defined( _PS3 )
 	#include "modulate_ps30.inc"
 	#include "unlitgeneric_vs30.inc"
 #endif
@@ -103,7 +103,7 @@ BEGIN_VS_SHADER( Modulate_DX9,
 	{
 		if (params[BASETEXTURE]->IsDefined())
 		{
-			LoadTexture( BASETEXTURE );
+			LoadTexture( BASETEXTURE, TEXTUREFLAGS_SRGB );
 		}
 
 		// Cloak Pass
@@ -163,6 +163,7 @@ BEGIN_VS_SHADER( Modulate_DX9,
 				if( params[BASETEXTURE]->IsTexture() )
 				{
 					pShaderShadow->EnableTexture( SHADER_SAMPLER0, true );
+					pShaderShadow->EnableSRGBRead( SHADER_SAMPLER0, true );
 					numTexCoords = 1;
 				}
 
@@ -184,7 +185,7 @@ BEGIN_VS_SHADER( Modulate_DX9,
 
 				pShaderShadow->VertexShaderVertexFormat( flags, numTexCoords, NULL, userDataSize );
 
-#ifndef _X360
+#if !defined( _X360 ) && !defined( _PS3 )
 				if ( !g_pHardwareConfig->HasFastVertexTextures() )
 #endif
 				{
@@ -203,7 +204,7 @@ BEGIN_VS_SHADER( Modulate_DX9,
 						SET_STATIC_PIXEL_SHADER( modulate_ps20 );
 					}
 				}
-#ifndef _X360
+#if !defined( _X360 ) && !defined( _PS3 )
 				else
 				{
 					SET_FLAGS2( MATERIAL_VAR2_USES_VERTEXID );
@@ -241,7 +242,7 @@ BEGIN_VS_SHADER( Modulate_DX9,
 			{
 				if( params[BASETEXTURE]->IsTexture() )
 				{
-					BindTexture( SHADER_SAMPLER0, BASETEXTURE, FRAME );
+					BindTexture( SHADER_SAMPLER0, TEXTURE_BINDFLAGS_SRGBREAD, BASETEXTURE, FRAME );
 					SetVertexShaderTextureTransform( VERTEX_SHADER_SHADER_SPECIFIC_CONST_0, BASETEXTURETRANSFORM );
 				}
 
@@ -264,10 +265,10 @@ BEGIN_VS_SHADER( Modulate_DX9,
 				vEyePos_SpecExponent[3] = 0.0f;
 				pShaderAPI->SetPixelShaderConstant( PSREG_EYEPOS_SPEC_EXPONENT, vEyePos_SpecExponent, 1 );
 
-				BOOL bShaderConstants[1] = { bVertexColorOrAlpha };
-				pShaderAPI->SetBooleanVertexShaderConstant( VERTEX_SHADER_SHADER_SPECIFIC_BOOL_CONST_0, bShaderConstants, 1 );
+				float vVertexColor[4] = { bVertexColorOrAlpha ? 1.0f : 0.0f, 0.0f, 0.0f, 0.0f };
+				pShaderAPI->SetVertexShaderConstant( VERTEX_SHADER_SHADER_SPECIFIC_CONST_6, vVertexColor, 1 );
 
-#ifndef _X360
+#if !defined( _X360 ) && !defined( _PS3 )
 				if ( !g_pHardwareConfig->HasFastVertexTextures() )
 #endif
 				{
@@ -289,7 +290,7 @@ BEGIN_VS_SHADER( Modulate_DX9,
 						SET_DYNAMIC_PIXEL_SHADER( modulate_ps20 );
 					}
 				}
-#ifndef _X360
+#if !defined( _X360 ) && !defined( _PS3 )
 				else
 				{
 					TessellationMode_t nTessellationMode = pShaderAPI->GetTessellationMode();

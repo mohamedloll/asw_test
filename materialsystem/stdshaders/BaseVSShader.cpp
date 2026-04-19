@@ -1,4 +1,4 @@
-//===== Copyright © 1996-2007, Valve Corporation, All rights reserved. ======//
+//===== Copyright (c) 1996-2007, Valve Corporation, All rights reserved. ======//
 //
 // Purpose: 
 //
@@ -8,10 +8,10 @@
 #if !defined(_STATIC_LINKED) || defined(STDSHADER_DX9_DLL_EXPORT)
 
 #include "cpp_shader_constant_register_map.h"
-#include "basevsshader.h"
+#include "BaseVSShader.h"
 #include "mathlib/vmatrix.h"
 #include "mathlib/bumpvects.h"
-#include "ConVar.h"
+#include "convar.h"
 #include "tier0/icommandline.h"
 
 #ifdef HDR
@@ -19,7 +19,7 @@
 #include "vertexlit_and_unlit_generic_hdr_ps20b.inc"
 #endif
 
-#ifndef _X360
+#if !defined( _X360 ) && !defined( _PS3 )
 #include "lightmappedgeneric_flashlight_vs30.inc"
 #include "flashlight_ps30.inc"
 #endif
@@ -29,13 +29,17 @@
 #include "flashlight_ps20b.inc"
 #include "vertexlitgeneric_flashlight_vs20.inc"
 
+#include "shaderapifast.h"
+
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
-static ConVar mat_fullbright( "mat_fullbright","0", FCVAR_CHEAT );
-
 // NOTE: This is externed in BaseVSShader.h so it needs to be here
+#if defined( _PS3 ) || defined( OSX )
+extern ConVar r_flashlightbrightness;
+#else
 ConVar r_flashlightbrightness( "r_flashlightbrightness", "0.25", FCVAR_CHEAT );
+#endif
 
 // These functions are to be called from the shaders.
 
@@ -441,7 +445,12 @@ void CBaseVSShader::SetVertexShaderMatrix4x4( int vertexReg, int matrixVar )
 	IMaterialVar* pTranslationVar = s_ppParams[matrixVar];
 	if (pTranslationVar)
 	{
+#ifdef _PS3
+		VMatrix transpose = pTranslationVar->GetMatrixValue().Transpose();
+		s_pShaderAPI->SetVertexShaderConstant( vertexReg, &transpose[0][0], 4 ); 
+#else // _PS3
 		s_pShaderAPI->SetVertexShaderConstant( vertexReg, &pTranslationVar->GetMatrixValue( )[0][0], 4 ); 
+#endif // !_PS3
 	}
 	else
 	{
@@ -460,7 +469,11 @@ void CBaseVSShader::LoadViewMatrixIntoVertexShaderConstant( int vertexReg )
 	VMatrix mat, transpose;
 	s_pShaderAPI->GetMatrix( MATERIAL_VIEW, mat.m[0] );
 
+#ifdef _PS3
+	transpose = mat;
+#else // _PS3
 	MatrixTranspose( mat, transpose );
+#endif // !_PS3
 	s_pShaderAPI->SetVertexShaderConstant( vertexReg, transpose.m[0], 3 );
 }
 
@@ -471,9 +484,13 @@ void CBaseVSShader::LoadViewMatrixIntoVertexShaderConstant( int vertexReg )
 void CBaseVSShader::LoadProjectionMatrixIntoVertexShaderConstant( int vertexReg )
 {
 	VMatrix mat, transpose;
-	s_pShaderAPI->GetMatrix( MATERIAL_PROJECTION, mat.m[0] );
+	s_pShaderAPI->GetActualProjectionMatrix( mat.m[0] );
 
+#ifdef _PS3
+	transpose = mat;
+#else // _PS3
 	MatrixTranspose( mat, transpose );
+#endif // !_PS3
 	s_pShaderAPI->SetVertexShaderConstant( vertexReg, transpose.m[0], 4 );
 }
 
@@ -485,11 +502,15 @@ void CBaseVSShader::LoadModelViewMatrixIntoVertexShaderConstant( int vertexReg )
 {
 	VMatrix view, model, modelView, transpose;
 	s_pShaderAPI->GetMatrix( MATERIAL_MODEL, model.m[0] );
+
 	MatrixTranspose( model, model );
+
 	s_pShaderAPI->GetMatrix( MATERIAL_VIEW, view.m[0] );
+
 	MatrixTranspose( view, view );
 
 	MatrixMultiply( view, model, modelView );
+
 	s_pShaderAPI->SetVertexShaderConstant( vertexReg, modelView.m[0], 3 );
 }
 
@@ -583,8 +604,6 @@ ConVar mat_envmaptintoverride( "mat_envmaptintoverride", "-1" );
 ConVar mat_envmaptintscale( "mat_envmaptintscale", "-1" );
 #endif
 
-ConVar r_emulategl( "r_emulategl", "0" );
-
 //-----------------------------------------------------------------------------
 // Helpers for dealing with envmap tint
 //-----------------------------------------------------------------------------
@@ -592,7 +611,7 @@ ConVar r_emulategl( "r_emulategl", "0" );
 void CBaseVSShader::SetEnvMapTintPixelShaderDynamicState( int pixelReg, int tintVar, int alphaVar, bool bConvertFromGammaToLinear )
 {
 	float color[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
-	if( g_pConfig->bShowSpecular && mat_fullbright.GetInt() != 2 )
+	if( g_pConfig->bShowSpecular && g_pConfig->nFullbright != 2 )
 	{
 		IMaterialVar* pAlphaVar = NULL;
 		if( alphaVar >= 0 )
@@ -652,7 +671,7 @@ void CBaseVSShader::SetEnvMapTintPixelShaderDynamicState( int pixelReg, int tint
 //-----------------------------------------------------------------------------
 void CBaseVSShader::SetHWMorphVertexShaderState( int nDimConst, int nSubrectConst, VertexTextureSampler_t morphSampler )
 {
-#ifndef _X360
+#if !defined( _X360 ) && !defined( _PS3 )
 	if ( !s_pShaderAPI->IsHWMorphingEnabled() )
 		return;
 
@@ -747,20 +766,21 @@ void CBaseVSShader::SetFlashlightVertexShaderConstants( bool bBump, int bumpTran
 	}
 }
 
-
 void CBaseVSShader::DrawFlashlight_dx90( IMaterialVar** params, IShaderDynamicAPI *pShaderAPI, 
 										IShaderShadow* pShaderShadow, DrawFlashlight_dx90_Vars_t &vars )
 {
+	bool bSFM = ( ToolsEnabled() && IsPlatformWindowsPC() && g_pHardwareConfig->SupportsPixelShaders_3_0() ) ? true : false;
+
 	// FLASHLIGHTFIXME: hack . . need to fix the vertex shader so that it can deal with and without bumps for vertexlitgeneric
 	if( !vars.m_bLightmappedGeneric )
 	{
 		vars.m_bBump = false;
 	}
-	bool bBump2 = vars.m_bWorldVertexTransition && vars.m_bBump && vars.m_nBumpmap2Var != -1 && params[vars.m_nBumpmap2Var]->IsTexture();
+	bool bBump2 = vars.m_bWorldVertexTransition && vars.m_bBump && vars.m_nBumpmapVar2 != -1 && params[vars.m_nBumpmapVar2]->IsTexture();
 	bool bSeamless = vars.m_fSeamlessScale != 0.0;
-	bool bDetail = vars.m_bLightmappedGeneric && (vars.m_nDetailVar != -1) && params[vars.m_nDetailVar]->IsDefined() && (vars.m_nDetailScale != -1);
+	bool bDetail = vars.m_bLightmappedGeneric && (vars.m_nDetailVar != -1) && params[vars.m_nDetailVar]->IsDefined() && (vars.m_nDetailScale != -1) && g_pConfig->UseDetailTexturing();
 
-	int nDetailBlendMode = 0;
+	int nDetailBlendMode = DETAIL_BLEND_MODE_RGB_EQUALS_BASE_x_DETAILx2;
 	if ( bDetail )
 	{
 		nDetailBlendMode = GetIntParam( vars.m_nDetailTextureCombineMode, params );
@@ -768,9 +788,9 @@ void CBaseVSShader::DrawFlashlight_dx90( IMaterialVar** params, IShaderDynamicAP
 		if ( pDetailTexture->GetFlags() & TEXTUREFLAGS_SSBUMP )
 		{
 			if ( vars.m_bBump )
-				nDetailBlendMode = 10;					// ssbump
+				nDetailBlendMode = DETAIL_BLEND_MODE_SSBUMP_BUMP;	// ssbump
 			else
-				nDetailBlendMode = 11;					// ssbump_nobump
+				nDetailBlendMode = DETAIL_BLEND_MODE_SSBUMP_NOBUMP;	// ssbump_nobump
 		}
 	}
 	
@@ -792,6 +812,7 @@ void CBaseVSShader::DrawFlashlight_dx90( IMaterialVar** params, IShaderDynamicAP
 
 		// Spot sampler
 		pShaderShadow->EnableTexture( SHADER_SAMPLER0, true );
+		pShaderShadow->EnableSRGBRead( SHADER_SAMPLER0, true );
 
 		// Base sampler
 		pShaderShadow->EnableTexture( SHADER_SAMPLER1, true );
@@ -808,7 +829,7 @@ void CBaseVSShader::DrawFlashlight_dx90( IMaterialVar** params, IShaderDynamicAP
 
 		// Flashlight depth sampler
 		pShaderShadow->EnableTexture( SHADER_SAMPLER7, true );
-		pShaderShadow->SetShadowDepthFiltering( SHADER_SAMPLER7 );
+		//pShaderShadow->SetShadowDepthFiltering( SHADER_SAMPLER7 );
 
 		if( vars.m_bWorldVertexTransition )
 		{
@@ -824,16 +845,15 @@ void CBaseVSShader::DrawFlashlight_dx90( IMaterialVar** params, IShaderDynamicAP
 		if( bDetail )
 		{
 			pShaderShadow->EnableTexture( SHADER_SAMPLER8, true );				// detail sampler
-			if ( nDetailBlendMode == 1 )
-				pShaderShadow->EnableSRGBRead( SHADER_SAMPLER8, true );
+			pShaderShadow->EnableSRGBRead( SHADER_SAMPLER8, IsSRGBDetailTexture( nDetailBlendMode ) );
 		}
 
 		pShaderShadow->EnableSRGBWrite( true );
 
 		if( vars.m_bLightmappedGeneric )
 		{
-#ifndef _X360
-			if ( g_pHardwareConfig->HasFastVertexTextures() )
+#if !defined( _X360 ) && !defined( _PS3 )
+			if ( g_pHardwareConfig->SupportsPixelShaders_3_0() )
 			{
 				DECLARE_STATIC_VERTEX_SHADER( lightmappedgeneric_flashlight_vs30 );
 				SET_STATIC_VERTEX_SHADER_COMBO( WORLDVERTEXTRANSITION, vars.m_bWorldVertexTransition );
@@ -886,12 +906,13 @@ void CBaseVSShader::DrawFlashlight_dx90( IMaterialVar** params, IShaderDynamicAP
 			nBumpMapVariant = ( vars.m_bSSBump ) ? 2 : 1;
 		}
 
-#ifndef _X360
-		if ( g_pHardwareConfig->HasFastVertexTextures() )
+#if !defined( _X360 ) && !defined( _PS3 )
+		if ( g_pHardwareConfig->SupportsPixelShaders_3_0() )
 		{
-			int nShadowFilterMode = g_pHardwareConfig->GetShadowFilterMode();
+			ShadowFilterMode_t nShadowFilterMode = g_pHardwareConfig->GetShadowFilterMode( false /* bForceLowQuality */, true /* bPS30 */ );
 
 			DECLARE_STATIC_PIXEL_SHADER( flashlight_ps30 );
+			SET_STATIC_PIXEL_SHADER_COMBO( SFM, bSFM );
 			SET_STATIC_PIXEL_SHADER_COMBO( NORMALMAP, nBumpMapVariant );
 			SET_STATIC_PIXEL_SHADER_COMBO( NORMALMAP2, bBump2 );
 			SET_STATIC_PIXEL_SHADER_COMBO( WORLDVERTEXTRANSITION, vars.m_bWorldVertexTransition );
@@ -905,9 +926,10 @@ void CBaseVSShader::DrawFlashlight_dx90( IMaterialVar** params, IShaderDynamicAP
 #endif
 		if ( g_pHardwareConfig->SupportsPixelShaders_2_b() )
 		{
-			int nShadowFilterMode = g_pHardwareConfig->GetShadowFilterMode();
+			ShadowFilterMode_t nShadowFilterMode = g_pHardwareConfig->GetShadowFilterMode( false /* bForceLowQuality */, false /* bPS30 */ );
 
 			DECLARE_STATIC_PIXEL_SHADER( flashlight_ps20b );
+			SET_STATIC_PIXEL_SHADER_COMBO( SFM, bSFM );
 			SET_STATIC_PIXEL_SHADER_COMBO( NORMALMAP, nBumpMapVariant );
 			SET_STATIC_PIXEL_SHADER_COMBO( NORMALMAP2, bBump2 );
 			SET_STATIC_PIXEL_SHADER_COMBO( WORLDVERTEXTRANSITION, vars.m_bWorldVertexTransition );
@@ -920,6 +942,7 @@ void CBaseVSShader::DrawFlashlight_dx90( IMaterialVar** params, IShaderDynamicAP
 		else
 		{
 			DECLARE_STATIC_PIXEL_SHADER( flashlight_ps20 );
+			SET_STATIC_PIXEL_SHADER_COMBO( SFM, bSFM );
 			SET_STATIC_PIXEL_SHADER_COMBO( NORMALMAP, nBumpMapVariant );
 			SET_STATIC_PIXEL_SHADER_COMBO( NORMALMAP2, bBump2 );
 			SET_STATIC_PIXEL_SHADER_COMBO( WORLDVERTEXTRANSITION, vars.m_bWorldVertexTransition );
@@ -938,82 +961,84 @@ void CBaseVSShader::DrawFlashlight_dx90( IMaterialVar** params, IShaderDynamicAP
 	{
 		VMatrix worldToTexture;
 		ITexture *pFlashlightDepthTexture;
-		FlashlightState_t flashlightState = pShaderAPI->GetFlashlightStateEx( worldToTexture, &pFlashlightDepthTexture );
+		FlashlightState_t flashlightState = ShaderApiFast( pShaderAPI )->GetFlashlightStateEx( worldToTexture, &pFlashlightDepthTexture );
 
 		SetFlashLightColorFromState( flashlightState, pShaderAPI, false );
 
-		BindTexture( SHADER_SAMPLER0, flashlightState.m_pSpotlightTexture, flashlightState.m_nSpotlightTextureFrame );
+		BindTexture( SHADER_SAMPLER0, TEXTURE_BINDFLAGS_SRGBREAD, flashlightState.m_pSpotlightTexture, flashlightState.m_nSpotlightTextureFrame );
 
-		pShaderAPI->BindStandardTexture( SHADER_SAMPLER5, TEXTURE_SHADOW_NOISE_2D );
+		ShaderApiFast( pShaderAPI )->BindStandardTexture( SHADER_SAMPLER5, TEXTURE_BINDFLAGS_NONE, TEXTURE_SHADOW_NOISE_2D );
 		if( pFlashlightDepthTexture && g_pConfig->ShadowDepthTexture() && flashlightState.m_bEnableShadows )
 		{
-			BindTexture( SHADER_SAMPLER7, pFlashlightDepthTexture, 0 );
+			BindTexture( SHADER_SAMPLER7, TEXTURE_BINDFLAGS_SHADOWDEPTH, pFlashlightDepthTexture, 0 );
 
 			// Tweaks associated with a given flashlight
 			float tweaks[4];
 			tweaks[0] = ShadowFilterFromState( flashlightState );
 			tweaks[1] = ShadowAttenFromState( flashlightState );
 			HashShadow2DJitter( flashlightState.m_flShadowJitterSeed, &tweaks[2], &tweaks[3] );
-			pShaderAPI->SetPixelShaderConstant( PSREG_ENVMAP_TINT__SHADOW_TWEAKS, tweaks, 1 );
+			ShaderApiFast( pShaderAPI )->SetPixelShaderConstant( PSREG_ENVMAP_TINT__SHADOW_TWEAKS, tweaks, 1 );
 
 			// Dimensions of screen, used for screen-space noise map sampling
 			float vScreenScale[4] = {1280.0f / 32.0f, 720.0f / 32.0f, 0, 0};
 			int nWidth, nHeight;
-			pShaderAPI->GetBackBufferDimensions( nWidth, nHeight );
+			ShaderApiFast( pShaderAPI )->GetBackBufferDimensions( nWidth, nHeight );
 
 			int nTexWidth, nTexHeight;
-			pShaderAPI->GetStandardTextureDimensions( &nTexWidth, &nTexHeight, TEXTURE_SHADOW_NOISE_2D );
+			ShaderApiFast( pShaderAPI )->GetStandardTextureDimensions( &nTexWidth, &nTexHeight, TEXTURE_SHADOW_NOISE_2D );
 
 			vScreenScale[0] = (float) nWidth  / nTexWidth;
 			vScreenScale[1] = (float) nHeight / nTexHeight;
+			vScreenScale[2] = 1.0f / flashlightState.m_flShadowMapResolution;
+			vScreenScale[3] = 2.0f / flashlightState.m_flShadowMapResolution;
 
-			pShaderAPI->SetPixelShaderConstant( PSREG_FLASHLIGHT_SCREEN_SCALE, vScreenScale, 1 );
+			ShaderApiFast( pShaderAPI )->SetPixelShaderConstant( PSREG_FLASHLIGHT_SCREEN_SCALE, vScreenScale, 1 );
 		}
 		else
 		{
-			pShaderAPI->BindStandardTexture( SHADER_SAMPLER7, TEXTURE_WHITE );
+			ShaderApiFast( pShaderAPI )->BindStandardTexture( SHADER_SAMPLER7, TEXTURE_BINDFLAGS_NONE, TEXTURE_WHITE );
 		}
 
-		if( params[BASETEXTURE]->IsTexture() && mat_fullbright.GetInt() != 2 )
+		if( params[BASETEXTURE]->IsTexture() && g_pConfig->nFullbright != 2 )
 		{
-			BindTexture( SHADER_SAMPLER1, BASETEXTURE, FRAME );
+			BindTexture( SHADER_SAMPLER1, TEXTURE_BINDFLAGS_SRGBREAD, BASETEXTURE, FRAME );
 		}
 		else
 		{
-			pShaderAPI->BindStandardTexture( SHADER_SAMPLER1, TEXTURE_GREY );
+			ShaderApiFast( pShaderAPI )->BindStandardTexture( SHADER_SAMPLER1, TEXTURE_BINDFLAGS_SRGBREAD, TEXTURE_GREY );
 		}
 		if( vars.m_bWorldVertexTransition )
 		{
 			Assert( vars.m_nBaseTexture2Var >= 0 && vars.m_nBaseTexture2FrameVar >= 0 );
-			BindTexture( SHADER_SAMPLER4, vars.m_nBaseTexture2Var, vars.m_nBaseTexture2FrameVar );
+			BindTexture( SHADER_SAMPLER4, TEXTURE_BINDFLAGS_SRGBREAD, vars.m_nBaseTexture2Var, vars.m_nBaseTexture2FrameVar );
 		}
-		pShaderAPI->BindStandardTexture( SHADER_SAMPLER2, TEXTURE_NORMALIZATION_CUBEMAP );
+		ShaderApiFast( pShaderAPI )->BindStandardTexture( SHADER_SAMPLER2, TEXTURE_BINDFLAGS_NONE, TEXTURE_NORMALIZATION_CUBEMAP );
 		if( vars.m_bBump )
 		{
-			BindTexture( SHADER_SAMPLER3, vars.m_nBumpmapVar, vars.m_nBumpmapFrame );
+			BindTexture( SHADER_SAMPLER3, TEXTURE_BINDFLAGS_NONE, vars.m_nBumpmapVar, vars.m_nBumpmapFrame );
 		}
 		else
 		{
-			pShaderAPI->BindStandardTexture( SHADER_SAMPLER3, TEXTURE_NORMALIZATION_CUBEMAP );
+			ShaderApiFast( pShaderAPI )->BindStandardTexture( SHADER_SAMPLER3, TEXTURE_BINDFLAGS_NONE, TEXTURE_NORMALIZATION_CUBEMAP );
 		}
 
 		if( bDetail )
 		{
-			BindTexture( SHADER_SAMPLER8, vars.m_nDetailVar );
+			BindTexture( SHADER_SAMPLER8, IsSRGBDetailTexture( nDetailBlendMode ) ? TEXTURE_BINDFLAGS_SRGBREAD : TEXTURE_BINDFLAGS_NONE, vars.m_nDetailVar );
 		}
 
 		if( vars.m_bWorldVertexTransition )
 		{
 			if( bBump2 )
 			{
-				BindTexture( SHADER_SAMPLER6, vars.m_nBumpmap2Var, vars.m_nBumpmap2Frame );
+				BindTexture( SHADER_SAMPLER6, TEXTURE_BINDFLAGS_NONE, vars.m_nBumpmapVar2, vars.m_nBumpmapFrame2 );
 			}
 		}
 
 		if( vars.m_bLightmappedGeneric )
 		{
-#ifndef _X360
-			if ( g_pHardwareConfig->HasFastVertexTextures() )
+#if !defined( _X360 ) && !defined( _PS3 )
+			if ( g_pHardwareConfig->SupportsPixelShaders_3_0() )
 			{
 				DECLARE_DYNAMIC_VERTEX_SHADER( lightmappedgeneric_flashlight_vs30 );
 				SET_DYNAMIC_VERTEX_SHADER( lightmappedgeneric_flashlight_vs30 );
@@ -1028,7 +1053,7 @@ void CBaseVSShader::DrawFlashlight_dx90( IMaterialVar** params, IShaderDynamicAP
 			if ( bSeamless )
 			{
 				float const0[4]={ vars.m_fSeamlessScale,0,0,0};
-				pShaderAPI->SetVertexShaderConstant( VERTEX_SHADER_SHADER_SPECIFIC_CONST_6, const0 );
+				ShaderApiFast( pShaderAPI )->SetVertexShaderConstant( VERTEX_SHADER_SHADER_SPECIFIC_CONST_6, const0 );
 			}
 
 			if ( bDetail )
@@ -1045,13 +1070,13 @@ void CBaseVSShader::DrawFlashlight_dx90( IMaterialVar** params, IShaderDynamicAP
 					vDetailConstants[3] = params[vars.m_nDetailTextureBlendFactor]->GetFloatValue();
 				}
 
-				pShaderAPI->SetPixelShaderConstant( 0, vDetailConstants, 1 );
+				ShaderApiFast( pShaderAPI )->SetPixelShaderConstant( 0, vDetailConstants, 1 );
 			}
 		}
 		else
 		{
 			DECLARE_DYNAMIC_VERTEX_SHADER( vertexlitgeneric_flashlight_vs20 );
-			SET_DYNAMIC_VERTEX_SHADER_COMBO( SKINNING, pShaderAPI->GetCurrentNumBones() > 0 );
+			SET_DYNAMIC_VERTEX_SHADER_COMBO( SKINNING, ShaderApiFast( pShaderAPI )->GetCurrentNumBones() > 0 );
 			SET_DYNAMIC_VERTEX_SHADER( vertexlitgeneric_flashlight_vs20 );
 
 			if( vars.m_bTeeth )
@@ -1061,23 +1086,23 @@ void CBaseVSShader::DrawFlashlight_dx90( IMaterialVar** params, IShaderDynamicAP
 				Vector4D lighting;
 				params[vars.m_nTeethForwardVar]->GetVecValue( lighting.Base(), 3 );
 				lighting[3] = params[vars.m_nTeethIllumFactorVar]->GetFloatValue();
-				pShaderAPI->SetVertexShaderConstant( VERTEX_SHADER_SHADER_SPECIFIC_CONST_0, lighting.Base() );
+				ShaderApiFast( pShaderAPI )->SetVertexShaderConstant( VERTEX_SHADER_SHADER_SPECIFIC_CONST_0, lighting.Base() );
 			}
 		}
 
-		pShaderAPI->SetPixelShaderFogParams( PSREG_FOG_PARAMS );
+		ShaderApiFast( pShaderAPI )->SetPixelShaderFogParams( PSREG_FOG_PARAMS );
 
 		float vEyePos_SpecExponent[4];
-		pShaderAPI->GetWorldSpaceCameraPosition( vEyePos_SpecExponent );
+		ShaderApiFast( pShaderAPI )->GetWorldSpaceCameraPosition( vEyePos_SpecExponent );
 		vEyePos_SpecExponent[3] = 0.0f;
-		pShaderAPI->SetPixelShaderConstant( PSREG_EYEPOS_SPEC_EXPONENT, vEyePos_SpecExponent, 1 );
+		ShaderApiFast( pShaderAPI )->SetPixelShaderConstant( PSREG_EYEPOS_SPEC_EXPONENT, vEyePos_SpecExponent, 1 );
 
-#ifndef _X360
-		if ( g_pHardwareConfig->HasFastVertexTextures() )
+#if !defined( _X360 ) && !defined( _PS3 )
+		if ( g_pHardwareConfig->SupportsPixelShaders_3_0() )
 		{
 			DECLARE_DYNAMIC_PIXEL_SHADER( flashlight_ps30 );
-			SET_DYNAMIC_PIXEL_SHADER_COMBO( FLASHLIGHTSHADOWS, flashlightState.m_bEnableShadows );
-			SET_DYNAMIC_PIXEL_SHADER_COMBO( UBERLIGHT, flashlightState.m_bUberlight );
+			SET_DYNAMIC_PIXEL_SHADER_COMBO( FLASHLIGHTSHADOWS, flashlightState.m_bEnableShadows && ( pFlashlightDepthTexture != NULL ) );
+			SET_DYNAMIC_PIXEL_SHADER_COMBO( UBERLIGHT, flashlightState.m_bUberlight && bSFM );
 			SET_DYNAMIC_PIXEL_SHADER( flashlight_ps30 );
 
 			SetupUberlightFromState( pShaderAPI, flashlightState );
@@ -1087,7 +1112,7 @@ void CBaseVSShader::DrawFlashlight_dx90( IMaterialVar** params, IShaderDynamicAP
 		if ( g_pHardwareConfig->SupportsPixelShaders_2_b() )
 		{
 			DECLARE_DYNAMIC_PIXEL_SHADER( flashlight_ps20b );
-			SET_DYNAMIC_PIXEL_SHADER_COMBO( FLASHLIGHTSHADOWS, flashlightState.m_bEnableShadows );
+			SET_DYNAMIC_PIXEL_SHADER_COMBO( FLASHLIGHTSHADOWS, flashlightState.m_bEnableShadows && ( pFlashlightDepthTexture != NULL ) );
 			SET_DYNAMIC_PIXEL_SHADER( flashlight_ps20b );
 		}
 		else
@@ -1108,7 +1133,7 @@ void CBaseVSShader::DrawFlashlight_dx90( IMaterialVar** params, IShaderDynamicAP
 		pos[1] = flashlightState.m_vecLightOrigin[1];
 		pos[2] = flashlightState.m_vecLightOrigin[2];
 		pos[3] = flashlightState.m_FarZ;
-		pShaderAPI->SetPixelShaderConstant( PSREG_FLASHLIGHT_POSITION_RIM_BOOST, pos, 1 );	// rim boost not really used here
+		ShaderApiFast( pShaderAPI )->SetPixelShaderConstant( PSREG_FLASHLIGHT_POSITION_RIM_BOOST, pos, 1 );	// rim boost not really used here
 
 		SetFlashlightVertexShaderConstants( vars.m_bBump, vars.m_nBumpTransform, bDetail, vars.m_nDetailScale,  bSeamless ? false : true );
 	}
@@ -1169,9 +1194,11 @@ void CBaseVSShader::DrawEqualDepthToDestAlpha( void )
 }
 
 
+#if !defined( _PS3 ) && !defined( OSX )
 //-----------------------------------------------------------------------------
 bool ToolsEnabled()
 {
 	static bool bToolsMode = ( CommandLine()->CheckParm( "-tools" ) != NULL );
 	return bToolsMode;
 }
+#endif

@@ -19,14 +19,12 @@ BEGIN_VS_SHADER( Projected_DX90, "Help for Projected" )
 
 	BEGIN_SHADER_PARAMS
 		SHADER_PARAM( SPECTEXTURE, SHADER_PARAM_TYPE_TEXTURE, "", "" )
-		SHADER_PARAM( FOW, SHADER_PARAM_TYPE_TEXTURE, "", "FoW Render Target" )
 	END_SHADER_PARAMS
 
 	void SetupVars( Projected_DX9_Vars_t& info )
 	{
 		info.m_nBaseTextureTransform = BASETEXTURETRANSFORM;
 		info.m_nBaseTexture = BASETEXTURE;
-		info.m_nFoW = FOW;
 	}
 
 	SHADER_INIT_PARAMS()

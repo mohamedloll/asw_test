@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
+//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -57,6 +57,8 @@ BEGIN_VS_SHADER_FLAGS( screenspace_general_dx9, "Help for screenspace_general", 
 		SHADER_PARAM( VERTEXSHADER, SHADER_PARAM_TYPE_STRING, "", "Name of the vertex shader to use" )
 		SHADER_PARAM( DISABLE_COLOR_WRITES,SHADER_PARAM_TYPE_INTEGER,"0","")
 		SHADER_PARAM( ALPHATESTED,SHADER_PARAM_TYPE_FLOAT,"0","")
+		SHADER_PARAM( ALPHA_BLEND_COLOR_OVERLAY, SHADER_PARAM_TYPE_INTEGER, "0", "")
+		SHADER_PARAM( ALPHA_BLEND, SHADER_PARAM_TYPE_INTEGER, "0", "")
 		SHADER_PARAM( TEXTURE1, SHADER_PARAM_TYPE_TEXTURE, "", "" )
 		SHADER_PARAM( TEXTURE2, SHADER_PARAM_TYPE_TEXTURE, "", "" )
 		SHADER_PARAM( TEXTURE3, SHADER_PARAM_TYPE_TEXTURE, "", "" )
@@ -65,7 +67,6 @@ BEGIN_VS_SHADER_FLAGS( screenspace_general_dx9, "Help for screenspace_general", 
 		SHADER_PARAM( LINEARREAD_TEXTURE2, SHADER_PARAM_TYPE_INTEGER, "0", "" )
 		SHADER_PARAM( LINEARREAD_TEXTURE3, SHADER_PARAM_TYPE_INTEGER, "0", "" )
 		SHADER_PARAM( LINEARWRITE,SHADER_PARAM_TYPE_INTEGER,"0","")
-		SHADER_PARAM( VERTEXCOLOR,SHADER_PARAM_TYPE_INTEGER, "0", "vertices have color info" )
 		SHADER_PARAM( VERTEXTRANSFORM,SHADER_PARAM_TYPE_INTEGER, "0", "verts are in world space" )
 		SHADER_PARAM( ALPHABLEND,SHADER_PARAM_TYPE_INTEGER, "0", "whether or not to enable alpha blend" )
 		SHADER_PARAM( MULTIPLYCOLOR, SHADER_PARAM_TYPE_INTEGER, "0", "whether or not to multiply src and dest color" )
@@ -83,11 +84,9 @@ BEGIN_VS_SHADER_FLAGS( screenspace_general_dx9, "Help for screenspace_general", 
 		SHADER_PARAM( POINTSAMPLE_TEXTURE1, SHADER_PARAM_TYPE_INTEGER, "0", "" )
 		SHADER_PARAM( POINTSAMPLE_TEXTURE2, SHADER_PARAM_TYPE_INTEGER, "0", "" )
 		SHADER_PARAM( POINTSAMPLE_TEXTURE3, SHADER_PARAM_TYPE_INTEGER, "0", "" )
-		SHADER_PARAM( ALPHA_BLEND_COLOR_OVERLAY, SHADER_PARAM_TYPE_INTEGER, "0", "")
 	    SHADER_PARAM( CULL, SHADER_PARAM_TYPE_INTEGER, "0", "Culling control - 0 = nocull, 1 = do cull" )
 	    SHADER_PARAM( DEPTHTEST, SHADER_PARAM_TYPE_INTEGER, "0", "Enable Depthtest" )
 	    SHADER_PARAM( COPYALPHA, SHADER_PARAM_TYPE_INTEGER, "0", "")
-		SHADER_PARAM( ALPHA_BLEND, SHADER_PARAM_TYPE_INTEGER, "0", "")
 	END_SHADER_PARAMS
 
     SHADER_INIT_PARAMS()
@@ -101,19 +100,59 @@ BEGIN_VS_SHADER_FLAGS( screenspace_general_dx9, "Help for screenspace_general", 
 
 		if ( params[BASETEXTURE]->IsDefined() )
 		{
+#if defined( PLATFORM_POSIX ) && !defined( _PS3 )
+			ImageFormat fmt = params[BASETEXTURE]->GetTextureValue()->GetImageFormat();
+			bool bSRGB;
+			if ( ( fmt == IMAGE_FORMAT_RGBA16161616F ) || ( fmt == IMAGE_FORMAT_RGBA16161616 ) )
+				bSRGB = false;
+			else
+				bSRGB = !params[LINEARREAD_BASETEXTURE]->IsDefined() || !params[LINEARREAD_BASETEXTURE]->GetIntValue();
+			LoadTexture( BASETEXTURE, bSRGB ? TEXTUREFLAGS_SRGB : 0 );
+#else
 			LoadTexture( BASETEXTURE );
+#endif // PLATFORM_POSIX
 		}
 		if ( params[TEXTURE1]->IsDefined() )
 		{
+#if defined( PLATFORM_POSIX ) && !defined( _PS3 )
+			ImageFormat fmt = params[TEXTURE1]->GetTextureValue()->GetImageFormat();
+			bool bSRGB;
+			if ( ( fmt == IMAGE_FORMAT_RGBA16161616F ) || ( fmt == IMAGE_FORMAT_RGBA16161616 ) )
+				bSRGB = false;
+			else
+				bSRGB = !params[LINEARREAD_TEXTURE1]->IsDefined() || !params[LINEARREAD_TEXTURE1]->GetIntValue();
+			LoadTexture( TEXTURE1, bSRGB ? TEXTUREFLAGS_SRGB : 0 );
+#else
 			LoadTexture( TEXTURE1 );
+#endif // PLATFORM_POSIX
 		}
 		if ( params[TEXTURE2]->IsDefined() )
 		{
+#if defined( PLATFORM_POSIX ) && !defined( _PS3 )
+			ImageFormat fmt = params[TEXTURE2]->GetTextureValue()->GetImageFormat();
+			bool bSRGB;
+			if ( ( fmt == IMAGE_FORMAT_RGBA16161616F ) || ( fmt == IMAGE_FORMAT_RGBA16161616 ) )
+				bSRGB = false;
+			else
+				bSRGB = !params[LINEARREAD_TEXTURE2]->IsDefined() || !params[LINEARREAD_TEXTURE2]->GetIntValue();
+			LoadTexture( TEXTURE2, bSRGB ? TEXTUREFLAGS_SRGB : 0 );
+#else
 			LoadTexture( TEXTURE2 );
+#endif // PLATFORM_POSIX
 		}
 		if ( params[TEXTURE3]->IsDefined() )
 		{
+#if defined( PLATFORM_POSIX ) && !defined( _PS3 )
+			ImageFormat fmt = params[TEXTURE3]->GetTextureValue()->GetImageFormat();
+			bool bSRGB;
+			if ( ( fmt == IMAGE_FORMAT_RGBA16161616F ) || ( fmt == IMAGE_FORMAT_RGBA16161616 ) )
+				bSRGB = false;
+			else
+				bSRGB = !params[LINEARREAD_TEXTURE3]->IsDefined() || !params[LINEARREAD_TEXTURE3]->GetIntValue();
+			LoadTexture( TEXTURE3, bSRGB ? TEXTUREFLAGS_SRGB : 0 );
+#else
 			LoadTexture( TEXTURE3 );
+#endif // PLATFORM_POSIX
 		}
 	}
 	
@@ -160,7 +199,8 @@ BEGIN_VS_SHADER_FLAGS( screenspace_general_dx9, "Help for screenspace_general", 
 			}				
 			int fmt = VERTEX_POSITION;
 
-			if ( params[VERTEXCOLOR]->GetIntValue() )
+			const bool bHasVertexColor = IS_FLAG_SET( MATERIAL_VAR_VERTEXCOLOR );
+			if ( bHasVertexColor )
 			{
 				fmt |= VERTEX_COLOR;
 			}
@@ -215,7 +255,7 @@ BEGIN_VS_SHADER_FLAGS( screenspace_general_dx9, "Help for screenspace_general", 
 			{
 				// Pre-cache shaders
 				DECLARE_STATIC_VERTEX_SHADER( screenspaceeffect_vs20 );
-				SET_STATIC_VERTEX_SHADER_COMBO_HAS_DEFAULT( VERTEXCOLOR, params[VERTEXCOLOR]->GetIntValue() );
+				SET_STATIC_VERTEX_SHADER_COMBO_HAS_DEFAULT( VERTEXCOLOR, bHasVertexColor );
 				SET_STATIC_VERTEX_SHADER_COMBO_HAS_DEFAULT( TRANSFORMVERTS, params[VERTEXTRANSFORM]->GetIntValue() );
 				SET_STATIC_VERTEX_SHADER( screenspaceeffect_vs20 );
 			}
@@ -256,25 +296,25 @@ BEGIN_VS_SHADER_FLAGS( screenspace_general_dx9, "Help for screenspace_general", 
 		{
 			if (params[BASETEXTURE]->IsDefined())
 			{
-				BindTexture( SHADER_SAMPLER0, BASETEXTURE, -1 );
+				BindTexture( SHADER_SAMPLER0, SRGBReadMask( !params[LINEARREAD_BASETEXTURE]->IsDefined() || !params[LINEARREAD_BASETEXTURE]->GetIntValue() ), BASETEXTURE );
 				if ( params[POINTSAMPLE_BASETEXTURE]->GetIntValue() )
 					pShaderAPI->SetTextureFilterMode( SHADER_SAMPLER0, TFILTER_MODE_POINTSAMPLED );
 			}
 			if (params[TEXTURE1]->IsDefined())
 			{
-				BindTexture( SHADER_SAMPLER1, TEXTURE1, -1 );
+				BindTexture( SHADER_SAMPLER1, SRGBReadMask( !params[LINEARREAD_TEXTURE1]->IsDefined() || !params[LINEARREAD_TEXTURE1]->GetIntValue() ), TEXTURE1, -1 );
 				if ( params[POINTSAMPLE_TEXTURE1]->GetIntValue() )
 					pShaderAPI->SetTextureFilterMode( SHADER_SAMPLER1, TFILTER_MODE_POINTSAMPLED );
 			}
 			if (params[TEXTURE2]->IsDefined())
 			{
-				BindTexture( SHADER_SAMPLER2, TEXTURE2, -1 );
+				BindTexture( SHADER_SAMPLER2, SRGBReadMask( !params[LINEARREAD_TEXTURE2]->IsDefined() || !params[LINEARREAD_TEXTURE2]->GetIntValue() ), TEXTURE2, -1 );
 				if ( params[POINTSAMPLE_TEXTURE2]->GetIntValue() )
 					pShaderAPI->SetTextureFilterMode( SHADER_SAMPLER2, TFILTER_MODE_POINTSAMPLED );
 			}
 			if (params[TEXTURE3]->IsDefined())
 			{
-				BindTexture( SHADER_SAMPLER3, TEXTURE3, -1 );
+				BindTexture( SHADER_SAMPLER3, SRGBReadMask( !params[LINEARREAD_TEXTURE3]->IsDefined() || !params[LINEARREAD_TEXTURE3]->GetIntValue() ), TEXTURE3, -1 );
 				if ( params[POINTSAMPLE_TEXTURE3]->GetIntValue() )
 					pShaderAPI->SetTextureFilterMode( SHADER_SAMPLER3, TFILTER_MODE_POINTSAMPLED );
 			}

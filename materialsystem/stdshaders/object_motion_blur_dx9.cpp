@@ -49,6 +49,8 @@ BEGIN_VS_SHADER_FLAGS( ObjectMotionBlur, "Object Motion Blur", SHADER_NOT_EDITAB
 			DECLARE_STATIC_VERTEX_SHADER( object_motion_blur_vs20 );
 			SET_STATIC_VERTEX_SHADER( object_motion_blur_vs20 );
 
+			Assert( g_pHardwareConfig->SupportsPixelShaders_2_b() );
+			
 			DECLARE_STATIC_PIXEL_SHADER( object_motion_blur_ps20b );
 			SET_STATIC_PIXEL_SHADER( object_motion_blur_ps20b );
 
@@ -60,8 +62,8 @@ BEGIN_VS_SHADER_FLAGS( ObjectMotionBlur, "Object Motion Blur", SHADER_NOT_EDITAB
 		DYNAMIC_STATE
 		{
 			// Bind textures
-			BindTexture( SHADER_SAMPLER0, FB_TEXTURE );
-			BindTexture( SHADER_SAMPLER1, VELOCITY_TEXTURE );
+			BindTexture( SHADER_SAMPLER0, TEXTURE_BINDFLAGS_SRGBREAD, FB_TEXTURE );
+			BindTexture( SHADER_SAMPLER1, TEXTURE_BINDFLAGS_NONE, VELOCITY_TEXTURE );
 
 			DECLARE_DYNAMIC_VERTEX_SHADER( object_motion_blur_vs20 );
 			SET_DYNAMIC_VERTEX_SHADER( object_motion_blur_vs20 );

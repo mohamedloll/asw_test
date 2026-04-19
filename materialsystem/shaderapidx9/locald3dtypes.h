@@ -12,7 +12,9 @@
 #pragma once
 #endif
 
-#if defined( DX10 ) && !defined( POSIX )
+#include "tier0/platform.h"
+
+#if defined( DX10 ) && !defined( DX_TO_GL_ABSTRACTION )
 
 #include <d3d10.h>
 #include <d3dx10.h>
@@ -49,7 +51,7 @@ public:
 #endif // defined( DX10 ) && !defined( POSIX )
 
 
-#if !defined( _X360 ) && !defined( POSIX )
+#if !defined( _X360 ) && !defined( DX_TO_GL_ABSTRACTION )
 #ifdef _DEBUG
 #define D3D_DEBUG_INFO 1
 #endif
@@ -113,8 +115,8 @@ typedef void *HardwareShader_t;
 //-----------------------------------------------------------------------------
 // The vertex and pixel shader type
 //-----------------------------------------------------------------------------
-typedef int VertexShader_t;
-typedef int PixelShader_t;	
+typedef intp VertexShader_t;
+typedef intp PixelShader_t;	
 
 //-----------------------------------------------------------------------------
 // Bitpattern for an invalid shader
@@ -125,7 +127,7 @@ typedef int PixelShader_t;
 #define D3DSAMP_NOTSUPPORTED					D3DSAMP_FORCE_DWORD
 #define D3DRS_NOTSUPPORTED						D3DRS_FORCE_DWORD
 
-//#include "dxabstract.h"
+#include "togl/rendermechanism.h"
 
 #if defined( _X360 )
 
@@ -184,6 +186,7 @@ typedef enum D3DSHADEMODE
 {
 	D3DSHADE_FLAT = 0,
 	D3DSHADE_GOURAUD = 0,
+	D3DSHADE_NONE    = -1
 };
 
 #endif // _X360

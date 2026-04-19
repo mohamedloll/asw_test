@@ -31,6 +31,7 @@ public:
 	}
 	void SetFLASHLIGHT( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nFLASHLIGHT = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bFLASHLIGHT = true;
@@ -52,6 +53,7 @@ public:
 	}
 	void SetLIGHTWARPTEXTURE( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nLIGHTWARPTEXTURE = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bLIGHTWARPTEXTURE = true;
@@ -73,6 +75,7 @@ public:
 	}
 	void SetSPHERETEXKILLCOMBO( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nSPHERETEXKILLCOMBO = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bSPHERETEXKILLCOMBO = true;
@@ -94,6 +97,7 @@ public:
 	}
 	void SetRAYTRACESPHERE( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nRAYTRACESPHERE = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bRAYTRACESPHERE = true;
@@ -107,7 +111,7 @@ private:
 public:
 	void SetFLASHLIGHTDEPTHFILTERMODE( int i )
 	{
-		Assert( i >= 0 && i <= 2 );
+		Assert( i >= 0 && i <= 3 );
 		m_nFLASHLIGHTDEPTHFILTERMODE = i;
 #ifdef _DEBUG
 		m_bFLASHLIGHTDEPTHFILTERMODE = true;
@@ -115,6 +119,7 @@ public:
 	}
 	void SetFLASHLIGHTDEPTHFILTERMODE( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 3 );
 		m_nFLASHLIGHTDEPTHFILTERMODE = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bFLASHLIGHTDEPTHFILTERMODE = true;
@@ -136,6 +141,7 @@ public:
 	}
 	void SetWORLD_NORMAL( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 0 );
 		m_nWORLD_NORMAL = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bWORLD_NORMAL = true;
@@ -178,7 +184,7 @@ public:
 		bool bAllStaticVarsDefined = m_bFLASHLIGHT && m_bLIGHTWARPTEXTURE && m_bSPHERETEXKILLCOMBO && m_bRAYTRACESPHERE && m_bFLASHLIGHTDEPTHFILTERMODE && m_bWORLD_NORMAL;
 		Assert( bAllStaticVarsDefined );
 #endif // _DEBUG
-		return ( 20 * m_nFLASHLIGHT ) + ( 40 * m_nLIGHTWARPTEXTURE ) + ( 80 * m_nSPHERETEXKILLCOMBO ) + ( 160 * m_nRAYTRACESPHERE ) + ( 320 * m_nFLASHLIGHTDEPTHFILTERMODE ) + ( 960 * m_nWORLD_NORMAL ) + 0;
+		return ( 20 * m_nFLASHLIGHT ) + ( 40 * m_nLIGHTWARPTEXTURE ) + ( 80 * m_nSPHERETEXKILLCOMBO ) + ( 160 * m_nRAYTRACESPHERE ) + ( 320 * m_nFLASHLIGHTDEPTHFILTERMODE ) + ( 1280 * m_nWORLD_NORMAL ) + 0;
 	}
 };
 #define shaderStaticTest_eye_refract_ps20b psh_forgot_to_set_static_FLASHLIGHT + psh_forgot_to_set_static_LIGHTWARPTEXTURE + psh_forgot_to_set_static_SPHERETEXKILLCOMBO + psh_forgot_to_set_static_RAYTRACESPHERE + psh_forgot_to_set_static_FLASHLIGHTDEPTHFILTERMODE + psh_forgot_to_set_static_WORLD_NORMAL + 0
@@ -200,6 +206,7 @@ public:
 	}
 	void SetPIXELFOGTYPE( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nPIXELFOGTYPE = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bPIXELFOGTYPE = true;
@@ -221,6 +228,7 @@ public:
 	}
 	void SetNUM_LIGHTS( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 4 );
 		m_nNUM_LIGHTS = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bNUM_LIGHTS = true;
@@ -242,6 +250,7 @@ public:
 	}
 	void SetFLASHLIGHTSHADOWS( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nFLASHLIGHTSHADOWS = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bFLASHLIGHTSHADOWS = true;
@@ -276,3 +285,35 @@ public:
 	}
 };
 #define shaderDynamicTest_eye_refract_ps20b psh_forgot_to_set_dynamic_NUM_LIGHTS + psh_forgot_to_set_dynamic_FLASHLIGHTSHADOWS + 0
+
+static const ShaderComboInformation_t s_DynamicComboArray_eye_refract_ps20b[3] = 
+{
+	{ "PIXELFOGTYPE", 0, 1 },
+	{ "NUM_LIGHTS", 0, 4 },
+	{ "FLASHLIGHTSHADOWS", 0, 1 },
+};
+
+static const ShaderComboInformation_t s_StaticComboArray_eye_refract_ps20b[6] = 
+{
+	{ "FLASHLIGHT", 0, 1 },
+	{ "LIGHTWARPTEXTURE", 0, 1 },
+	{ "SPHERETEXKILLCOMBO", 0, 1 },
+	{ "RAYTRACESPHERE", 0, 1 },
+	{ "FLASHLIGHTDEPTHFILTERMODE", 0, 3 },
+	{ "WORLD_NORMAL", 0, 0 },
+};
+static const ShaderComboSemantics_t eye_refract_ps20b_combos =
+{
+	"eye_refract_ps20b", s_DynamicComboArray_eye_refract_ps20b, 3, s_StaticComboArray_eye_refract_ps20b, 6 
+};
+
+class ConstructMe_eye_refract_ps20b
+{
+public:
+	ConstructMe_eye_refract_ps20b()
+	{
+		GetShaderDLL()->AddShaderComboInformation( &eye_refract_ps20b_combos );
+	}
+};
+
+static ConstructMe_eye_refract_ps20b s_ConstructMe_eye_refract_ps20b;

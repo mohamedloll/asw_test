@@ -1,7 +1,7 @@
 //========= Copyright © 1996-2006, Valve Corporation, All rights reserved. ============//
 
 #include "BaseVSShader.h"
-#include "mathlib/VMatrix.h"
+#include "mathlib/vmatrix.h"
 #include "volume_clouds_helper.h"
 #include "convar.h"
 
@@ -31,17 +31,17 @@ void InitVolumeClouds( CBaseVSShader *pShader, IMaterialVar** params, VolumeClou
 	// Load textures
 	if ( (info.m_nTexture1 != -1) && params[info.m_nTexture1]->IsDefined() )
 	{
-		pShader->LoadTexture( info.m_nTexture1 );
+		pShader->LoadTexture( info.m_nTexture1, TEXTUREFLAGS_SRGB );
 	}
 
 	if ( (info.m_nTexture2 != -1) && params[info.m_nTexture2]->IsDefined() )
 	{
-		pShader->LoadTexture( info.m_nTexture2 );
+		pShader->LoadTexture( info.m_nTexture2, TEXTUREFLAGS_SRGB );
 	}
 
 	if ( (info.m_nTexture3 != -1) && params[info.m_nTexture3]->IsDefined() )
 	{
-		pShader->LoadTexture( info.m_nTexture3 );
+		pShader->LoadTexture( info.m_nTexture3, TEXTUREFLAGS_SRGB );
 	}
 }
 
@@ -61,7 +61,7 @@ void DrawVolumeClouds( CBaseVSShader *pShader, IMaterialVar** params, IShaderDyn
 		SET_STATIC_VERTEX_SHADER( volume_clouds_vs20 );
 	
 		// Pixel Shader
-		if( g_pHardwareConfig->SupportsPixelShaders_2_b() )
+		if( g_pHardwareConfig->SupportsPixelShaders_2_b() && !IsOpenGL() ) // Always send OpenGL down the 20 path (rg - why?)
 		{
 			DECLARE_STATIC_PIXEL_SHADER( volume_clouds_ps20b );
 			SET_STATIC_PIXEL_SHADER( volume_clouds_ps20b );
@@ -111,7 +111,7 @@ void DrawVolumeClouds( CBaseVSShader *pShader, IMaterialVar** params, IShaderDyn
 		pShaderAPI->SetVertexShaderConstant( VERTEX_SHADER_SHADER_SPECIFIC_CONST_0, vPackedVsConst1, 1 );
 
 		// Set Pixel Shader Combos
-		if ( g_pHardwareConfig->SupportsPixelShaders_2_b() )
+		if ( g_pHardwareConfig->SupportsPixelShaders_2_b() && !IsOpenGL() ) // Always send OpenGL down the 20 path (rg - why?)
 		{
 			DECLARE_DYNAMIC_PIXEL_SHADER( volume_clouds_ps20b );
 			SET_DYNAMIC_PIXEL_SHADER( volume_clouds_ps20b );
@@ -123,9 +123,9 @@ void DrawVolumeClouds( CBaseVSShader *pShader, IMaterialVar** params, IShaderDyn
 		}
 
 		// Bind textures
-		pShader->BindTexture( SHADER_SAMPLER0, info.m_nTexture1 );
-		pShader->BindTexture( SHADER_SAMPLER1, info.m_nTexture2 );
-		pShader->BindTexture( SHADER_SAMPLER2, info.m_nTexture3 );
+		pShader->BindTexture( SHADER_SAMPLER0, TEXTURE_BINDFLAGS_SRGBREAD, info.m_nTexture1 );
+		pShader->BindTexture( SHADER_SAMPLER1, TEXTURE_BINDFLAGS_SRGBREAD, info.m_nTexture2 );
+		pShader->BindTexture( SHADER_SAMPLER2, TEXTURE_BINDFLAGS_SRGBREAD, info.m_nTexture3 );
 
 		// Set Pixel Shader Constants 
 		float vEyePos[4] = { 0.0f, 0.0f, 0.0f, 0.0f };

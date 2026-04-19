@@ -28,6 +28,7 @@ public:
 	}
 	void SetTEXTURE2( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nTEXTURE2 = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bTEXTURE2 = true;
@@ -72,6 +73,7 @@ public:
 	}
 	void SetPIXELFOGTYPE( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nPIXELFOGTYPE = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bPIXELFOGTYPE = true;
@@ -93,6 +95,7 @@ public:
 	}
 	void SetWRITE_DEPTH_TO_DESTALPHA( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nWRITE_DEPTH_TO_DESTALPHA = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bWRITE_DEPTH_TO_DESTALPHA = true;
@@ -123,3 +126,29 @@ public:
 	}
 };
 #define shaderDynamicTest_monitorscreen_ps20b psh_forgot_to_set_dynamic_WRITE_DEPTH_TO_DESTALPHA + 0
+
+static const ShaderComboInformation_t s_DynamicComboArray_monitorscreen_ps20b[2] = 
+{
+	{ "PIXELFOGTYPE", 0, 1 },
+	{ "WRITE_DEPTH_TO_DESTALPHA", 0, 1 },
+};
+
+static const ShaderComboInformation_t s_StaticComboArray_monitorscreen_ps20b[1] = 
+{
+	{ "TEXTURE2", 0, 1 },
+};
+static const ShaderComboSemantics_t monitorscreen_ps20b_combos =
+{
+	"monitorscreen_ps20b", s_DynamicComboArray_monitorscreen_ps20b, 2, s_StaticComboArray_monitorscreen_ps20b, 1 
+};
+
+class ConstructMe_monitorscreen_ps20b
+{
+public:
+	ConstructMe_monitorscreen_ps20b()
+	{
+		GetShaderDLL()->AddShaderComboInformation( &monitorscreen_ps20b_combos );
+	}
+};
+
+static ConstructMe_monitorscreen_ps20b s_ConstructMe_monitorscreen_ps20b;

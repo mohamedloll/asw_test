@@ -169,8 +169,8 @@ BEGIN_VS_SHADER_FLAGS( DepthOfField_dx9, "Depth of Field", SHADER_NOT_EDITABLE )
 			SET_DYNAMIC_VERTEX_SHADER( depth_of_field_vs20 );
 
 			// Bind textures
-			BindTexture( SHADER_SAMPLER0, BASETEXTURE );
-			BindTexture( SHADER_SAMPLER1, SMALLFB );
+			BindTexture( SHADER_SAMPLER0, TEXTURE_BINDFLAGS_NONE, BASETEXTURE );
+			BindTexture( SHADER_SAMPLER1, TEXTURE_BINDFLAGS_NONE, SMALLFB );
 
 			// near blur = blur of stuff in front of focus range
 			// far blur = blur of stuff behind focus range

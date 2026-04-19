@@ -25,7 +25,6 @@ BEGIN_VS_SHADER( Multiblend_DX90, "Help for Multiblend" )
 		SHADER_PARAM( SPECTEXTURE3, SHADER_PARAM_TYPE_TEXTURE, "", "" )
 		SHADER_PARAM( BASETEXTURE4, SHADER_PARAM_TYPE_TEXTURE, "", "" )
 		SHADER_PARAM( SPECTEXTURE4, SHADER_PARAM_TYPE_TEXTURE, "", "" )
-		SHADER_PARAM( FOW, SHADER_PARAM_TYPE_TEXTURE, "", "FoW Render Target" )
 		SHADER_PARAM( ROTATION, SHADER_PARAM_TYPE_FLOAT, "0.0", "" )
 		SHADER_PARAM( SCALE, SHADER_PARAM_TYPE_FLOAT, "1.0", "" )
 		SHADER_PARAM( ROTATION2, SHADER_PARAM_TYPE_FLOAT, "0.0", "" )
@@ -47,7 +46,6 @@ BEGIN_VS_SHADER( Multiblend_DX90, "Help for Multiblend" )
 		info.m_nSpecTexture3 = SPECTEXTURE3;
 		info.m_nBaseTexture4 = BASETEXTURE4;
 		info.m_nSpecTexture4 = SPECTEXTURE4;
-		info.m_nFoW = FOW;
 		info.m_nRotation = ROTATION;
 		info.m_nRotation2 = ROTATION2;
 		info.m_nRotation3 = ROTATION3;
@@ -56,8 +54,6 @@ BEGIN_VS_SHADER( Multiblend_DX90, "Help for Multiblend" )
 		info.m_nScale2 = SCALE2;
 		info.m_nScale3 = SCALE3;
 		info.m_nScale4 = SCALE4;
-		info.m_nFlashlightTexture = FLASHLIGHTTEXTURE;
-		info.m_nFlashlightTextureFrame = FLASHLIGHTTEXTUREFRAME;
 	}
 
 	SHADER_INIT_PARAMS()
@@ -83,7 +79,7 @@ BEGIN_VS_SHADER( Multiblend_DX90, "Help for Multiblend" )
 	{
 		Multiblend_DX9_Vars_t info;
 		SetupVars( info );
-		DrawMultiblend_DX9( this, params, pShaderAPI, pShaderShadow, info, vertexCompression, pContextDataPtr );
+		DrawMultiblend_DX9( this, params, pShaderAPI, pShaderShadow, info, vertexCompression );
 	}
 END_SHADER
 

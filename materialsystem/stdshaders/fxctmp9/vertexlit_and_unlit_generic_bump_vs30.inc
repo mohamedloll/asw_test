@@ -1,10 +1,34 @@
 // ALL SKIP STATEMENTS THAT AFFECT THIS SHADER!!!
 // ( $STATICLIGHT3 || $MORPHING || $SKINNING || $COMPRESSED_VERTS) && $TESSELLATION
+// ( $SFM == 0 ) && ( $MORPHING )
+// ( $SFM == 0 ) && ( $TESSELLATION )
 // ( $DOWATERFOG == 0 ) && ( $DOPIXELFOG && $HARDWAREFOGBLEND )
 // defined $LIGHTING_PREVIEW && defined $FASTPATH && $LIGHTING_PREVIEW && $FASTPATH
 #include "shaderlib/cshader.h"
 class vertexlit_and_unlit_generic_bump_vs30_Static_Index
 {
+private:
+	int m_nSFM;
+#ifdef _DEBUG
+	bool m_bSFM;
+#endif
+public:
+	void SetSFM( int i )
+	{
+		Assert( i >= 0 && i <= 1 );
+		m_nSFM = i;
+#ifdef _DEBUG
+		m_bSFM = true;
+#endif
+	}
+	void SetSFM( bool i )
+	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		m_nSFM = i ? 1 : 0;
+#ifdef _DEBUG
+		m_bSFM = true;
+#endif
+	}
 private:
 	int m_nHALFLAMBERT;
 #ifdef _DEBUG
@@ -21,6 +45,7 @@ public:
 	}
 	void SetHALFLAMBERT( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nHALFLAMBERT = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bHALFLAMBERT = true;
@@ -42,6 +67,7 @@ public:
 	}
 	void SetUSE_WITH_2B( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nUSE_WITH_2B = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bUSE_WITH_2B = true;
@@ -63,30 +89,10 @@ public:
 	}
 	void SetDECAL( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nDECAL = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bDECAL = true;
-#endif
-	}
-private:
-	int m_nNORMALIZEEYEVEC;
-#ifdef _DEBUG
-	bool m_bNORMALIZEEYEVEC;
-#endif
-public:
-	void SetNORMALIZEEYEVEC( int i )
-	{
-		Assert( i >= 0 && i <= 1 );
-		m_nNORMALIZEEYEVEC = i;
-#ifdef _DEBUG
-		m_bNORMALIZEEYEVEC = true;
-#endif
-	}
-	void SetNORMALIZEEYEVEC( bool i )
-	{
-		m_nNORMALIZEEYEVEC = i ? 1 : 0;
-#ifdef _DEBUG
-		m_bNORMALIZEEYEVEC = true;
 #endif
 	}
 private:
@@ -105,30 +111,32 @@ public:
 	}
 	void SetWORLD_NORMAL( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nWORLD_NORMAL = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bWORLD_NORMAL = true;
 #endif
 	}
 private:
-	int m_nSTATICLIGHT3;
+	int m_nCASCADED_SHADOW_MAPPING;
 #ifdef _DEBUG
-	bool m_bSTATICLIGHT3;
+	bool m_bCASCADED_SHADOW_MAPPING;
 #endif
 public:
-	void SetSTATICLIGHT3( int i )
+	void SetCASCADED_SHADOW_MAPPING( int i )
 	{
 		Assert( i >= 0 && i <= 0 );
-		m_nSTATICLIGHT3 = i;
+		m_nCASCADED_SHADOW_MAPPING = i;
 #ifdef _DEBUG
-		m_bSTATICLIGHT3 = true;
+		m_bCASCADED_SHADOW_MAPPING = true;
 #endif
 	}
-	void SetSTATICLIGHT3( bool i )
+	void SetCASCADED_SHADOW_MAPPING( bool i )
 	{
-		m_nSTATICLIGHT3 = i ? 1 : 0;
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 0 );
+		m_nCASCADED_SHADOW_MAPPING = i ? 1 : 0;
 #ifdef _DEBUG
-		m_bSTATICLIGHT3 = true;
+		m_bCASCADED_SHADOW_MAPPING = true;
 #endif
 	}
 private:
@@ -147,6 +155,7 @@ public:
 	}
 	void SetDOPIXELFOG( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nDOPIXELFOG = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bDOPIXELFOG = true;
@@ -168,6 +177,7 @@ public:
 	}
 	void SetHARDWAREFOGBLEND( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 0 );
 		m_nHARDWAREFOGBLEND = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bHARDWAREFOGBLEND = true;
@@ -177,6 +187,10 @@ public:
 	// CONSTRUCTOR
 	vertexlit_and_unlit_generic_bump_vs30_Static_Index( IShaderShadow *pShaderShadow, IMaterialVar **params )
 	{
+#ifdef _DEBUG
+		m_bSFM = false;
+#endif // _DEBUG
+		m_nSFM = 0;
 #ifdef _DEBUG
 		m_bHALFLAMBERT = false;
 #endif // _DEBUG
@@ -190,17 +204,13 @@ public:
 #endif // _DEBUG
 		m_nDECAL = 0;
 #ifdef _DEBUG
-		m_bNORMALIZEEYEVEC = false;
-#endif // _DEBUG
-		m_nNORMALIZEEYEVEC = 0;
-#ifdef _DEBUG
 		m_bWORLD_NORMAL = false;
 #endif // _DEBUG
 		m_nWORLD_NORMAL = 0;
 #ifdef _DEBUG
-		m_bSTATICLIGHT3 = false;
+		m_bCASCADED_SHADOW_MAPPING = false;
 #endif // _DEBUG
-		m_nSTATICLIGHT3 = 0;
+		m_nCASCADED_SHADOW_MAPPING = 0;
 #ifdef _DEBUG
 		m_bDOPIXELFOG = true;
 #endif // _DEBUG
@@ -215,13 +225,13 @@ public:
 		// Asserts to make sure that we aren't using any skipped combinations.
 		// Asserts to make sure that we are setting all of the combination vars.
 #ifdef _DEBUG
-		bool bAllStaticVarsDefined = m_bHALFLAMBERT && m_bUSE_WITH_2B && m_bDECAL && m_bNORMALIZEEYEVEC && m_bWORLD_NORMAL && m_bSTATICLIGHT3 && m_bDOPIXELFOG && m_bHARDWAREFOGBLEND;
+		bool bAllStaticVarsDefined = m_bSFM && m_bHALFLAMBERT && m_bUSE_WITH_2B && m_bDECAL && m_bWORLD_NORMAL && m_bCASCADED_SHADOW_MAPPING && m_bDOPIXELFOG && m_bHARDWAREFOGBLEND;
 		Assert( bAllStaticVarsDefined );
 #endif // _DEBUG
-		return ( 48 * m_nHALFLAMBERT ) + ( 96 * m_nUSE_WITH_2B ) + ( 192 * m_nDECAL ) + ( 384 * m_nNORMALIZEEYEVEC ) + ( 768 * m_nWORLD_NORMAL ) + ( 1536 * m_nSTATICLIGHT3 ) + ( 1536 * m_nDOPIXELFOG ) + ( 3072 * m_nHARDWAREFOGBLEND ) + 0;
+		return ( 24 * m_nSFM ) + ( 48 * m_nHALFLAMBERT ) + ( 96 * m_nUSE_WITH_2B ) + ( 192 * m_nDECAL ) + ( 384 * m_nWORLD_NORMAL ) + ( 768 * m_nCASCADED_SHADOW_MAPPING ) + ( 768 * m_nDOPIXELFOG ) + ( 1536 * m_nHARDWAREFOGBLEND ) + 0;
 	}
 };
-#define shaderStaticTest_vertexlit_and_unlit_generic_bump_vs30 vsh_forgot_to_set_static_HALFLAMBERT + vsh_forgot_to_set_static_USE_WITH_2B + vsh_forgot_to_set_static_DECAL + vsh_forgot_to_set_static_NORMALIZEEYEVEC + vsh_forgot_to_set_static_WORLD_NORMAL + vsh_forgot_to_set_static_STATICLIGHT3 + 0
+#define shaderStaticTest_vertexlit_and_unlit_generic_bump_vs30 vsh_forgot_to_set_static_SFM + vsh_forgot_to_set_static_HALFLAMBERT + vsh_forgot_to_set_static_USE_WITH_2B + vsh_forgot_to_set_static_DECAL + vsh_forgot_to_set_static_WORLD_NORMAL + vsh_forgot_to_set_static_CASCADED_SHADOW_MAPPING + 0
 class vertexlit_and_unlit_generic_bump_vs30_Dynamic_Index
 {
 private:
@@ -240,6 +250,7 @@ public:
 	}
 	void SetCOMPRESSED_VERTS( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nCOMPRESSED_VERTS = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bCOMPRESSED_VERTS = true;
@@ -261,6 +272,7 @@ public:
 	}
 	void SetSKINNING( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nSKINNING = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bSKINNING = true;
@@ -274,7 +286,7 @@ private:
 public:
 	void SetMORPHING( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		Assert( i >= 0 && i <= 0 );
 		m_nMORPHING = i;
 #ifdef _DEBUG
 		m_bMORPHING = true;
@@ -282,6 +294,7 @@ public:
 	}
 	void SetMORPHING( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 0 );
 		m_nMORPHING = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bMORPHING = true;
@@ -295,7 +308,7 @@ private:
 public:
 	void SetTESSELLATION( int i )
 	{
-		Assert( i >= 0 && i <= 2 );
+		Assert( i >= 0 && i <= 0 );
 		m_nTESSELLATION = i;
 #ifdef _DEBUG
 		m_bTESSELLATION = true;
@@ -303,9 +316,32 @@ public:
 	}
 	void SetTESSELLATION( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 0 );
 		m_nTESSELLATION = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bTESSELLATION = true;
+#endif
+	}
+private:
+	int m_nSTATICLIGHT3;
+#ifdef _DEBUG
+	bool m_bSTATICLIGHT3;
+#endif
+public:
+	void SetSTATICLIGHT3( int i )
+	{
+		Assert( i >= 0 && i <= 2 );
+		m_nSTATICLIGHT3 = i;
+#ifdef _DEBUG
+		m_bSTATICLIGHT3 = true;
+#endif
+	}
+	void SetSTATICLIGHT3( bool i )
+	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 2 );
+		m_nSTATICLIGHT3 = i ? 1 : 0;
+#ifdef _DEBUG
+		m_bSTATICLIGHT3 = true;
 #endif
 	}
 private:
@@ -324,6 +360,7 @@ public:
 	}
 	void SetDOWATERFOG( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nDOWATERFOG = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bDOWATERFOG = true;
@@ -344,11 +381,15 @@ public:
 #ifdef _DEBUG
 		m_bMORPHING = true;
 #endif // _DEBUG
-		m_nMORPHING = pShaderAPI->IsHWMorphingEnabled() ;
+		m_nMORPHING = false ;
 #ifdef _DEBUG
 		m_bTESSELLATION = false;
 #endif // _DEBUG
 		m_nTESSELLATION = 0;
+#ifdef _DEBUG
+		m_bSTATICLIGHT3 = false;
+#endif // _DEBUG
+		m_nSTATICLIGHT3 = 0;
 #ifdef _DEBUG
 		m_bDOWATERFOG = true;
 #endif // _DEBUG
@@ -359,10 +400,47 @@ public:
 		// Asserts to make sure that we aren't using any skipped combinations.
 		// Asserts to make sure that we are setting all of the combination vars.
 #ifdef _DEBUG
-		bool bAllDynamicVarsDefined = m_bCOMPRESSED_VERTS && m_bSKINNING && m_bMORPHING && m_bTESSELLATION && m_bDOWATERFOG;
+		bool bAllDynamicVarsDefined = m_bCOMPRESSED_VERTS && m_bSKINNING && m_bMORPHING && m_bTESSELLATION && m_bSTATICLIGHT3 && m_bDOWATERFOG;
 		Assert( bAllDynamicVarsDefined );
 #endif // _DEBUG
-		return ( 1 * m_nCOMPRESSED_VERTS ) + ( 2 * m_nSKINNING ) + ( 4 * m_nMORPHING ) + ( 8 * m_nTESSELLATION ) + ( 24 * m_nDOWATERFOG ) + 0;
+		return ( 1 * m_nCOMPRESSED_VERTS ) + ( 2 * m_nSKINNING ) + ( 4 * m_nMORPHING ) + ( 4 * m_nTESSELLATION ) + ( 4 * m_nSTATICLIGHT3 ) + ( 12 * m_nDOWATERFOG ) + 0;
 	}
 };
-#define shaderDynamicTest_vertexlit_and_unlit_generic_bump_vs30 vsh_forgot_to_set_dynamic_COMPRESSED_VERTS + vsh_forgot_to_set_dynamic_SKINNING + vsh_forgot_to_set_dynamic_TESSELLATION + 0
+#define shaderDynamicTest_vertexlit_and_unlit_generic_bump_vs30 vsh_forgot_to_set_dynamic_COMPRESSED_VERTS + vsh_forgot_to_set_dynamic_SKINNING + vsh_forgot_to_set_dynamic_TESSELLATION + vsh_forgot_to_set_dynamic_STATICLIGHT3 + 0
+
+static const ShaderComboInformation_t s_DynamicComboArray_vertexlit_and_unlit_generic_bump_vs30[6] = 
+{
+	{ "COMPRESSED_VERTS", 0, 1 },
+	{ "SKINNING", 0, 1 },
+	{ "MORPHING", 0, 0 },
+	{ "TESSELLATION", 0, 0 },
+	{ "STATICLIGHT3", 0, 2 },
+	{ "DOWATERFOG", 0, 1 },
+};
+
+static const ShaderComboInformation_t s_StaticComboArray_vertexlit_and_unlit_generic_bump_vs30[8] = 
+{
+	{ "SFM", 0, 1 },
+	{ "HALFLAMBERT", 0, 1 },
+	{ "USE_WITH_2B", 0, 1 },
+	{ "DECAL", 0, 1 },
+	{ "WORLD_NORMAL", 0, 1 },
+	{ "CASCADED_SHADOW_MAPPING", 0, 0 },
+	{ "DOPIXELFOG", 0, 1 },
+	{ "HARDWAREFOGBLEND", 0, 0 },
+};
+static const ShaderComboSemantics_t vertexlit_and_unlit_generic_bump_vs30_combos =
+{
+	"vertexlit_and_unlit_generic_bump_vs30", s_DynamicComboArray_vertexlit_and_unlit_generic_bump_vs30, 6, s_StaticComboArray_vertexlit_and_unlit_generic_bump_vs30, 8 
+};
+
+class ConstructMe_vertexlit_and_unlit_generic_bump_vs30
+{
+public:
+	ConstructMe_vertexlit_and_unlit_generic_bump_vs30()
+	{
+		GetShaderDLL()->AddShaderComboInformation( &vertexlit_and_unlit_generic_bump_vs30_combos );
+	}
+};
+
+static ConstructMe_vertexlit_and_unlit_generic_bump_vs30 s_ConstructMe_vertexlit_and_unlit_generic_bump_vs30;

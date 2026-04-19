@@ -39,3 +39,18 @@ public:
 	}
 };
 #define shaderDynamicTest_emissive_scroll_blended_pass_ps30 0
+static const ShaderComboSemantics_t emissive_scroll_blended_pass_ps30_combos =
+{
+	"emissive_scroll_blended_pass_ps30", NULL, 0, NULL, 0 
+};
+
+class ConstructMe_emissive_scroll_blended_pass_ps30
+{
+public:
+	ConstructMe_emissive_scroll_blended_pass_ps30()
+	{
+		GetShaderDLL()->AddShaderComboInformation( &emissive_scroll_blended_pass_ps30_combos );
+	}
+};
+
+static ConstructMe_emissive_scroll_blended_pass_ps30 s_ConstructMe_emissive_scroll_blended_pass_ps30;

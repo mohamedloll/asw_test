@@ -1,4 +1,4 @@
-//===== Copyright © 1996-2007, Valve Corporation, All rights reserved. ======//
+//===== Copyright (c) 1996-2007, Valve Corporation, All rights reserved. ======//
 //
 // Purpose: shader for drawing sprites as cards, with animation frame lerping
 //
@@ -6,7 +6,7 @@
 // $NoKeywords: $
 //===========================================================================//
 
-#include "basevsshader.h"
+#include "BaseVSShader.h"
 #include "convar.h"
 
 // STDSHADER_DX9_DLL_EXPORT
@@ -14,8 +14,10 @@
 #include "spritecard_ps20b.inc"
 #include "spritecard_vs20.inc"
 #include "splinecard_vs20.inc"
+#include "common_hlsl_cpp_consts.h"
 
 #include "tier0/icommandline.h" //command line
+
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -23,6 +25,12 @@
 #define DEFAULT_PARTICLE_FEATHERING_ENABLED 1
 
 static ConVar mat_depthfeather_enable( "mat_depthfeather_enable", "1", FCVAR_DEVELOPMENTONLY );
+
+#if defined( CSTRIKE15 ) && defined( _X360 )
+static ConVar r_shader_srgbread( "r_shader_srgbread", "1", 0, "1 = use shader srgb texture reads, 0 = use HW" );
+#else
+static ConVar r_shader_srgbread( "r_shader_srgbread", "0", 0, "1 = use shader srgb texture reads, 0 = use HW" );
+#endif
 
 int GetDefaultDepthFeatheringValue( void ) //Allow the command-line to go against the default soft-particle value
 {
@@ -47,6 +55,13 @@ int GetDefaultDepthFeatheringValue( void ) //Allow the command-line to go agains
 		#endif
 	}
 
+	// On low end parts on the Mac, we reduce particles and shut off depth blending here
+	static ConVarRef mat_reduceparticles( "mat_reduceparticles" );
+	if ( mat_reduceparticles.GetBool() )
+	{
+		iRetVal = 0;
+	}
+
 	return iRetVal;
 }
 
@@ -55,9 +70,11 @@ BEGIN_VS_SHADER_FLAGS( Spritecard, "Help for Spritecard", SHADER_NOT_EDITABLE )
 
 	BEGIN_SHADER_PARAMS
         SHADER_PARAM( DEPTHBLEND, SHADER_PARAM_TYPE_INTEGER, "0", "fade at intersection boundaries" )
+		SHADER_PARAM( SCENEDEPTH, SHADER_PARAM_TYPE_TEXTURE, "", "" )
 		SHADER_PARAM( DEPTHBLENDSCALE, SHADER_PARAM_TYPE_FLOAT, "50.0", "Amplify or reduce DEPTHBLEND fading. Lower values make harder edges." )
 		SHADER_PARAM( INVERSEDEPTHBLEND, SHADER_PARAM_TYPE_BOOL, "0", "calculate 1-depthblendalpha so that sprites appear when they are near geometry" )
-	    SHADER_PARAM( ORIENTATION, SHADER_PARAM_TYPE_INTEGER, "0", "0 = always face camera, 1 = rotate around z, 2= parallel to ground 3=use normal" )
+	    SHADER_PARAM( ORIENTATION, SHADER_PARAM_TYPE_INTEGER, "0", "0 = always face camera, 1 = rotate around z, 2= parallel to ground 3=use normal 4=face camera POS" )
+		SHADER_PARAM( AIMATCAMERA, SHADER_PARAM_TYPE_BOOL, "0", "Aim at camera using orientation type 1" )
 	    SHADER_PARAM( ADDBASETEXTURE2, SHADER_PARAM_TYPE_FLOAT, "0.0", "amount to blend second texture into frame by" )
 	    SHADER_PARAM( OVERBRIGHTFACTOR, SHADER_PARAM_TYPE_FLOAT, "1.0", "overbright factor for texture. For HDR effects.")
 	    SHADER_PARAM( DUALSEQUENCE, SHADER_PARAM_TYPE_INTEGER, "0", "blend two separate animated sequences.")
@@ -106,6 +123,9 @@ BEGIN_VS_SHADER_FLAGS( Spritecard, "Help for Spritecard", SHADER_NOT_EDITABLE )
 		SHADER_PARAM( OUTLINEEND0, SHADER_PARAM_TYPE_FLOAT, "0.0", "inner end value for outline")
 		SHADER_PARAM( OUTLINEEND1, SHADER_PARAM_TYPE_FLOAT, "0.0", "outer end value for outline")
 		SHADER_PARAM( PERPARTICLEOUTLINE, SHADER_PARAM_TYPE_BOOL, "0", "Allow per particle outline control" )
+
+		SHADER_PARAM( MULOUTPUTBYALPHA, SHADER_PARAM_TYPE_BOOL, "0", "Multiply output RGB by output alpha to avoid precision problems" );
+		SHADER_PARAM( INTENSITY, SHADER_PARAM_TYPE_FLOAT, "1.0", "Multiply output RGB by intensity factor" );
 	END_SHADER_PARAMS
 
 	SHADER_INIT_PARAMS()
@@ -156,7 +176,9 @@ BEGIN_VS_SHADER_FLAGS( Spritecard, "Help for Spritecard", SHADER_NOT_EDITABLE )
 		InitIntParam( OUTLINE, params, 0 );
 		InitIntParam( SOFTEDGES, params, 0 );
 		InitIntParam( PERPARTICLEOUTLINE, params, 0 );
-
+		InitIntParam( MULOUTPUTBYALPHA, params, 0 );
+		InitFloatParam( INTENSITY, params, 1.0f );
+			
 
 		if ( !params[USEINSTANCING]->IsDefined() )
 		{
@@ -197,6 +219,16 @@ BEGIN_VS_SHADER_FLAGS( Spritecard, "Help for Spritecard", SHADER_NOT_EDITABLE )
 			params[INVERSEDEPTHBLEND]->SetIntValue( 0 );
 		}
 
+		if ( IsPS3() && !params[SCENEDEPTH]->IsDefined() )
+		{
+			params[SCENEDEPTH]->SetStringValue( "^PS3^DEPTHBUFFER" );
+		}
+
+		if ( g_pHardwareConfig->HasFullResolutionDepthTexture() )
+		{
+			params[SCENEDEPTH]->SetStringValue( "_rt_FullFrameDepth" );
+		}
+
 		SET_FLAGS2( MATERIAL_VAR2_IS_SPRITECARD );
 	}
 
@@ -213,13 +245,25 @@ BEGIN_VS_SHADER_FLAGS( Spritecard, "Help for Spritecard", SHADER_NOT_EDITABLE )
 		{
 			bool bExtractGreenAlpha = false;
 			if ( params[EXTRACTGREENALPHA]->IsDefined() )
+			{
 				bExtractGreenAlpha = params[EXTRACTGREENALPHA]->GetIntValue() != 0;
+			}
 
-			LoadTexture( BASETEXTURE );
+			LoadTexture( BASETEXTURE, bExtractGreenAlpha ? 0 : TEXTUREFLAGS_SRGB  );
 		}
 		if ( params[RAMPTEXTURE]->IsDefined() )
 		{
-			LoadTexture( RAMPTEXTURE );
+			LoadTexture( RAMPTEXTURE, TEXTUREFLAGS_SRGB );
+		}
+
+		if( IsPS3() && params[SCENEDEPTH]->IsDefined() )
+		{
+			LoadTexture( SCENEDEPTH, 0 );
+		}
+
+		if ( g_pHardwareConfig->HasFullResolutionDepthTexture() )
+		{
+			LoadTexture( SCENEDEPTH, 0 );
 		}
 	}
 
@@ -228,9 +272,10 @@ BEGIN_VS_SHADER_FLAGS( Spritecard, "Help for Spritecard", SHADER_NOT_EDITABLE )
 		bool bUseRampTexture = ( params[RAMPTEXTURE]->IsDefined() );
 		bool bZoomSeq2 = ( ( params[ZOOMANIMATESEQ2]->GetFloatValue()) > 1.0 );
 		bool bDepthBlend = false;
-		if ( IsX360() )
+
+		if ( g_pHardwareConfig->HasFullResolutionDepthTexture() )
 		{
-			// Don't create the depth texture.  We are looking at not using depth feathering to save memory.
+			// If we didn't create the depth texture.  We are looking at not using depth feathering to save memory.
 			static bool bNoDepthTexture = ( CommandLine()->FindParm( "-nodepthtexture" ) ) ? true : false;
 			if ( !bNoDepthTexture )
 			{
@@ -242,7 +287,11 @@ BEGIN_VS_SHADER_FLAGS( Spritecard, "Help for Spritecard", SHADER_NOT_EDITABLE )
 		bool bExtractGreenAlpha = ( params[EXTRACTGREENALPHA]->GetIntValue() != 0 );
 		int nSplineType = params[SPLINETYPE]->GetIntValue();
 		bool bUseInstancing = IsX360() ? ( params[ USEINSTANCING ]->GetIntValue() != 0 ) : false;
+#if defined( CSTRIKE15 )
+		bool bShaderSrgbRead = IsX360() && r_shader_srgbread.GetBool();
+#else
 		bool bShaderSrgbRead = ( IsX360() && IS_PARAM_DEFINED( SHADERSRGBREAD360 ) && params[SHADERSRGBREAD360]->GetIntValue() );
+#endif
 		bool bCrop = ( params[CROPFACTOR]->GetVecValue()[0] != 1.0f ) || ( params[CROPFACTOR]->GetVecValue()[1] != 1.0f );
 		bool bSecondSequence = params[DUALSEQUENCE]->GetIntValue() != 0;
 		bool bBlendFrames = ( params[BLENDFRAMES]->GetIntValue() != 0 );
@@ -251,10 +300,11 @@ BEGIN_VS_SHADER_FLAGS( Spritecard, "Help for Spritecard", SHADER_NOT_EDITABLE )
 		bool bOutLine = bDistanceAlpha && ( params[OUTLINE]->GetIntValue() != 0 );
 		bool bSoftEdges = bDistanceAlpha && ( params[OUTLINE]->GetIntValue() != 0 );
 		bool bPerParticleOutline = bDistanceAlpha && ( !bSecondSequence ) && ( params[PERPARTICLEOUTLINE]->GetIntValue() );
-
+		float flIntensity = params[INTENSITY]->GetFloatValue();
+							
 		if ( nSplineType )
 		{
-			bDepthBlend = false; //splinecard_vsxx.fxc don't output all the data necessary for depth blending
+			bDepthBlend = false; //splinecard_vsxx.fxc doesn't output all the data necessary for depth blending
 			bUseInstancing = false;
 			bBlendFrames = false;
 		}
@@ -384,6 +434,7 @@ BEGIN_VS_SHADER_FLAGS( Spritecard, "Help for Spritecard", SHADER_NOT_EDITABLE )
 				DECLARE_STATIC_VERTEX_SHADER( spritecard_vs20 );
 				SET_STATIC_VERTEX_SHADER_COMBO( SPRITECARDVERTEXFOG, bFog );
 				SET_STATIC_VERTEX_SHADER_COMBO( DUALSEQUENCE, bSecondSequence );
+				SET_STATIC_VERTEX_SHADER_COMBO( ZOOM_ANIMATE_SEQ2, bZoomSeq2 );
 				SET_STATIC_VERTEX_SHADER_COMBO( ADDBASETEXTURE2, bAdditive2ndTexture );
 				SET_STATIC_VERTEX_SHADER_COMBO( EXTRACTGREENALPHA, bExtractGreenAlpha );
 				SET_STATIC_VERTEX_SHADER_COMBO( DEPTHBLEND, bDepthBlend );
@@ -394,6 +445,8 @@ BEGIN_VS_SHADER_FLAGS( Spritecard, "Help for Spritecard", SHADER_NOT_EDITABLE )
 				SET_STATIC_VERTEX_SHADER_COMBO( PERPARTICLEOUTLINE, bPerParticleOutline );
 				SET_STATIC_VERTEX_SHADER( spritecard_vs20 );
 			}
+
+			bool bMulOutputByAlpha = params[MULOUTPUTBYALPHA]->GetIntValue() != 0;
 
 			if( g_pHardwareConfig->SupportsPixelShaders_2_b() )
 			{
@@ -416,6 +469,7 @@ BEGIN_VS_SHADER_FLAGS( Spritecard, "Help for Spritecard", SHADER_NOT_EDITABLE )
 				SET_STATIC_PIXEL_SHADER_COMBO( DISTANCEALPHA, bDistanceAlpha );
 				SET_STATIC_PIXEL_SHADER_COMBO( OUTLINE, bOutLine );
 				SET_STATIC_PIXEL_SHADER_COMBO( SOFTEDGES, bSoftEdges );
+				SET_STATIC_PIXEL_SHADER_COMBO( MULOUTPUTBYALPHA, bMulOutputByAlpha );
 				SET_STATIC_PIXEL_SHADER( spritecard_ps20b );
 			}
 			else
@@ -439,6 +493,7 @@ BEGIN_VS_SHADER_FLAGS( Spritecard, "Help for Spritecard", SHADER_NOT_EDITABLE )
 				SET_STATIC_PIXEL_SHADER_COMBO( DISTANCEALPHA, bDistanceAlpha );
 				SET_STATIC_PIXEL_SHADER_COMBO( OUTLINE, bOutLine );
 				SET_STATIC_PIXEL_SHADER_COMBO( SOFTEDGES, bSoftEdges );
+				SET_STATIC_PIXEL_SHADER_COMBO( MULOUTPUTBYALPHA, bMulOutputByAlpha );
 				SET_STATIC_PIXEL_SHADER( spritecard_ps20 );
 			}
 
@@ -457,20 +512,23 @@ BEGIN_VS_SHADER_FLAGS( Spritecard, "Help for Spritecard", SHADER_NOT_EDITABLE )
 		}
 		DYNAMIC_STATE
 		{
-			BindTexture( SHADER_SAMPLER0, BASETEXTURE, FRAME );
+			BindTexture( SHADER_SAMPLER0, SRGBReadMask( (! bExtractGreenAlpha ) && ( ! bShaderSrgbRead ) ), BASETEXTURE, FRAME );
 
 			if ( bUseRampTexture )
 			{
-				BindTexture( SHADER_SAMPLER1, RAMPTEXTURE, FRAME );
+				BindTexture( SHADER_SAMPLER1, SRGBReadMask( !bShaderSrgbRead ), RAMPTEXTURE, FRAME );
 			}
 
 			if ( bDepthBlend )
 			{
-				pShaderAPI->BindStandardTexture( SHADER_SAMPLER2, TEXTURE_FRAME_BUFFER_FULL_DEPTH );
+				BindTexture( SHADER_SAMPLER2, TEXTURE_BINDFLAGS_NONE, SCENEDEPTH, -1 );
 			}
 
 			int nOrientation = params[ORIENTATION]->GetIntValue();
-			nOrientation = clamp( nOrientation, 0, 3 );
+			nOrientation = clamp( nOrientation, 0, 4 );
+
+			if ( nOrientation == 1 && params[AIMATCAMERA]->GetIntValue() > 0 )
+				nOrientation = 4;
 
 			switch ( nOrientation )
 			{
@@ -490,8 +548,7 @@ BEGIN_VS_SHADER_FLAGS( Spritecard, "Help for Spritecard", SHADER_NOT_EDITABLE )
 			{
 				float flZScale=1.0/(params[ZOOMANIMATESEQ2]->GetFloatValue());
 				float C0[4]={ 0.5*(1.0+flZScale), flZScale, params[VERTEXFOGAMOUNT]->GetFloatValue(), 0 };
-				pShaderAPI->SetVertexShaderConstant( VERTEX_SHADER_SHADER_SPECIFIC_CONST_7, C0,
-													 ARRAYSIZE(C0)/4 );
+				pShaderAPI->SetVertexShaderConstant( VERTEX_SHADER_SHADER_SPECIFIC_CONST_7, C0, ARRAYSIZE(C0)/4 );
 			}
 
 			// set fade constants in vsconsts 8 and 9
@@ -506,7 +563,10 @@ BEGIN_VS_SHADER_FLAGS( Spritecard, "Help for Spritecard", SHADER_NOT_EDITABLE )
 
 			pShaderAPI->SetVertexShaderConstant( VERTEX_SHADER_SHADER_SPECIFIC_CONST_8, VC0, ARRAYSIZE(VC0)/4 );
 
-			pShaderAPI->SetDepthFeatheringPixelShaderConstant( 2, params[DEPTHBLENDSCALE]->GetFloatValue() );
+			if ( bDepthBlend )
+			{
+				pShaderAPI->SetDepthFeatheringShaderConstants( 2, params[DEPTHBLENDSCALE]->GetFloatValue() );
+			}
 
 			// Get viewport and render target dimensions and set shader constant to do a 2D mad
 			int nViewportX, nViewportY, nViewportWidth, nViewportHeight;
@@ -516,11 +576,12 @@ BEGIN_VS_SHADER_FLAGS( Spritecard, "Help for Spritecard", SHADER_NOT_EDITABLE )
 			pShaderAPI->GetCurrentRenderTargetDimensions( nRtWidth, nRtHeight );
 
 			float vViewportMad[4];
-			vViewportMad[0] = ( float )nViewportWidth / ( float )nRtWidth;
-			vViewportMad[1] = ( float )nViewportHeight / ( float )nRtHeight;
-			vViewportMad[2] = ( float )nViewportX / ( float )nRtWidth;
-			vViewportMad[3] = ( float )nViewportY / ( float )nRtHeight;
-			pShaderAPI->SetVertexShaderConstant( VERTEX_SHADER_SHADER_SPECIFIC_CONST_10, vViewportMad, 1 );
+			// Compute viewport mad that takes projection space coords (post divide by W) into normalized screenspace, taking into account the currently set viewport.
+			vViewportMad[0] =  .5f * ( ( float )nViewportWidth / ( float )nRtWidth );
+			vViewportMad[1] = -.5f * ( ( float )nViewportHeight / ( float )nRtHeight );
+			vViewportMad[2] =  vViewportMad[0] + ( ( float )nViewportX / ( float )nRtWidth );
+			vViewportMad[3] = -vViewportMad[1] + ( ( float )nViewportY / ( float )nRtHeight );
+			pShaderAPI->SetPixelShaderConstant( DEPTH_FEATHER_VIEWPORT_MAD, vViewportMad, 1 );
 
 			if ( bCrop )
 			{
@@ -541,13 +602,10 @@ BEGIN_VS_SHADER_FLAGS( Spritecard, "Help for Spritecard", SHADER_NOT_EDITABLE )
 				SetPixelShaderConstantGammaToLinear( 5, vLerpColors, 2 );
 			}
 
-			float C0[4]={ params[ADDBASETEXTURE2]->GetFloatValue(),
-						  params[OVERBRIGHTFACTOR]->GetFloatValue(),
-						  params[ADDSELF]->GetFloatValue(),
-						  0.0f };
+			float C0[4]={ params[ADDBASETEXTURE2]->GetFloatValue(), params[OVERBRIGHTFACTOR]->GetFloatValue(), params[ADDSELF]->GetFloatValue(), flIntensity };
 
-			BOOL bShaderConstants[3] = { bZoomSeq2, bExtractGreenAlpha, bUseInstancing };
-			pShaderAPI->SetBooleanVertexShaderConstant( VERTEX_SHADER_SHADER_SPECIFIC_BOOL_CONST_0, bShaderConstants, 3 );
+			BOOL nBoolShaderConstant = bUseInstancing ? 1 : 0; // Convert to BOOL, which is int
+			pShaderAPI->SetBooleanVertexShaderConstant( VERTEX_SHADER_SHADER_SPECIFIC_BOOL_CONST_0, &nBoolShaderConstant, 1 );
 			pShaderAPI->SetPixelShaderConstant( 0, C0, ARRAYSIZE(C0)/4 );
 
 			// Set Mod2xIdentity to be 0.5 if we blend in linear space, or 0.5 Gamma->Linear if we blend in gamma space

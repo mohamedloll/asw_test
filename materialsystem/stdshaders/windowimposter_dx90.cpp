@@ -95,7 +95,7 @@ BEGIN_VS_SHADER( WindowImposter_DX90,
 			vEyePos_SpecExponent[3] = 0.0f;
 			pShaderAPI->SetPixelShaderConstant( PSREG_EYEPOS_SPEC_EXPONENT, vEyePos_SpecExponent, 1 );
 
-			BindTexture( SHADER_SAMPLER0, ENVMAP, -1 );
+			BindTexture( SHADER_SAMPLER0, TEXTURE_BINDFLAGS_NONE, ENVMAP, -1 );
 		}
 		Draw();
 	}

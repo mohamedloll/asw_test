@@ -9,6 +9,8 @@
 #include "BaseVSShader.h"
 #include "vertexlitgeneric_dx9_helper.h"
 
+#include "shaderapifast.h"
+
 // NOTE: This has to be the last file included!
 #include "tier0/memdbgon.h"
 
@@ -42,6 +44,9 @@ BEGIN_VS_SHADER( UnlitGeneric, "Help for UnlitGeneric" )
 		SHADER_PARAM( DETAILBLENDMODE, SHADER_PARAM_TYPE_INTEGER, "0", "mode for combining detail texture with base. 0=normal, 1= additive, 2=alpha blend detail over base, 3=crossfade" )
 		SHADER_PARAM( DETAILBLENDFACTOR, SHADER_PARAM_TYPE_FLOAT, "1", "blend amount for detail texture." )
 		SHADER_PARAM( DETAILTEXTURETRANSFORM, SHADER_PARAM_TYPE_MATRIX, "center .5 .5 scale 1 1 rotate 0 translate 0 0", "$detail texcoord transform" )
+
+		SHADER_PARAM( DECALTEXTURE, SHADER_PARAM_TYPE_TEXTURE, "", "Decal texture" )
+		SHADER_PARAM( DECALBLENDMODE, SHADER_PARAM_TYPE_INTEGER, "0", "mode for combining decal texture with base. 0=normal(decal*srca + base*(1-srca), 1= mod, 2=mod2x, 3=additive" )
 
 		SHADER_PARAM( DISTANCEALPHA, SHADER_PARAM_TYPE_BOOL, "0", "Use distance-coded alpha generated from hi-res texture by vtex.")
 		SHADER_PARAM( DISTANCEALPHAFROMDETAIL, SHADER_PARAM_TYPE_BOOL, "0", "Take the distance-coded alpha mask from the detail texture.")
@@ -78,6 +83,9 @@ BEGIN_VS_SHADER( UnlitGeneric, "Help for UnlitGeneric" )
 		SHADER_PARAM( DISPLACEMENTMAP, SHADER_PARAM_TYPE_TEXTURE, "shadertest/BaseTexture", "Displacement map" )
 
 		SHADER_PARAM( SHADERSRGBREAD360, SHADER_PARAM_TYPE_BOOL, "0", "Simulate srgb read in shader code")
+
+		SHADER_PARAM( TINTMASKTEXTURE, SHADER_PARAM_TYPE_TEXTURE, "", "Separate tint mask texture (as opposed to using basetexture alpha)" )
+
 	END_SHADER_PARAMS
 
 	void SetupVars( VertexLitGeneric_DX9_Vars_t& info )
@@ -93,6 +101,9 @@ BEGIN_VS_SHADER( UnlitGeneric, "Help for UnlitGeneric" )
 		info.m_nDetailTextureCombineMode = DETAILBLENDMODE;
 		info.m_nDetailTextureBlendFactor = DETAILBLENDFACTOR;
 		info.m_nDetailTextureTransform = DETAILTEXTURETRANSFORM;
+
+		info.m_nDecalTexture = DECALTEXTURE;
+		info.m_nDecalTextureCombineMode = DECALBLENDMODE;
 
 		info.m_nEnvmap = ENVMAP;
 		info.m_nEnvmapFrame = ENVMAPFRAME;
@@ -117,6 +128,7 @@ BEGIN_VS_SHADER( UnlitGeneric, "Help for UnlitGeneric" )
 		info.m_nPhongBoost = -1;
 		info.m_nPhongFresnelRanges = -1;
 		info.m_nPhong = -1;
+		info.m_nForcePhong = -1;
 		info.m_nPhongTint = -1;
 		info.m_nPhongAlbedoTint = -1;
 		info.m_nSelfIllumEnvMapMask_Alpha = -1;
@@ -161,6 +173,8 @@ BEGIN_VS_SHADER( UnlitGeneric, "Help for UnlitGeneric" )
 
 		info.m_nShaderSrgbRead360 = SHADERSRGBREAD360;
 		info.m_nDisplacementMap = DISPLACEMENTMAP;
+
+		info.m_nTintMaskTexture = TINTMASKTEXTURE;
 	}
 
 	SHADER_INIT_PARAMS()
@@ -187,10 +201,10 @@ BEGIN_VS_SHADER( UnlitGeneric, "Help for UnlitGeneric" )
 		VertexLitGeneric_DX9_Vars_t vars;
 		SetupVars( vars );
 
-		if ( ( pShaderShadow == NULL ) && ( pShaderAPI != NULL ) && (params[RECEIVEFLASHLIGHT]->GetIntValue() == 0) && pShaderAPI->InFlashlightMode() && !IsX360() ) // Not snapshotting && flashlight pass
+		if ( ( pShaderShadow == NULL ) && ( pShaderAPI != NULL ) && (params[RECEIVEFLASHLIGHT]->GetIntValue() == 0) && ShaderApiFast( pShaderAPI )->InFlashlightMode() && !( IsX360() || IsPS3() ) ) // Not snapshotting && flashlight pass
 		{
-			// Don't go in here on the 360 with single-pass flashlight, because there is no 2nd draw call for this material.
-			// FIXME: Is the !IsX360() test too broad?
+			// Don't go in here on the 360/PS3 with single-pass flashlight, because there is no 2nd draw call for this material.
+			// FIXME: Is the !IsX360/PS3() test too broad?
 			Draw( false );
 		}
 		else
@@ -198,4 +212,20 @@ BEGIN_VS_SHADER( UnlitGeneric, "Help for UnlitGeneric" )
 			DrawVertexLitGeneric_DX9( this, params, pShaderAPI, pShaderShadow, false, vars, vertexCompression, pContextDataPtr );
 		}
 	}
+
+	void ExecuteFastPath( int *dynVSIdx, int *dynPSIdx,  IMaterialVar** params, IShaderDynamicAPI * pShaderAPI, 
+		VertexCompressionType_t vertexCompression, CBasePerMaterialContextData **pContextDataPtr, BOOL bCSMEnabled )
+	{
+		*dynVSIdx = -1;
+		*dynPSIdx = -1;
+
+		VertexLitGeneric_DX9_Vars_t vars;
+		SetupVars( vars );
+
+		// Only draw standard pass for now
+		DrawVertexLitGeneric_DX9_ExecuteFastPath( dynVSIdx, dynPSIdx, this, params, pShaderAPI, vars, vertexCompression, 
+			pContextDataPtr, bCSMEnabled, false );
+
+	}
+
 END_SHADER

@@ -24,7 +24,7 @@ struct PS_INPUT
 
 // Main ===========================================================================================
 //float4 main( PS_INPUT i ) : COLOR // Non-HDR for debugging
-float4 main( PS_INPUT i ) : COLOR
+float4_color_return_type main( PS_INPUT i ) : COLOR
 {
 	// Color texture
 	float4 cBaseColor = tex2D( g_tBaseSampler, i.vTexCoord0.xy );

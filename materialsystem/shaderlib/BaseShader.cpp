@@ -1,4 +1,4 @@
-//===== Copyright © 1996-2005, Valve Corporation, All rights reserved. ======//
+//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -8,7 +8,7 @@
 #include "shaderlib/ShaderDLL.h"
 #include "tier0/dbg.h"
 #include "shaderDLL_Global.h"
-#include "../IShaderSystem.h"
+#include "materialsystem/ishadersystem.h"
 #include "materialsystem/imaterial.h"
 #include "materialsystem/itexture.h"
 #include "materialsystem/ishaderapi.h"
@@ -20,6 +20,7 @@
 #include "tier1/strtools.h"
 #include "convar.h"
 #include "tier0/vprof.h"
+#include "shaderapifast.h"
 
 // NOTE: This must be the last include file in a .cpp file!
 #include "tier0/memdbgon.h"
@@ -39,6 +40,12 @@ public:
 			delete m_pCommandBuffer; 
 		}
 	}
+
+	virtual unsigned char* GetInstanceCommandBuffer()
+	{
+		return m_pCommandBuffer;
+	}
+
 	unsigned char *m_pCommandBuffer;
 	int m_nSize;
 };
@@ -48,7 +55,7 @@ public:
 // Globals
 //-----------------------------------------------------------------------------
 const char *CBaseShader::s_pTextureGroupName = NULL;
-IMaterialVar **CBaseShader::s_ppParams;
+IMaterialVar **CBaseShader::s_ppParams = NULL;
 IShaderShadow *CBaseShader::s_pShaderShadow;
 IShaderDynamicAPI *CBaseShader::s_pShaderAPI;
 IShaderInit *CBaseShader::s_pShaderInit;
@@ -59,7 +66,6 @@ static bool s_bBuildingInstanceCommandBuffer = false;
 static CInstanceCommandBufferBuilder< CFixedCommandStorageBuffer< 512 > > s_InstanceCommandBuffer;
 
 bool g_shaderConfigDumpEnable = false; //true;		//DO NOT CHECK IN ENABLED FIXME
-static ConVar mat_fullbright( "mat_fullbright","0", FCVAR_CHEAT );
 	
 //-----------------------------------------------------------------------------
 // constructor
@@ -253,6 +259,8 @@ void CBaseShader::Draw( bool bMakeActualDrawCall )
 	}
 	else
 	{
+		//SNPROF("CBaseShader::Draw");
+
 		GetShaderSystem()->DrawSnapshot( s_pInstanceDataPtr[s_nPassCount] ? 
 			s_pInstanceDataPtr[s_nPassCount]->m_pCommandBuffer : NULL, bMakeActualDrawCall );
 	}
@@ -367,7 +375,7 @@ void CBaseShader::PI_SetModulationPixelShaderDynamicState_LinearColorSpace_Linea
 {
 	Assert( s_bBuildingInstanceCommandBuffer );
 	Vector color2( 1.0f, 1.0f, 1.0f );
-	ApplyColor2Factor( color2.Base() );
+	ApplyColor2Factor( color2.Base(), true );
 	s_InstanceCommandBuffer.SetModulationPixelShaderDynamicState_LinearColorSpace_LinearScale( nRegister, color2, scale );
 }
 
@@ -391,7 +399,7 @@ void CBaseShader::PI_SetModulationPixelShaderDynamicState_LinearColorSpace( int 
 {
 	Assert( s_bBuildingInstanceCommandBuffer );
 	Vector color2( 1.0f, 1.0f, 1.0f );
-	ApplyColor2Factor( color2.Base() );
+	ApplyColor2Factor( color2.Base(), true );
 	s_InstanceCommandBuffer.SetModulationPixelShaderDynamicState_LinearColorSpace( nRegister, color2 );
 }
 
@@ -463,7 +471,7 @@ bool CBaseShader::CanUseEditorMaterials() const
 //-----------------------------------------------------------------------------
 // Loads a texture
 //-----------------------------------------------------------------------------
-void CBaseShader::LoadTexture( int nTextureVar )
+void CBaseShader::LoadTexture( int nTextureVar, int nAdditionalCreationFlags /* = 0 */ )
 {
 	if ((!s_ppParams) || (nTextureVar == -1))
 		return;
@@ -471,7 +479,7 @@ void CBaseShader::LoadTexture( int nTextureVar )
 	IMaterialVar* pNameVar = s_ppParams[nTextureVar];
 	if( pNameVar && pNameVar->IsDefined() )
 	{
-		s_pShaderInit->LoadTexture( pNameVar, s_pTextureGroupName );
+		s_pShaderInit->LoadTexture( pNameVar, s_pTextureGroupName, nAdditionalCreationFlags );
 	}
 }
 
@@ -479,7 +487,7 @@ void CBaseShader::LoadTexture( int nTextureVar )
 //-----------------------------------------------------------------------------
 // Loads a bumpmap
 //-----------------------------------------------------------------------------
-void CBaseShader::LoadBumpMap( int nTextureVar )
+void CBaseShader::LoadBumpMap( int nTextureVar, int nAdditionalCreationFlags )
 {
 	if ((!s_ppParams) || (nTextureVar == -1))
 		return;
@@ -487,7 +495,7 @@ void CBaseShader::LoadBumpMap( int nTextureVar )
 	IMaterialVar* pNameVar = s_ppParams[nTextureVar];
 	if( pNameVar && pNameVar->IsDefined() )
 	{
-		s_pShaderInit->LoadBumpMap( pNameVar, s_pTextureGroupName );
+		s_pShaderInit->LoadBumpMap( pNameVar, s_pTextureGroupName, nAdditionalCreationFlags );
 	}
 }
 
@@ -495,7 +503,7 @@ void CBaseShader::LoadBumpMap( int nTextureVar )
 //-----------------------------------------------------------------------------
 // Loads a cubemap
 //-----------------------------------------------------------------------------
-void CBaseShader::LoadCubeMap( int nTextureVar )
+void CBaseShader::LoadCubeMap( int nTextureVar, int nAdditionalCreationFlags /* = 0 */ )
 {
 	if ((!s_ppParams) || (nTextureVar == -1))
 		return;
@@ -503,7 +511,7 @@ void CBaseShader::LoadCubeMap( int nTextureVar )
 	IMaterialVar* pNameVar = s_ppParams[nTextureVar];
 	if( pNameVar && pNameVar->IsDefined() )
 	{
-		s_pShaderInit->LoadCubeMap( s_ppParams, pNameVar );
+		s_pShaderInit->LoadCubeMap( s_ppParams, pNameVar, nAdditionalCreationFlags );
 	}
 }
 
@@ -541,13 +549,13 @@ ShaderAPITextureHandle_t CBaseShader::GetShaderAPITextureBindHandle( ITexture *p
 // case as well as ITexture* versus textureVar forms
 //-----------------------------------------------------------------------------
 
-void CBaseShader::BindTexture( Sampler_t sampler1, int nTextureVar, int nFrameVar /* = -1 */ )
+void CBaseShader::BindTexture( Sampler_t sampler1, TextureBindFlags_t nBindFlags,  int nTextureVar, int nFrameVar /* = -1 */ )
 {
-	BindTexture( sampler1, (Sampler_t) -1, nTextureVar, nFrameVar );
+	BindTexture( sampler1, SHADER_SAMPLER_INVALID, nBindFlags, nTextureVar, nFrameVar );
 }
 
 
-void CBaseShader::BindTexture( Sampler_t sampler1, Sampler_t sampler2, int nTextureVar, int nFrameVar /* = -1 */ )
+void CBaseShader::BindTexture( Sampler_t sampler1, Sampler_t sampler2, TextureBindFlags_t nBindFlags, int nTextureVar, int nFrameVar /* = -1 */ )
 {
 	Assert( !IsSnapshotting() );
 	Assert( nTextureVar != -1 );
@@ -561,32 +569,32 @@ void CBaseShader::BindTexture( Sampler_t sampler1, Sampler_t sampler2, int nText
 
 		if ( sampler2 == -1 )
 		{
-			GetShaderSystem()->BindTexture( sampler1, pTextureVar->GetTextureValue(), nFrame );
+			GetShaderSystem()->BindTexture( sampler1, nBindFlags, pTextureVar->GetTextureValue(), nFrame );
 		}
 		else
 		{
-			GetShaderSystem()->BindTexture( sampler1, sampler2, pTextureVar->GetTextureValue(), nFrame );
+			GetShaderSystem()->BindTexture( sampler1, sampler2, nBindFlags, pTextureVar->GetTextureValue(), nFrame );
 		}
 	}
 }
 
 
-void CBaseShader::BindTexture( Sampler_t sampler1, ITexture *pTexture, int nFrame /* = 0 */ )
+void CBaseShader::BindTexture( Sampler_t sampler1, TextureBindFlags_t nBindFlags, ITexture *pTexture, int nFrame /* = 0 */ )
 {
-	BindTexture( sampler1, (Sampler_t) -1, pTexture, nFrame );
+	BindTexture( sampler1, SHADER_SAMPLER_INVALID, nBindFlags, pTexture, nFrame );
 }
 
-void CBaseShader::BindTexture( Sampler_t sampler1, Sampler_t sampler2, ITexture *pTexture, int nFrame /* = 0 */ )
+void CBaseShader::BindTexture( Sampler_t sampler1, Sampler_t sampler2, TextureBindFlags_t nBindFlags, ITexture *pTexture, int nFrame /* = 0 */ )
 {
 	Assert( !IsSnapshotting() );
 
 	if ( sampler2 == -1 )
 	{
-		GetShaderSystem()->BindTexture( sampler1, pTexture, nFrame );
+		GetShaderSystem()->BindTexture( sampler1, nBindFlags, pTexture, nFrame );
 	}
 	else
 	{
-		GetShaderSystem()->BindTexture( sampler1, sampler2, pTexture, nFrame );
+		GetShaderSystem()->BindTexture( sampler1, sampler2, nBindFlags, pTexture, nFrame );
 	}
 }
 
@@ -649,6 +657,9 @@ bool CBaseShader::IsAlphaModulating()
 {
 	return (s_nModulationFlags & SHADER_USING_ALPHA_MODULATION) != 0;
 }
+
+
+//-----------------------------------------------------------------------------
 // FIXME: Figure out a better way to do this?
 //-----------------------------------------------------------------------------
 int CBaseShader::ComputeModulationFlags( IMaterialVar** params, IShaderDynamicAPI* pShaderAPI )
@@ -656,7 +667,7 @@ int CBaseShader::ComputeModulationFlags( IMaterialVar** params, IShaderDynamicAP
  	s_pShaderAPI = pShaderAPI;
 
 	int mod = 0;
-	if( UsingFlashlight(params) )
+	if ( UsingFlashlight(params) )
 	{
 		mod |= SHADER_USING_FLASHLIGHT;
 	}
@@ -666,13 +677,9 @@ int CBaseShader::ComputeModulationFlags( IMaterialVar** params, IShaderDynamicAP
 		mod |= SHADER_USING_EDITOR;
 	}
 
-	if( IS_FLAG2_SET( MATERIAL_VAR2_USE_FIXED_FUNCTION_BAKED_LIGHTING ) )
+	if ( IsRenderingPaint(params) )
 	{
-		AssertOnce( IS_FLAG2_SET( MATERIAL_VAR2_NEEDS_BAKED_LIGHTING_SNAPSHOTS ) );
-		if( IS_FLAG2_SET( MATERIAL_VAR2_NEEDS_BAKED_LIGHTING_SNAPSHOTS ) )
-		{
-			mod |= SHADER_USING_FIXED_FUNCTION_BAKED_LIGHTING;
-		}
+		mod |= SHADER_USING_PAINT;
 	}
 
 	if ( IsSnapshotting() )
@@ -684,7 +691,7 @@ int CBaseShader::ComputeModulationFlags( IMaterialVar** params, IShaderDynamicAP
 	}
 	else
 	{
-		int nFixedLightingMode = pShaderAPI->GetIntRenderingParameter( INT_RENDERPARM_ENABLE_FIXED_LIGHTING );
+		int nFixedLightingMode = ShaderApiFast( pShaderAPI )->GetIntRenderingParameter( INT_RENDERPARM_ENABLE_FIXED_LIGHTING );
 		if ( nFixedLightingMode & 1 )
 			mod |= SHADER_USING_GBUFFER0;
 		if ( nFixedLightingMode & 2 )
@@ -721,7 +728,7 @@ bool CBaseShader::IsTranslucent( IMaterialVar **params ) const
 //-----------------------------------------------------------------------------
 // Returns the translucency...
 //-----------------------------------------------------------------------------
-void CBaseShader::ApplyColor2Factor( float *pColorOut ) const // (*pColorOut) *= COLOR2
+void CBaseShader::ApplyColor2Factor( float *pColorOut, bool isLinearSpace ) const // (*pColorOut) *= COLOR2
 {
 	if ( !g_pConfig->bShowDiffuse )
 	{
@@ -739,6 +746,7 @@ void CBaseShader::ApplyColor2Factor( float *pColorOut ) const // (*pColorOut) *=
 		pColorOut[1] *= flColor2[1];
 		pColorOut[2] *= flColor2[2];
 	}
+#ifndef _PS3
 	if ( g_pHardwareConfig->UsesSRGBCorrectBlending() )
 	{
 		IMaterialVar* pSRGBVar = s_ppParams[SRGBTINT];
@@ -747,11 +755,21 @@ void CBaseShader::ApplyColor2Factor( float *pColorOut ) const // (*pColorOut) *=
 			float flSRGB[3];
 			pSRGBVar->GetVecValue( flSRGB, 3 );
 			
-			pColorOut[0] *= flSRGB[0];
-			pColorOut[1] *= flSRGB[1];
-			pColorOut[2] *= flSRGB[2];
+			if ( isLinearSpace )
+			{
+				pColorOut[0] *= flSRGB[0];
+				pColorOut[1] *= flSRGB[1];
+				pColorOut[2] *= flSRGB[2];
+			}
+			else
+			{
+				pColorOut[0] *= GammaToLinearFullRange( flSRGB[0] );
+				pColorOut[1] *= GammaToLinearFullRange( flSRGB[1] );
+				pColorOut[2] *= GammaToLinearFullRange( flSRGB[2] );
+			}
 		}
 	}
+#endif
 }
 
 
@@ -890,14 +908,15 @@ void CBaseShader::SingleTextureLightmapBlendMode( )
 
 FORCEINLINE void CBaseShader::SetFogMode( ShaderFogMode_t fogMode )
 {
+	bool bVertexFog = ((CurrentMaterialVarFlags() & MATERIAL_VAR_VERTEXFOG) != 0);
+
 	if (( CurrentMaterialVarFlags() & MATERIAL_VAR_NOFOG ) == 0)
 	{
-		bool bVertexFog = ( ( CurrentMaterialVarFlags() & MATERIAL_VAR_VERTEXFOG ) != 0 );
 		s_pShaderShadow->FogMode( fogMode, bVertexFog );
 	}
 	else
 	{
-		s_pShaderShadow->FogMode( SHADER_FOGMODE_DISABLED, false );
+		s_pShaderShadow->FogMode( SHADER_FOGMODE_DISABLED, bVertexFog );
 	}
 }
 
@@ -977,9 +996,31 @@ bool CBaseShader::UsingEditor( IMaterialVar **params ) const
 	}
 }
 
+bool CBaseShader::IsRenderingPaint( IMaterialVar **params ) const
+{
+	if( IsSnapshotting() )
+	{
+		// NOTE: This only works because IsRenderingPaint
+		// really only affects lightmappedgeneric in a specific way.
+		// If we make it used more generally, then we'll need a pattern
+		// more similar to UsingEditor or UsingFlashlight
+		return CShader_IsFlag2Set( params, MATERIAL_VAR2_USE_PAINT );
+	}
+	else
+	{
+		if ( !g_pConfig->m_bPaintInGame || !g_pConfig->m_bPaintInMap )
+			return false;
+		return s_pShaderAPI->IsRenderingPaint();
+	}
+}
+
 bool CBaseShader::IsHDREnabled( void )
 {
+#ifdef _PS3
+	return true;
+#else
 	// HDRFIXME!  Need to fix this for vgui materials
 	HDRType_t hdr_mode = g_pHardwareConfig->GetHDRType();
 	return ( hdr_mode == HDR_TYPE_INTEGER ) || ( hdr_mode == HDR_TYPE_FLOAT );
+#endif
 }

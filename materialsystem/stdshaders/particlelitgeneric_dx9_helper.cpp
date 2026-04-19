@@ -1,4 +1,4 @@
-//===== Copyright © 1996-2005, Valve Corporation, All rights reserved. ======//
+//===== Copyright ï¿½ 1996-2005, Valve Corporation, All rights reserved. ======//
 //
 // Purpose: 
 //
@@ -9,7 +9,7 @@
 #if 0
 
 #include "particlelitgeneric_dx9_helper.h"
-#include "basevsshader.h"
+#include "BaseVSShader.h"
 #include "particlelit_generic_vs30.inc"
 #include "particlelit_generic_ps30.inc"
 #include "convar.h"
@@ -54,12 +54,12 @@ void InitParamsParticleLitGeneric_DX9( CBaseVSShader *pShader, IMaterialVar** pa
 void InitParticleLitGeneric_DX9( CBaseVSShader *pShader, IMaterialVar** params, ParticleLitGeneric_DX9_Vars_t &info )
 {
 	Assert( info.m_nFlashlightTexture >= 0 );
-	pShader->LoadTexture( info.m_nFlashlightTexture );
+	pShader->LoadTexture( info.m_nFlashlightTexture, TEXTUREFLAGS_SRGB );
 	
 	bool bIsBaseTextureTranslucent = false;
 	if ( params[info.m_nBaseTexture]->IsDefined() )
 	{
-		pShader->LoadTexture( info.m_nBaseTexture );
+		pShader->LoadTexture( info.m_nBaseTexture, TEXTUREFLAGS_SRGB );
 		
 		if ( params[info.m_nBaseTexture]->GetTextureValue()->IsTranslucent() )
 		{
@@ -150,6 +150,7 @@ void DrawParticleLitGeneric_DX9( CBaseVSShader *pShader, IMaterialVar** params,
 		if( hasFlashlight )
 		{
 			pShaderShadow->EnableTexture( SHADER_SAMPLER7, true );
+			pShaderShadow->EnableSRGBRead( SHADER_SAMPLER7, true );
 			userDataSize = 4; // tangent S
 		}
 		if( hasBump )
@@ -203,26 +204,26 @@ void DrawParticleLitGeneric_DX9( CBaseVSShader *pShader, IMaterialVar** params,
 
 		if( hasBaseTexture )
 		{
-			pShader->BindTexture( SHADER_SAMPLER0, info.m_nBaseTexture, info.m_nBaseTextureFrame );
+			pShader->BindTexture( SHADER_SAMPLER0, true, info.m_nBaseTexture, info.m_nBaseTextureFrame );
 		}
 		if( !g_pConfig->m_bFastNoBump )
 		{
 			if( hasBump )
 			{
-				pShader->BindTexture( SHADER_SAMPLER3, info.m_nBumpmap, info.m_nBumpFrame );
+				pShader->BindTexture( SHADER_SAMPLER3, false, info.m_nBumpmap, info.m_nBumpFrame );
 			}
 		}
 		else
 		{
 			if( hasBump )
 			{
-				pShaderAPI->BindStandardTexture( SHADER_SAMPLER3, TEXTURE_NORMALMAP_FLAT );
+				pShaderAPI->BindStandardTexture( SHADER_SAMPLER3, false, TEXTURE_NORMALMAP_FLAT );
 			}
 		}
 		if( hasFlashlight )
 		{
 			Assert( info.m_nFlashlightTexture >= 0 && info.m_nFlashlightTextureFrame >= 0 );
-			pShader->BindTexture( SHADER_SAMPLER7, info.m_nFlashlightTexture, info.m_nFlashlightTextureFrame );
+			pShader->BindTexture( SHADER_SAMPLER7, true, info.m_nFlashlightTexture, info.m_nFlashlightTextureFrame );
 		}
 
 		LightState_t lightState = { 0, false, false };
@@ -251,7 +252,7 @@ void DrawParticleLitGeneric_DX9( CBaseVSShader *pShader, IMaterialVar** params,
 		}
 		if( hasBump )
 		{
-			pShaderAPI->BindStandardTexture( SHADER_SAMPLER5, TEXTURE_NORMALIZATION_CUBEMAP_SIGNED );
+			pShaderAPI->BindStandardTexture( SHADER_SAMPLER5, false, TEXTURE_NORMALIZATION_CUBEMAP_SIGNED );
 			pShaderAPI->SetPixelShaderStateAmbientLightCube( 5 );
 			pShaderAPI->CommitPixelShaderLighting( 13 );
 		}

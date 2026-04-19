@@ -1,28 +1,36 @@
 // STATIC: "ONLY_PROJECT_POSITION"	"0..1" [XBOX]
 // STATIC: "ONLY_PROJECT_POSITION"	"0..0" [PC]
+// STATIC: "ONLY_PROJECT_POSITION"	"0..0" [SONYPS3]
 // STATIC: "TREESWAY"				"0..2"
+// STATIC: "COLOR_DEPTH"			"0..1"
 
 // DYNAMIC: "COMPRESSED_VERTS"		"0..1"
 // DYNAMIC: "SKINNING"				"0..1"
 
-// DYNAMIC: "MORPHING"				"0..1" [vs30] [ = pShaderAPI->IsHWMorphingEnabled() ]
-// DYNAMIC: "TESSELLATION"			"0..2"	[vs30] [PC]
-// DYNAMIC: "TESSELLATION"			"0..0"	[XBOX]
+// DYNAMIC: "MORPHING"				"0..0"  [ = false ]
+// DYNAMIC: "TESSELLATION"			"0..0"	[vs30] [PC]
+// DYNAMIC: "TESSELLATION"			"0..0"	[CONSOLE]
 // DYNAMIC: "TESSELLATION"			"0..0"	[vs20] [PC]
 
 //	SKIP: ( $MORPHING || $SKINNING || $COMPRESSED_VERTS ) && $TESSELLATION
+
+// Disabling morphing in CS:GO, otherwise this shader causes an Internal Driver Error on the first Present() under Windows XP ATI X1650.
+#if MORPHING
+#undef MORPHING
+#define MORPHING 0
+#endif
 
 #include "common_vs_fxc.h"
 
 static const bool g_bSkinning = SKINNING ? true : false;
 
-#ifdef SHADER_MODEL_VS_3_0
+#if defined( SHADER_MODEL_VS_3_0 ) && MORPHING
 // NOTE: cMorphTargetTextureDim.xy = target dimensions,
 //		 cMorphTargetTextureDim.z = 4tuples/morph
 const float3 cMorphTargetTextureDim			: register( SHADER_SPECIFIC_CONST_6 );
 const float4 cMorphSubrect					: register( SHADER_SPECIFIC_CONST_7 );
 
-sampler2D morphSampler						: register( D3DVERTEXTEXTURESAMPLER0, s0 );
+sampler2D morphSampler						: register( s0 );
 #endif
 
 #if ( TREESWAY )
@@ -74,7 +82,7 @@ struct VS_INPUT
 	float4 vBoneIndices			: BLENDINDICES;
 	// Position delta stream
 	float3 vPosFlex				: POSITION1;
-#ifdef SHADER_MODEL_VS_3_0
+#if defined( SHADER_MODEL_VS_3_0 ) && MORPHING
 	float vVertexID				: POSITION2;
 #endif
 };
@@ -83,11 +91,16 @@ struct VS_INPUT
 
 struct VS_OUTPUT
 {
-    float4 projPos				: POSITION;
+    float4 vProjPos				: POSITION;
 
 #if (ONLY_PROJECT_POSITION == 0) //360 sometimes runs without the pixel shader component, but has to patch this output if it does.
 	float2 texCoord				: TEXCOORD0;
 #endif
+
+#if COLOR_DEPTH
+	float4 vWorldPos_projPosZ	: TEXCOORD1;
+#endif
+
 };
 
 #include "tree_sway.h"
@@ -139,7 +152,21 @@ VS_OUTPUT main( const VS_INPUT v )
 	}
 	#endif
 
-	o.projPos = mul( float4( worldPos, 1.0f ), cViewProj );
+	float4 vProjPos = mul( float4( worldPos, 1.0f ), cViewProj );
+
+	o.vProjPos    = vProjPos;
+
+#if ( COLOR_DEPTH && !ONLY_PROJECT_POSITION )
+	o.vWorldPos_projPosZ.z = vProjPos.z;
+	o.vWorldPos_projPosZ.w = vProjPos.w;
+#endif
+	
+#ifdef _PS3
+	// Account for OpenGL's flipped y coordinate and expanded z range [-1,1] instead of [0,1]
+	o.projPos.y = -o.projPos.y;
+	o.projPos.z = 2.0f * o.projPos.z - o.projPos.w;
+#endif // _PS3
 
 	return o;
 }
+

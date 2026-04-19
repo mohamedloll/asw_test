@@ -1,5 +1,7 @@
 //========== Copyright (c) Valve Corporation, All rights reserved. ==========//
 
+// STATIC: "PS3REGCOUNT12" "0..0"
+
 #define HDRTYPE HDR_TYPE_NONE
 #include "common_ps_fxc.h"
 
@@ -26,7 +28,7 @@ struct PS_OUTPUT
 
 PS_OUTPUT main( PS_INPUT i )
 {
-	float3 color = tex2D( TexSampler, i.uv0 );
+	float3 color = tex2D( TexSampler, i.uv0 ).xyz;
 
 	// Formula for calculating luminance based on NTSC standard
 	float3 tmpv = { 0.2125f, 0.7154f, 0.0721f };
@@ -40,7 +42,8 @@ PS_OUTPUT main( PS_INPUT i )
 	//float flLuminance = ( color.r + color.g + color.b ) * 0.33333f;
 
 	PS_OUTPUT o;
-	o.color.rgba = step( g_flComparisonMin, flLuminance ) * step( flLuminance, g_flComparisonMax );
+	o.color.a = step( g_flComparisonMin, flLuminance ) * step( flLuminance, g_flComparisonMax );
+	o.color.rgb = 1.0f;
 	#ifndef _X360
 	{
 		o.depth = 0.0f; // Workaround for ATI driver bug

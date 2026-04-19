@@ -1,4 +1,4 @@
-//===== Copyright © 1996-2007, Valve Corporation, All rights reserved. ======//
+//===== Copyright (c) 1996-2007, Valve Corporation, All rights reserved. ======//
 //
 // Purpose: 
 //
@@ -26,6 +26,10 @@ BEGIN_VS_SHADER_FLAGS( DebugMorphAccumulator, "Help for Debug Morph Accumulator"
 
 	SHADER_FALLBACK
 	{
+		if ( !g_pHardwareConfig->SupportsPixelShaders_3_0() )
+		{
+			return "Wireframe";
+		}
 		return 0;
 	}
 
@@ -55,7 +59,7 @@ BEGIN_VS_SHADER_FLAGS( DebugMorphAccumulator, "Help for Debug Morph Accumulator"
 		}
 		DYNAMIC_STATE
 		{
-			BindTexture( SHADER_SAMPLER0, BASETEXTURE );
+			BindTexture( SHADER_SAMPLER0, TEXTURE_BINDFLAGS_NONE, BASETEXTURE );
 
 			DECLARE_DYNAMIC_VERTEX_SHADER( debugmorphaccumulator_vs30 );
 			SET_DYNAMIC_VERTEX_SHADER( debugmorphaccumulator_vs30 );

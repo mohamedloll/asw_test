@@ -1,13 +1,13 @@
-//===== Copyright © 1996-2005, Valve Corporation, All rights reserved. ======//
+//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
 //
 // Purpose: 
 //
 //===========================================================================//
 
 #include "BaseVSShader.h"
-#include "blurfilter_vs20.inc"
-#include "blurfilter_ps20.inc"
-#include "blurfilter_ps20b.inc"
+#include "BlurFilter_vs20.inc"
+#include "BlurFilter_ps20.inc"
+#include "BlurFilter_ps20b.inc"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -21,12 +21,8 @@ BEGIN_VS_SHADER_FLAGS( BlurFilterY, "Help for BlurFilterY", SHADER_NOT_EDITABLE 
 		SHADER_PARAM( CLEARCOLOR, SHADER_PARAM_TYPE_VEC3, "[0 0 0]", "clear color" )
 	END_SHADER_PARAMS
 
-	SHADER_INIT
+	SHADER_INIT_PARAMS()
 	{
-		if ( params[BASETEXTURE]->IsDefined() )
-		{
-			LoadTexture( BASETEXTURE );
-		}
 		if ( !( params[BLOOMAMOUNT]->IsDefined() ) )
 		{
 			params[BLOOMAMOUNT]->SetFloatValue(1.0);
@@ -46,7 +42,14 @@ BEGIN_VS_SHADER_FLAGS( BlurFilterY, "Help for BlurFilterY", SHADER_NOT_EDITABLE 
 		{
 			params[ CLEARCOLOR ]->SetVecValue( 0.0f, 0.0f, 0.0f );
 		}
+	}
 
+	SHADER_INIT
+	{
+		if ( params[BASETEXTURE]->IsDefined() )
+		{
+			LoadTexture( BASETEXTURE );
+		}
 	}
 	
 	SHADER_FALLBACK
@@ -56,6 +59,8 @@ BEGIN_VS_SHADER_FLAGS( BlurFilterY, "Help for BlurFilterY", SHADER_NOT_EDITABLE 
 
 	SHADER_DRAW
 	{
+		// Render targets are pegged as sRGB on POSIX, so just force these reads and writes
+		bool bForceSRGBReadAndWrite = false;
 		SHADOW_STATE
 		{
 			pShaderShadow->EnableDepthWrites( false );
@@ -63,10 +68,8 @@ BEGIN_VS_SHADER_FLAGS( BlurFilterY, "Help for BlurFilterY", SHADER_NOT_EDITABLE 
 			pShaderShadow->EnableTexture( SHADER_SAMPLER0, true );
 			pShaderShadow->VertexShaderVertexFormat( VERTEX_POSITION, 1, 0, 0 );
 
-			//avoid srgb conversions to alleviate some of the srgb texture lookup problems
-			pShaderShadow->EnableSRGBRead( SHADER_SAMPLER0, false );
-			pShaderShadow->EnableSRGBWrite( false );
-
+			pShaderShadow->EnableSRGBRead( SHADER_SAMPLER0, bForceSRGBReadAndWrite );
+			pShaderShadow->EnableSRGBWrite( bForceSRGBReadAndWrite );
 			DECLARE_STATIC_VERTEX_SHADER( blurfilter_vs20 );
 			SET_STATIC_VERTEX_SHADER_COMBO( KERNEL, params[ KERNEL ]->GetIntValue() ? 1 : 0 );
 			SET_STATIC_VERTEX_SHADER( blurfilter_vs20 );
@@ -76,6 +79,7 @@ BEGIN_VS_SHADER_FLAGS( BlurFilterY, "Help for BlurFilterY", SHADER_NOT_EDITABLE 
 				DECLARE_STATIC_PIXEL_SHADER( blurfilter_ps20b );
 				SET_STATIC_PIXEL_SHADER_COMBO( KERNEL, params[ KERNEL ]->GetIntValue() );
 				SET_STATIC_PIXEL_SHADER_COMBO( CLEAR_COLOR, params[ ENABLECLEARCOLOR ]->GetIntValue() );
+				SET_STATIC_PIXEL_SHADER_COMBO( APPROX_SRGB_ADAPTER, bForceSRGBReadAndWrite && ( params[ KERNEL ]->GetIntValue() != 0 ) && ( params[ ENABLECLEARCOLOR ]->GetIntValue() == 0 ) );
 				SET_STATIC_PIXEL_SHADER( blurfilter_ps20b );
 			}
 			else
@@ -92,7 +96,7 @@ BEGIN_VS_SHADER_FLAGS( BlurFilterY, "Help for BlurFilterY", SHADER_NOT_EDITABLE 
 
 		DYNAMIC_STATE
 		{
-			BindTexture( SHADER_SAMPLER0, BASETEXTURE, -1 );
+			BindTexture( SHADER_SAMPLER0, bForceSRGBReadAndWrite ? TEXTURE_BINDFLAGS_SRGBREAD : TEXTURE_BINDFLAGS_NONE, BASETEXTURE, -1 );
 
 			// The temp buffer is 1/4 back buffer size
 			ITexture *src_texture = params[BASETEXTURE]->GetTextureValue();

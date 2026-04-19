@@ -87,8 +87,8 @@ BEGIN_VS_SHADER_FLAGS( floatcombine, "Help for floatcombine", SHADER_NOT_EDITABL
 						 params[EDGE_SOFTNESS]->GetFloatValue()};
 			pShaderAPI->SetPixelShaderConstant( 0, c0, 1 );
 			pShaderAPI->SetPixelShaderConstant( 1, c1, 1 );
-			BindTexture( SHADER_SAMPLER0, BASETEXTURE, -1 );
-			BindTexture( SHADER_SAMPLER1, BLOOMTEXTURE, -1 );
+			BindTexture( SHADER_SAMPLER0, TEXTURE_BINDFLAGS_NONE, BASETEXTURE, -1 );
+			BindTexture( SHADER_SAMPLER1, TEXTURE_BINDFLAGS_NONE, BLOOMTEXTURE, -1 );
 
 			ITexture *base_texture=params[BASETEXTURE]->GetTextureValue();
 			ITexture *bloom_texture=params[BLOOMTEXTURE]->GetTextureValue();

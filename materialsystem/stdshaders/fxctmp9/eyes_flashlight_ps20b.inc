@@ -20,7 +20,7 @@ private:
 public:
 	void SetFLASHLIGHTDEPTHFILTERMODE( int i )
 	{
-		Assert( i >= 0 && i <= 2 );
+		Assert( i >= 0 && i <= 3 );
 		m_nFLASHLIGHTDEPTHFILTERMODE = i;
 #ifdef _DEBUG
 		m_bFLASHLIGHTDEPTHFILTERMODE = true;
@@ -28,6 +28,7 @@ public:
 	}
 	void SetFLASHLIGHTDEPTHFILTERMODE( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 3 );
 		m_nFLASHLIGHTDEPTHFILTERMODE = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bFLASHLIGHTDEPTHFILTERMODE = true;
@@ -72,6 +73,7 @@ public:
 	}
 	void SetPIXELFOGTYPE( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nPIXELFOGTYPE = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bPIXELFOGTYPE = true;
@@ -93,6 +95,7 @@ public:
 	}
 	void SetFLASHLIGHTSHADOWS( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nFLASHLIGHTSHADOWS = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bFLASHLIGHTSHADOWS = true;
@@ -123,3 +126,29 @@ public:
 	}
 };
 #define shaderDynamicTest_eyes_flashlight_ps20b psh_forgot_to_set_dynamic_FLASHLIGHTSHADOWS + 0
+
+static const ShaderComboInformation_t s_DynamicComboArray_eyes_flashlight_ps20b[2] = 
+{
+	{ "PIXELFOGTYPE", 0, 1 },
+	{ "FLASHLIGHTSHADOWS", 0, 1 },
+};
+
+static const ShaderComboInformation_t s_StaticComboArray_eyes_flashlight_ps20b[1] = 
+{
+	{ "FLASHLIGHTDEPTHFILTERMODE", 0, 3 },
+};
+static const ShaderComboSemantics_t eyes_flashlight_ps20b_combos =
+{
+	"eyes_flashlight_ps20b", s_DynamicComboArray_eyes_flashlight_ps20b, 2, s_StaticComboArray_eyes_flashlight_ps20b, 1 
+};
+
+class ConstructMe_eyes_flashlight_ps20b
+{
+public:
+	ConstructMe_eyes_flashlight_ps20b()
+	{
+		GetShaderDLL()->AddShaderComboInformation( &eyes_flashlight_ps20b_combos );
+	}
+};
+
+static ConstructMe_eyes_flashlight_ps20b s_ConstructMe_eyes_flashlight_ps20b;

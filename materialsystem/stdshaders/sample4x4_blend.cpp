@@ -72,7 +72,7 @@ BEGIN_VS_SHADER( Sample4x4_Blend, "Help for Sample4x4_Blend" )
 
 		DYNAMIC_STATE
 		{
-			BindTexture( SHADER_SAMPLER0, BASETEXTURE, -1 );
+			BindTexture( SHADER_SAMPLER0, TEXTURE_BINDFLAGS_NONE, BASETEXTURE, -1 );
 			ITexture *src_texture=params[BASETEXTURE]->GetTextureValue();
 
 			int width=src_texture->GetActualWidth();

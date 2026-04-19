@@ -29,6 +29,10 @@ BEGIN_VS_SHADER_FLAGS( MorphWeight_DX9, "Help for morphweight", SHADER_NOT_EDITA
 
 	SHADER_FALLBACK
 	{
+		if ( !g_pHardwareConfig->SupportsPixelShaders_3_0() )
+		{
+			return "Wireframe";
+		}
 		return 0;
 	}
 

@@ -29,6 +29,7 @@ public:
 	}
 	void SetBASETEXTURE( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nBASETEXTURE = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bBASETEXTURE = true;
@@ -50,6 +51,7 @@ public:
 	}
 	void SetCUBEMAP( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nCUBEMAP = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bCUBEMAP = true;
@@ -71,6 +73,7 @@ public:
 	}
 	void SetDIFFUSELIGHTING( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nDIFFUSELIGHTING = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bDIFFUSELIGHTING = true;
@@ -92,6 +95,7 @@ public:
 	}
 	void SetNORMALMAPALPHAENVMAPMASK( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nNORMALMAPALPHAENVMAPMASK = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bNORMALMAPALPHAENVMAPMASK = true;
@@ -113,6 +117,7 @@ public:
 	}
 	void SetHALFLAMBERT( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nHALFLAMBERT = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bHALFLAMBERT = true;
@@ -134,6 +139,7 @@ public:
 	}
 	void SetFLASHLIGHT( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nFLASHLIGHT = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bFLASHLIGHT = true;
@@ -155,6 +161,7 @@ public:
 	}
 	void SetTRANSLUCENT( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nTRANSLUCENT = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bTRANSLUCENT = true;
@@ -223,6 +230,7 @@ public:
 	}
 	void SetWRITEWATERFOGTODESTALPHA( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nWRITEWATERFOGTODESTALPHA = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bWRITEWATERFOGTODESTALPHA = true;
@@ -244,6 +252,7 @@ public:
 	}
 	void SetPIXELFOGTYPE( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nPIXELFOGTYPE = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bPIXELFOGTYPE = true;
@@ -265,6 +274,7 @@ public:
 	}
 	void SetWARPINGIN( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nWARPINGIN = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bWARPINGIN = true;
@@ -286,6 +296,7 @@ public:
 	}
 	void SetAMBIENT_LIGHT( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nAMBIENT_LIGHT = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bAMBIENT_LIGHT = true;
@@ -307,6 +318,7 @@ public:
 	}
 	void SetNUM_LIGHTS( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 4 );
 		m_nNUM_LIGHTS = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bNUM_LIGHTS = true;
@@ -349,3 +361,38 @@ public:
 	}
 };
 #define shaderDynamicTest_vortwarp_ps30 psh_forgot_to_set_dynamic_WRITEWATERFOGTODESTALPHA + psh_forgot_to_set_dynamic_WARPINGIN + psh_forgot_to_set_dynamic_AMBIENT_LIGHT + psh_forgot_to_set_dynamic_NUM_LIGHTS + 0
+
+static const ShaderComboInformation_t s_DynamicComboArray_vortwarp_ps30[5] = 
+{
+	{ "WRITEWATERFOGTODESTALPHA", 0, 1 },
+	{ "PIXELFOGTYPE", 0, 1 },
+	{ "WARPINGIN", 0, 1 },
+	{ "AMBIENT_LIGHT", 0, 1 },
+	{ "NUM_LIGHTS", 0, 4 },
+};
+
+static const ShaderComboInformation_t s_StaticComboArray_vortwarp_ps30[7] = 
+{
+	{ "BASETEXTURE", 0, 1 },
+	{ "CUBEMAP", 0, 1 },
+	{ "DIFFUSELIGHTING", 0, 1 },
+	{ "NORMALMAPALPHAENVMAPMASK", 0, 1 },
+	{ "HALFLAMBERT", 0, 1 },
+	{ "FLASHLIGHT", 0, 1 },
+	{ "TRANSLUCENT", 0, 1 },
+};
+static const ShaderComboSemantics_t vortwarp_ps30_combos =
+{
+	"vortwarp_ps30", s_DynamicComboArray_vortwarp_ps30, 5, s_StaticComboArray_vortwarp_ps30, 7 
+};
+
+class ConstructMe_vortwarp_ps30
+{
+public:
+	ConstructMe_vortwarp_ps30()
+	{
+		GetShaderDLL()->AddShaderComboInformation( &vortwarp_ps30_combos );
+	}
+};
+
+static ConstructMe_vortwarp_ps30 s_ConstructMe_vortwarp_ps30;

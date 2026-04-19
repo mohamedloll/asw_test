@@ -6,7 +6,7 @@
 
 #include "BaseVSShader.h"
 #include "tier1/convar.h"
-#include "mathlib/VMatrix.h"
+#include "mathlib/vmatrix.h"
 #include "eyes_dx8_dx9_helper.h"
 #include "cpp_shader_constant_register_map.h"
 
@@ -17,7 +17,7 @@
 #include "eyes_flashlight_ps20.inc"
 #include "eyes_flashlight_ps20b.inc"
 
-#ifndef _X360
+#if !defined( _X360 ) && !defined( _PS3 )
 #include "eyes_vs30.inc"
 #include "eyes_ps30.inc"
 #include "eyes_flashlight_vs30.inc"
@@ -35,19 +35,13 @@ void InitParamsEyes_DX8_DX9( CBaseVSShader *pShader, IMaterialVar** params, cons
 
 	SET_FLAGS2( MATERIAL_VAR2_SUPPORTS_HW_SKINNING );
 	SET_FLAGS2( MATERIAL_VAR2_LIGHTING_VERTEX_LIT );
-
-	Assert( info.m_nIntro != -1 );
-	if( info.m_nIntro != -1 && !params[info.m_nIntro]->IsDefined() )
-	{
-		params[info.m_nIntro]->SetIntValue( 0 );
-	}
 }
 
 void InitEyes_DX8_DX9( CBaseVSShader *pShader, IMaterialVar** params, Eyes_DX8_DX9_Vars_t &info )
 {
-	pShader->LoadTexture( FLASHLIGHTTEXTURE );
-	pShader->LoadTexture( info.m_nBaseTexture );
-	pShader->LoadTexture( info.m_nIris );
+	pShader->LoadTexture( FLASHLIGHTTEXTURE, TEXTUREFLAGS_SRGB );
+	pShader->LoadTexture( info.m_nBaseTexture, TEXTUREFLAGS_SRGB );
+	pShader->LoadTexture( info.m_nIris, TEXTUREFLAGS_SRGB );
 	pShader->LoadTexture( info.m_nGlint );
 
 	// Be sure dilation is zeroed if undefined
@@ -90,6 +84,8 @@ static void SetDepthFlashlightParams( CBaseVSShader *pShader, IShaderDynamicAPI 
 
 	vScreenScale[0] = (float) nWidth  / nTexWidth;
 	vScreenScale[1] = (float) nHeight / nTexHeight;
+	vScreenScale[2] = 1.0f / flashlightState.m_flShadowMapResolution;
+	vScreenScale[3] = 2.0f / flashlightState.m_flShadowMapResolution;
 
 	pShaderAPI->SetPixelShaderConstant( PSREG_FLASHLIGHT_SCREEN_SCALE, vScreenScale, 1 );
 
@@ -126,8 +122,8 @@ static void DrawFlashlight( bool bDX9, CBaseVSShader *pShader, IMaterialVar** pa
 #ifdef STDSHADER_DX9_DLL_EXPORT
 		Assert( bDX9 );
 
-		int nShadowFilterMode = g_pHardwareConfig->GetShadowFilterMode();	// Based upon vendor and device dependent formats
-#ifndef _X360
+		ShadowFilterMode_t nShadowFilterMode = g_pHardwareConfig->GetShadowFilterMode( false /* bForceLowQuality */, g_pHardwareConfig->HasFastVertexTextures() && !IsPlatformX360() && !IsPlatformPS3() );	// Based upon vendor and device dependent formats
+#if !defined( _X360 ) && !defined( _PS3 )
 		if ( !g_pHardwareConfig->HasFastVertexTextures() )
 #endif
 		{
@@ -146,7 +142,7 @@ static void DrawFlashlight( bool bDX9, CBaseVSShader *pShader, IMaterialVar** pa
 				SET_STATIC_PIXEL_SHADER( eyes_flashlight_ps20 );
 			}
 		}
-#ifndef _X360
+#if !defined( _X360 ) && !defined( _PS3 )
 		else
 		{
 			// The vertex shader uses the vertex id stream
@@ -170,7 +166,7 @@ static void DrawFlashlight( bool bDX9, CBaseVSShader *pShader, IMaterialVar** pa
 		if ( g_pHardwareConfig->SupportsPixelShaders_2_b() )
 		{
 			pShaderShadow->EnableTexture( SHADER_SAMPLER4, true );			// Shadow depth map
-			pShaderShadow->SetShadowDepthFiltering( SHADER_SAMPLER4 );
+			//pShaderShadow->SetShadowDepthFiltering( SHADER_SAMPLER4 );
 			pShaderShadow->EnableTexture( SHADER_SAMPLER5, true );			// Shadow noise rotation map
 		}
 #endif
@@ -183,15 +179,15 @@ static void DrawFlashlight( bool bDX9, CBaseVSShader *pShader, IMaterialVar** pa
 		ITexture *pFlashlightDepthTexture;
 		FlashlightState_t flashlightState = pShaderAPI->GetFlashlightStateEx( worldToTexture, &pFlashlightDepthTexture );
 
-		pShader->BindTexture( SHADER_SAMPLER0, flashlightState.m_pSpotlightTexture, flashlightState.m_nSpotlightTextureFrame );
-		pShader->BindTexture( SHADER_SAMPLER1, info.m_nBaseTexture, info.m_nFrame );
-		pShaderAPI->BindStandardTexture( SHADER_SAMPLER2, TEXTURE_NORMALIZATION_CUBEMAP );
-		pShader->BindTexture( SHADER_SAMPLER3, info.m_nIris, info.m_nIrisFrame );
+		pShader->BindTexture( SHADER_SAMPLER0, TEXTURE_BINDFLAGS_SRGBREAD, flashlightState.m_pSpotlightTexture, flashlightState.m_nSpotlightTextureFrame );
+		pShader->BindTexture( SHADER_SAMPLER1, TEXTURE_BINDFLAGS_SRGBREAD, info.m_nBaseTexture, info.m_nFrame );
+		pShaderAPI->BindStandardTexture( SHADER_SAMPLER2, TEXTURE_BINDFLAGS_NONE, TEXTURE_NORMALIZATION_CUBEMAP );
+		pShader->BindTexture( SHADER_SAMPLER3, TEXTURE_BINDFLAGS_SRGBREAD, info.m_nIris, info.m_nIrisFrame );
 
 #ifdef STDSHADER_DX9_DLL_EXPORT
 		Assert( bDX9 );
 
-#ifndef _X360
+#if !defined( _X360 ) && !defined( _PS3 )
 		if ( !g_pHardwareConfig->HasFastVertexTextures() )
 #endif
 		{
@@ -200,7 +196,7 @@ static void DrawFlashlight( bool bDX9, CBaseVSShader *pShader, IMaterialVar** pa
 			SET_DYNAMIC_VERTEX_SHADER_COMBO( COMPRESSED_VERTS, (int)vertexCompression );
 			SET_DYNAMIC_VERTEX_SHADER( eyes_flashlight_vs20 );
 		}
-#ifndef _X360
+#if !defined( _X360 ) && !defined( _PS3 )
 		else
 		{
 			pShader->SetHWMorphVertexShaderState( VERTEX_SHADER_SHADER_SPECIFIC_CONST_10, VERTEX_SHADER_SHADER_SPECIFIC_CONST_11, SHADER_VERTEXTEXTURE_SAMPLER0 );
@@ -219,8 +215,8 @@ static void DrawFlashlight( bool bDX9, CBaseVSShader *pShader, IMaterialVar** pa
 
 		if( pFlashlightDepthTexture && g_pConfig->ShadowDepthTexture() && flashlightState.m_bEnableShadows )
 		{
-			pShader->BindTexture( SHADER_SAMPLER4, pFlashlightDepthTexture, 0 );
-			pShaderAPI->BindStandardTexture( SHADER_SAMPLER5, TEXTURE_SHADOW_NOISE_2D );
+			pShader->BindTexture( SHADER_SAMPLER4, TEXTURE_BINDFLAGS_SHADOWDEPTH, pFlashlightDepthTexture, 0 );
+			pShaderAPI->BindStandardTexture( SHADER_SAMPLER5, TEXTURE_BINDFLAGS_NONE, TEXTURE_SHADOW_NOISE_2D );
 		}
 
 		pShaderAPI->SetPixelShaderFogParams( PSREG_FOG_PARAMS );
@@ -230,7 +226,7 @@ static void DrawFlashlight( bool bDX9, CBaseVSShader *pShader, IMaterialVar** pa
 		vEyePos_SpecExponent[3] = 0.0f;
 		pShaderAPI->SetPixelShaderConstant( PSREG_EYEPOS_SPEC_EXPONENT, vEyePos_SpecExponent, 1 );
 
-#ifndef _X360
+#if !defined( _X360 ) && !defined( _PS3 )
 		if ( !g_pHardwareConfig->HasFastVertexTextures() )
 #endif
 		{
@@ -248,7 +244,7 @@ static void DrawFlashlight( bool bDX9, CBaseVSShader *pShader, IMaterialVar** pa
 				SET_DYNAMIC_PIXEL_SHADER( eyes_flashlight_ps20 );
 			}
 		}
-#ifndef _X360
+#if !defined( _X360 ) && !defined( _PS3 )
 		else
 		{
 			DECLARE_DYNAMIC_PIXEL_SHADER( eyes_flashlight_ps30 );
@@ -292,15 +288,21 @@ static void DrawUsingVertexShader( bool bDX9, CBaseVSShader *pShader, IMaterialV
 
 		pShaderShadow->EnableAlphaWrites( true ); //we end up hijacking destination alpha for opaques most of the time.
 		
+		bool bSRGBRead01 = false;
+
 #ifdef STDSHADER_DX9_DLL_EXPORT
 		Assert( bDX9 );
-#ifndef _X360
+		bSRGBRead01 = true;
+
+#if !defined( _X360 ) && !defined( _PS3 )
 		if ( !g_pHardwareConfig->HasFastVertexTextures() )
 #endif
 		{
+			bool bFlattenStaticControlFlow = !g_pHardwareConfig->SupportsStaticControlFlow();
+
 			DECLARE_STATIC_VERTEX_SHADER( eyes_vs20 );
 			SET_STATIC_VERTEX_SHADER_COMBO( HALFLAMBERT, IS_FLAG_SET( MATERIAL_VAR_HALFLAMBERT ) );
-			SET_STATIC_VERTEX_SHADER_COMBO( INTRO, params[info.m_nIntro]->GetIntValue() ? 1 : 0 );
+			SET_STATIC_VERTEX_SHADER_COMBO( FLATTEN_STATIC_CONTROL_FLOW, bFlattenStaticControlFlow );
 			SET_STATIC_VERTEX_SHADER( eyes_vs20 );
 
 			if( g_pHardwareConfig->SupportsPixelShaders_2_b() )
@@ -314,7 +316,7 @@ static void DrawUsingVertexShader( bool bDX9, CBaseVSShader *pShader, IMaterialV
 				SET_STATIC_PIXEL_SHADER( eyes_ps20 );
 			}
 		}
-#ifndef _X360
+#if !defined( _X360 ) && !defined( _PS3 )
 		else
 		{
 			// The vertex shader uses the vertex id stream
@@ -322,7 +324,6 @@ static void DrawUsingVertexShader( bool bDX9, CBaseVSShader *pShader, IMaterialV
 
 			DECLARE_STATIC_VERTEX_SHADER( eyes_vs30 );
 			SET_STATIC_VERTEX_SHADER_COMBO( HALFLAMBERT, IS_FLAG_SET( MATERIAL_VAR_HALFLAMBERT ) );
-			SET_STATIC_VERTEX_SHADER_COMBO( INTRO, params[info.m_nIntro]->GetIntValue() ? 1 : 0 );
 			SET_STATIC_VERTEX_SHADER( eyes_vs30 );
 
 			DECLARE_STATIC_PIXEL_SHADER( eyes_ps30 );
@@ -344,9 +345,14 @@ static void DrawUsingVertexShader( bool bDX9, CBaseVSShader *pShader, IMaterialV
 	}
 	DYNAMIC_STATE
 	{
-		pShader->BindTexture( SHADER_SAMPLER0, info.m_nBaseTexture, info.m_nFrame );
-		pShader->BindTexture( SHADER_SAMPLER1, info.m_nIris, info.m_nIrisFrame );
-		pShader->BindTexture( SHADER_SAMPLER2, info.m_nGlint );
+		TextureBindFlags_t nRead01Flags = TEXTURE_BINDFLAGS_NONE;
+#ifdef STDSHADER_DX9_DLL_EXPORT
+		nRead01Flags = TEXTURE_BINDFLAGS_SRGBREAD;
+#endif
+
+		pShader->BindTexture( SHADER_SAMPLER0, nRead01Flags, info.m_nBaseTexture, info.m_nFrame );
+		pShader->BindTexture( SHADER_SAMPLER1, nRead01Flags, info.m_nIris, info.m_nIrisFrame );
+		pShader->BindTexture( SHADER_SAMPLER2, TEXTURE_BINDFLAGS_NONE, info.m_nGlint );
 		pShader->SetVertexShaderConstant( VERTEX_SHADER_SHADER_SPECIFIC_CONST_0, info.m_nEyeOrigin );
 		pShader->SetVertexShaderConstant( VERTEX_SHADER_SHADER_SPECIFIC_CONST_1, info.m_nEyeUp );
 		pShader->SetVertexShaderConstant( VERTEX_SHADER_SHADER_SPECIFIC_CONST_2, info.m_nIrisU );
@@ -357,21 +363,23 @@ static void DrawUsingVertexShader( bool bDX9, CBaseVSShader *pShader, IMaterialV
 #ifdef STDSHADER_DX9_DLL_EXPORT
 		Assert( bDX9 );
 
-		LightState_t lightState;
+		LightState_t lightState = {0, false, false};
 		pShaderAPI->GetDX9LightState( &lightState );
 
-#ifndef _X360
+#if !defined( _X360 ) && !defined( _PS3 )
 		if ( !g_pHardwareConfig->HasFastVertexTextures() )
 #endif
 		{
+			bool bUseStaticControlFlow = g_pHardwareConfig->SupportsStaticControlFlow();
 			DECLARE_DYNAMIC_VERTEX_SHADER( eyes_vs20 );
 			SET_DYNAMIC_VERTEX_SHADER_COMBO( SKINNING, pShaderAPI->GetCurrentNumBones() > 0 );
 			SET_DYNAMIC_VERTEX_SHADER_COMBO( DYNAMIC_LIGHT, lightState.HasDynamicLight() );
 			SET_DYNAMIC_VERTEX_SHADER_COMBO( STATIC_LIGHT,  lightState.m_bStaticLight  ? 1 : 0 );
 			SET_DYNAMIC_VERTEX_SHADER_COMBO( COMPRESSED_VERTS, (int)vertexCompression );
+			SET_DYNAMIC_VERTEX_SHADER_COMBO( NUM_LIGHTS, bUseStaticControlFlow ? 0 : lightState.m_nNumLights );
 			SET_DYNAMIC_VERTEX_SHADER( eyes_vs20 );
 		}
-#ifndef _X360
+#if !defined( _X360 ) && !defined( _PS3 )
 		else
 		{
 			pShader->SetHWMorphVertexShaderState( VERTEX_SHADER_SHADER_SPECIFIC_CONST_7, VERTEX_SHADER_SHADER_SPECIFIC_CONST_8, SHADER_VERTEXTEXTURE_SAMPLER0 );
@@ -396,7 +404,7 @@ static void DrawUsingVertexShader( bool bDX9, CBaseVSShader *pShader, IMaterialV
 		vEyePos_SpecExponent[3] = 0.0f;
 		pShaderAPI->SetPixelShaderConstant( PSREG_EYEPOS_SPEC_EXPONENT, vEyePos_SpecExponent, 1 );
 
-#ifndef _X360
+#if !defined( _X360 ) && !defined( _PS3 )
 		if ( !g_pHardwareConfig->HasFastVertexTextures() )
 #endif
 		{
@@ -412,7 +420,7 @@ static void DrawUsingVertexShader( bool bDX9, CBaseVSShader *pShader, IMaterialV
 				SET_DYNAMIC_PIXEL_SHADER( eyes_ps20 );
 			}
 		}
-#ifndef _X360
+#if !defined( _X360 ) && !defined( _PS3 )
 		else
 		{
 			DECLARE_DYNAMIC_PIXEL_SHADER( eyes_ps30 );
@@ -420,16 +428,6 @@ static void DrawUsingVertexShader( bool bDX9, CBaseVSShader *pShader, IMaterialV
 			SET_DYNAMIC_PIXEL_SHADER( eyes_ps30 );
 		}
 #endif
-
-		Assert( info.m_nIntro != -1 );
-		if( params[info.m_nIntro]->GetIntValue() )
-		{
-			float curTime = params[info.m_nWarpParam]->GetFloatValue();
-			float timeVec[4] = { 0.0f, 0.0f, 0.0f, curTime };
-			Assert( params[info.m_nEntityOrigin]->IsDefined() );
-			params[info.m_nEntityOrigin]->GetVecValue( timeVec, 3 );
-			pShaderAPI->SetVertexShaderConstant( VERTEX_SHADER_SHADER_SPECIFIC_CONST_6, timeVec, 1 );
-		}
 #endif
 	}
 	pShader->Draw();
@@ -456,7 +454,7 @@ void DrawEyes_DX8_DX9( bool bDX9, CBaseVSShader *pShader, IMaterialVar** params,
 		SET_FLAGS2( MATERIAL_VAR2_LIGHTING_VERTEX_LIT );
 	}
 	bool bHasFlashlight = pShader->UsingFlashlight( params );
-	if ( bHasFlashlight && IsX360() )
+	if ( bHasFlashlight && ( IsX360() || IsPS3() ) )
 	{
 		DrawEyes_DX8_DX9_Internal( bDX9, pShader, params, pShaderAPI, pShaderShadow, false, info, vertexCompression );
 		if ( pShaderShadow )

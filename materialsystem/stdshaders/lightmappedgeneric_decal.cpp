@@ -45,7 +45,7 @@ BEGIN_VS_SHADER( LightmappedGeneric_Decal,
 
 	SHADER_INIT
 	{
-		LoadTexture( FLASHLIGHTTEXTURE );
+		LoadTexture( FLASHLIGHTTEXTURE, TEXTUREFLAGS_SRGB );
 		
 		if (params[BASETEXTURE]->IsDefined())
 		{

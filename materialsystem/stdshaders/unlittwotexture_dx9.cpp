@@ -24,6 +24,11 @@ BEGIN_VS_SHADER( UnlitTwoTexture_DX9, "Help for UnlitTwoTexture_DX9" )
 		SHADER_PARAM( FRAME2, SHADER_PARAM_TYPE_INTEGER, "0", "frame number for $texture2" )
 		SHADER_PARAM( TEXTURE2TRANSFORM, SHADER_PARAM_TYPE_MATRIX, "center .5 .5 scale 1 1 rotate 0 translate 0 0", "$texture2 texcoord transform" )
 
+		// CStrike adaptive crosshair mode
+		SHADER_PARAM( CROSSHAIRMODE, SHADER_PARAM_TYPE_BOOL, "0", "Crosshair mode" )
+		SHADER_PARAM( CROSSHAIRCOLORTINT, SHADER_PARAM_TYPE_COLOR, "[1 1 1]", "" )
+		SHADER_PARAM( CROSSHAIRCOLORADAPT, SHADER_PARAM_TYPE_FLOAT, "0.4", "" )
+
 		// Cloak Pass
 		SHADER_PARAM( CLOAKPASSENABLED, SHADER_PARAM_TYPE_BOOL, "0", "Enables cloak render in a second pass" )
 		SHADER_PARAM( CLOAKFACTOR, SHADER_PARAM_TYPE_FLOAT, "0.0", "" )
@@ -46,6 +51,9 @@ BEGIN_VS_SHADER( UnlitTwoTexture_DX9, "Help for UnlitTwoTexture_DX9" )
 
 	bool NeedsPowerOfTwoFrameBufferTexture( IMaterialVar **params, bool bCheckSpecificToThisFrame ) const 
 	{ 
+		if ( params[CROSSHAIRMODE]->GetFloatValue() > 0.0f )
+			return true;
+
 		if ( params[CLOAKPASSENABLED]->GetIntValue() ) // If material supports cloaking
 		{
 			if ( bCheckSpecificToThisFrame == false ) // For setting model flag at load time
@@ -76,6 +84,19 @@ BEGIN_VS_SHADER( UnlitTwoTexture_DX9, "Help for UnlitTwoTexture_DX9" )
 	{
 		SET_FLAGS2( MATERIAL_VAR2_SUPPORTS_HW_SKINNING );
 
+		if ( !params[CROSSHAIRMODE]->IsDefined() )
+		{
+			params[CROSSHAIRMODE]->SetIntValue(0);
+		}
+		if (!params[CROSSHAIRCOLORADAPT]->IsDefined())
+		{
+			params[CROSSHAIRCOLORADAPT]->SetFloatValue(0.4f);
+		}
+		if (!params[CROSSHAIRCOLORTINT]->IsDefined())
+		{
+			params[CROSSHAIRCOLORTINT]->SetVecValue(1,1,1);
+		}
+
 		// Cloak Pass
 		if ( !params[CLOAKPASSENABLED]->IsDefined() )
 		{
@@ -92,9 +113,9 @@ BEGIN_VS_SHADER( UnlitTwoTexture_DX9, "Help for UnlitTwoTexture_DX9" )
 	SHADER_INIT
 	{
 		if (params[BASETEXTURE]->IsDefined())
-			LoadTexture( BASETEXTURE );
+			LoadTexture( BASETEXTURE, TEXTUREFLAGS_SRGB | ANISOTROPIC_OVERRIDE );
 		if (params[TEXTURE2]->IsDefined())
-			LoadTexture( TEXTURE2 );
+			LoadTexture( TEXTURE2, TEXTUREFLAGS_SRGB | ANISOTROPIC_OVERRIDE );
 
 		// Cloak Pass
 		if ( params[CLOAKPASSENABLED]->GetIntValue() )
@@ -120,7 +141,7 @@ BEGIN_VS_SHADER( UnlitTwoTexture_DX9, "Help for UnlitTwoTexture_DX9" )
 		}
 
 		// Skip flashlight pass for unlit stuff
-		bool bNewFlashlightPath = IsX360();
+		bool bNewFlashlightPath = IsX360() || IsPS3();
 		if ( bDrawStandardPass && ( pShaderShadow == NULL ) && ( pShaderAPI != NULL ) &&
 			!bNewFlashlightPath && ( pShaderAPI->InFlashlightMode() ) ) // not snapshotting && flashlight pass)
 		{
@@ -180,6 +201,8 @@ BEGIN_VS_SHADER( UnlitTwoTexture_DX9, "Help for UnlitTwoTexture_DX9" )
 				// If this is set, blend with the alpha channels of the textures and modulation color
 				bool bTranslucent = IsAlphaModulating() || IS_FLAG_SET( MATERIAL_VAR_TRANSLUCENT ) || TextureIsTranslucent( BASETEXTURE, true ) || TextureIsTranslucent( TEXTURE2, true );
 
+				bool bCrosshairMode = ( params[CROSSHAIRMODE]->IsDefined() && params[CROSSHAIRMODE]->GetIntValue() > 0 );
+
 				int nLightingPreviewMode = IS_FLAG2_SET( MATERIAL_VAR2_USE_GBUFFER0 ) + 2 * IS_FLAG2_SET( MATERIAL_VAR2_USE_GBUFFER1 );
 
 				DECLARE_STATIC_VERTEX_SHADER( unlittwotexture_vs20 );
@@ -190,6 +213,7 @@ BEGIN_VS_SHADER( UnlitTwoTexture_DX9, "Help for UnlitTwoTexture_DX9" )
 					DECLARE_STATIC_PIXEL_SHADER( unlittwotexture_ps20b );
 					SET_STATIC_PIXEL_SHADER_COMBO( TRANSLUCENT, bTranslucent );
 					SET_STATIC_PIXEL_SHADER_COMBO( LIGHTING_PREVIEW, nLightingPreviewMode );
+					SET_STATIC_PIXEL_SHADER_COMBO( CROSSHAIR_MODE, bCrosshairMode );
 					SET_STATIC_PIXEL_SHADER( unlittwotexture_ps20b );
 				}
 				else
@@ -197,6 +221,7 @@ BEGIN_VS_SHADER( UnlitTwoTexture_DX9, "Help for UnlitTwoTexture_DX9" )
 					DECLARE_STATIC_PIXEL_SHADER( unlittwotexture_ps20 );
 					SET_STATIC_PIXEL_SHADER_COMBO( TRANSLUCENT, bTranslucent );
 					SET_STATIC_PIXEL_SHADER_COMBO( LIGHTING_PREVIEW, nLightingPreviewMode );
+					SET_STATIC_PIXEL_SHADER_COMBO( CROSSHAIR_MODE, bCrosshairMode );
 					SET_STATIC_PIXEL_SHADER( unlittwotexture_ps20 );
 				}
 
@@ -210,8 +235,8 @@ BEGIN_VS_SHADER( UnlitTwoTexture_DX9, "Help for UnlitTwoTexture_DX9" )
 			}
 			DYNAMIC_STATE
 			{
-				BindTexture( SHADER_SAMPLER0, BASETEXTURE, FRAME );
-				BindTexture( SHADER_SAMPLER1, TEXTURE2, FRAME2 );
+				BindTexture( SHADER_SAMPLER0, TEXTURE_BINDFLAGS_SRGBREAD, BASETEXTURE, FRAME );
+				BindTexture( SHADER_SAMPLER1, TEXTURE_BINDFLAGS_SRGBREAD, TEXTURE2, FRAME2 );
 				SetVertexShaderTextureTransform( VERTEX_SHADER_SHADER_SPECIFIC_CONST_0, BASETEXTURETRANSFORM );
 				SetVertexShaderTextureTransform( VERTEX_SHADER_SHADER_SPECIFIC_CONST_2, TEXTURE2TRANSFORM );
 
@@ -221,6 +246,15 @@ BEGIN_VS_SHADER( UnlitTwoTexture_DX9, "Help for UnlitTwoTexture_DX9" )
 				pShaderAPI->GetWorldSpaceCameraPosition( vEyePos_SpecExponent );
 				vEyePos_SpecExponent[3] = 0.0f;
 				pShaderAPI->SetPixelShaderConstant( PSREG_EYEPOS_SPEC_EXPONENT, vEyePos_SpecExponent, 1 );
+
+				if ( params[CROSSHAIRMODE]->IsDefined() && params[CROSSHAIRMODE]->GetIntValue() > 0 )
+				{
+					float fvConst4[4] = {	params[CROSSHAIRCOLORTINT]->GetVecValue()[0],
+											params[CROSSHAIRCOLORTINT]->GetVecValue()[1],
+											params[CROSSHAIRCOLORTINT]->GetVecValue()[2],
+											params[CROSSHAIRCOLORADAPT]->GetFloatValue() };
+					pShaderAPI->SetPixelShaderConstant(4, fvConst4, 1);
+				}
 
 				int numBones = pShaderAPI->GetCurrentNumBones();
 

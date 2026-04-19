@@ -21,6 +21,7 @@ public:
 	}
 	void SetDEFERRED_SHADOWS( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nDEFERRED_SHADOWS = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bDEFERRED_SHADOWS = true;
@@ -42,6 +43,7 @@ public:
 	}
 	void SetDOPIXELFOG( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nDOPIXELFOG = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bDOPIXELFOG = true;
@@ -63,6 +65,7 @@ public:
 	}
 	void SetHARDWAREFOGBLEND( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nHARDWAREFOGBLEND = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bHARDWAREFOGBLEND = true;
@@ -115,6 +118,7 @@ public:
 	}
 	void SetDOWATERFOG( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nDOWATERFOG = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bDOWATERFOG = true;
@@ -141,3 +145,30 @@ public:
 	}
 };
 #define shaderDynamicTest_shadow_vs20 0
+
+static const ShaderComboInformation_t s_DynamicComboArray_shadow_vs20[1] = 
+{
+	{ "DOWATERFOG", 0, 1 },
+};
+
+static const ShaderComboInformation_t s_StaticComboArray_shadow_vs20[3] = 
+{
+	{ "DEFERRED_SHADOWS", 0, 1 },
+	{ "DOPIXELFOG", 0, 1 },
+	{ "HARDWAREFOGBLEND", 0, 1 },
+};
+static const ShaderComboSemantics_t shadow_vs20_combos =
+{
+	"shadow_vs20", s_DynamicComboArray_shadow_vs20, 1, s_StaticComboArray_shadow_vs20, 3 
+};
+
+class ConstructMe_shadow_vs20
+{
+public:
+	ConstructMe_shadow_vs20()
+	{
+		GetShaderDLL()->AddShaderComboInformation( &shadow_vs20_combos );
+	}
+};
+
+static ConstructMe_shadow_vs20 s_ConstructMe_shadow_vs20;

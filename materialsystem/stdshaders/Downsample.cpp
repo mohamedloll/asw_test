@@ -1,4 +1,4 @@
-//===== Copyright © 1996-2005, Valve Corporation, All rights reserved. ======//
+//===== Copyright ï¿½ 1996-2005, Valve Corporation, All rights reserved. ======//
 //
 // Purpose: 
 //
@@ -8,8 +8,8 @@
 #include "BaseVSShader.h"
 #include "common_hlsl_cpp_consts.h"
 
-#include "downsample_ps20.inc"
-#include "downsample_ps20b.inc"
+#include "Downsample_ps20.inc"
+#include "Downsample_ps20b.inc"
 
 // NOTE: This has to be the last file included!
 #include "tier0/memdbgon.h"
@@ -31,6 +31,7 @@ BEGIN_VS_SHADER_FLAGS( Downsample, "Help for Downsample", SHADER_NOT_EDITABLE )
 
 	SHADER_DRAW
 	{
+		bool bForceSRGBReadAndWrite = false;
 		SHADOW_STATE
 		{
 			pShaderShadow->EnableDepthWrites( false );
@@ -38,8 +39,9 @@ BEGIN_VS_SHADER_FLAGS( Downsample, "Help for Downsample", SHADER_NOT_EDITABLE )
 
 			pShaderShadow->EnableTexture( SHADER_SAMPLER0, true );
 
-			pShaderShadow->EnableSRGBRead( SHADER_SAMPLER0, false );
-			pShaderShadow->EnableSRGBWrite( false );
+			// Render targets are pegged as sRGB on togl OSX, so just force these reads and writes
+			pShaderShadow->EnableSRGBRead( SHADER_SAMPLER0, bForceSRGBReadAndWrite );
+			pShaderShadow->EnableSRGBWrite( bForceSRGBReadAndWrite );
 
 			int fmt = VERTEX_POSITION;
 			pShaderShadow->VertexShaderVertexFormat( fmt, 1, 0, 0 );
@@ -60,7 +62,7 @@ BEGIN_VS_SHADER_FLAGS( Downsample, "Help for Downsample", SHADER_NOT_EDITABLE )
 
 		DYNAMIC_STATE
 		{
-			BindTexture( SHADER_SAMPLER0, BASETEXTURE, -1 );
+			BindTexture( SHADER_SAMPLER0, bForceSRGBReadAndWrite ? TEXTURE_BINDFLAGS_SRGBREAD : TEXTURE_BINDFLAGS_NONE, BASETEXTURE, -1 );
 
 			int width, height;
 			pShaderAPI->GetBackBufferDimensions( width, height );

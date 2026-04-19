@@ -4,7 +4,7 @@
 #include "common_fog_vs_fxc.h"
 //	DYNAMIC: "SKINNING"				"0..1"
 //	DYNAMIC: "WORLD_NORMAL"			"0..1"	[PC]
-//	DYNAMIC: "WORLD_NORMAL"			"0..0"	[XBOX]
+//	DYNAMIC: "WORLD_NORMAL"			"0..0"	[CONSOLE]
 
 #include "common_vs_fxc.h"
 
@@ -31,8 +31,8 @@ struct VS_OUTPUT
 #if !defined( _X360 ) && !defined( SHADER_MODEL_VS_3_0 )
 	float  fog						: FOG;
 #endif
-	HALF2 baseTexCoord				: TEXCOORD0;		// Base texture coordinate
-	HALF2 baseTexCoord2				: TEXCOORD1;		// Base texture coordinate
+	float2 baseTexCoord				: TEXCOORD0;		// Base texture coordinate
+	float2 baseTexCoord2				: TEXCOORD1;		// Base texture coordinate
 	float4 worldPos_projPosZ		: TEXCOORD7;		// Necessary for water fog dest alpha
 	
 	float4 vColor					: COLOR0;
@@ -51,6 +51,12 @@ VS_OUTPUT main( const VS_INPUT v )
 	// Transform into projection space
 	float4 projPos = mul( float4( worldPos, 1 ), cViewProj );
 	o.projPos = projPos;
+	
+#ifdef _PS3
+	// Account for OpenGL's flipped y coordinate and expanded z range [-1,1] instead of [0,1]
+	o.projPos.y = -o.projPos.y;
+	o.projPos.z = 2.0f * o.projPos.z - o.projPos.w;
+#endif // _PS3
 	
 #if !defined( _X360 ) && !defined( SHADER_MODEL_VS_3_0 )
 	o.fog = CalcFixedFunctionFog( worldPos, g_FogType );

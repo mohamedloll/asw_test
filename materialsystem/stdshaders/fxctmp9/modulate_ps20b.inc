@@ -45,6 +45,7 @@ public:
 	}
 	void SetPIXELFOGTYPE( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nPIXELFOGTYPE = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bPIXELFOGTYPE = true;
@@ -66,6 +67,7 @@ public:
 	}
 	void SetWRITE_DEPTH_TO_DESTALPHA( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nWRITE_DEPTH_TO_DESTALPHA = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bWRITE_DEPTH_TO_DESTALPHA = true;
@@ -96,3 +98,24 @@ public:
 	}
 };
 #define shaderDynamicTest_modulate_ps20b psh_forgot_to_set_dynamic_WRITE_DEPTH_TO_DESTALPHA + 0
+
+static const ShaderComboInformation_t s_DynamicComboArray_modulate_ps20b[2] = 
+{
+	{ "PIXELFOGTYPE", 0, 1 },
+	{ "WRITE_DEPTH_TO_DESTALPHA", 0, 1 },
+};
+static const ShaderComboSemantics_t modulate_ps20b_combos =
+{
+	"modulate_ps20b", s_DynamicComboArray_modulate_ps20b, 2, NULL, 0 
+};
+
+class ConstructMe_modulate_ps20b
+{
+public:
+	ConstructMe_modulate_ps20b()
+	{
+		GetShaderDLL()->AddShaderComboInformation( &modulate_ps20b_combos );
+	}
+};
+
+static ConstructMe_modulate_ps20b s_ConstructMe_modulate_ps20b;

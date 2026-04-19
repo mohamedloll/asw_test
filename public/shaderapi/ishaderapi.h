@@ -1,4 +1,4 @@
-//===== Copyright © 1996-2005, Valve Corporation, All rights reserved. ======//
+//===== Copyright (c) Valve Corporation, All rights reserved. ======//
 //
 // Purpose: 
 //
@@ -17,6 +17,7 @@
 #include "shaderapi/ishaderdynamic.h"
 #include "shaderapi/IShaderDevice.h"
 #include "materialsystem/deformations.h"
+#include "shaderlib/shadercombosemantics.h"
 
 
 //-----------------------------------------------------------------------------
@@ -38,6 +39,7 @@ struct MeshInstanceData_t;
 #ifdef _X360
 enum RTMultiSampleCount360_t;
 #endif
+struct ShaderComboInformation_t;
 
 //-----------------------------------------------------------------------------
 // This must match the definition in playback.cpp!
@@ -75,19 +77,20 @@ enum CreateTextureFlags_t
 	TEXTURE_CREATE_DYNAMIC		       = 0x00010,
 	TEXTURE_CREATE_AUTOMIPMAP          = 0x00020,
 	TEXTURE_CREATE_VERTEXTEXTURE       = 0x00040,
-	TEXTURE_CREATE_CACHEABLE           = 0x00080,	// 360 only, texture may be subject to streaming
-	TEXTURE_CREATE_NOD3DMEMORY         = 0x00100,	// 360 only, real allocation needs to occur later
-	TEXTURE_CREATE_REDUCED             = 0x00200,	// 360 only, true dimensions forced smaller (i.e. exclusion)
-	TEXTURE_CREATE_EXCLUDED            = 0x00400,	// 360 only, marked as excluded
+	TEXTURE_CREATE_CACHEABLE           = 0x00080,	// 360:		texture may be subject to streaming
+	TEXTURE_CREATE_NOD3DMEMORY         = 0x00100,	// CONSOLE:	real allocation needs to occur later
+	TEXTURE_CREATE_REDUCED             = 0x00200,	// CONSOLE:	true dimensions forced smaller (i.e. exclusion)
+	TEXTURE_CREATE_EXCLUDED            = 0x00400,	// CONSOLE:	marked as excluded
 	TEXTURE_CREATE_DEFAULT_POOL	       = 0x00800,
 	TEXTURE_CREATE_UNFILTERABLE_OK     = 0x01000,
-	TEXTURE_CREATE_CANCONVERTFORMAT    = 0x02000,	// 360 only, allow format conversions at load
-	TEXTURE_CREATE_PWLCORRECTED        = 0x04000,	// 360 only, texture is pwl corrected
-	TEXTURE_CREATE_ERROR               = 0x08000,	// 360 only, texture was forced to checkerboard
+	TEXTURE_CREATE_CANCONVERTFORMAT    = 0x02000,	// 360:		allow format conversions at load
+	TEXTURE_CREATE_PWLCORRECTED        = 0x04000,	// 360:		texture is pwl corrected
+	TEXTURE_CREATE_ERROR               = 0x08000,	// CONSOLE:	texture was forced to checkerboard
 	TEXTURE_CREATE_SYSMEM              = 0x10000,
 	TEXTURE_CREATE_SRGB                = 0x20000,	// Posix/GL only, for textures which are SRGB-readable
+	TEXTURE_CREATE_ANISOTROPIC		   = 0x40000,	// Posix/GL only, for textures which are flagged to use max aniso
+	TEXTURE_CREATE_REUSEHANDLES		   = 0x80000,	// hint to re-use supplied texture handles
 };
-
 
 //-----------------------------------------------------------------------------
 // Viewport structure
@@ -261,6 +264,28 @@ enum ShaderAPIOcclusionQueryResult_t
 
 
 //-----------------------------------------------------------------------------
+// Used on the 360 to create meshes from data in write-combined memory
+//-----------------------------------------------------------------------------
+struct ExternalMeshInfo_t
+{
+	IMaterial *m_pMaterial;
+	VertexFormat_t m_VertexFormat;
+	bool m_bFlexMesh;
+	IMesh* m_pVertexOverride;
+	IMesh* m_pIndexOverride;
+};
+
+struct ExternalMeshData_t
+{
+	uint8 *m_pVertexData;
+	int m_nVertexCount;
+	int m_nVertexSizeInBytes;
+	uint16 *m_pIndexData;
+	int m_nIndexCount;
+};
+
+
+//-----------------------------------------------------------------------------
 // This is what the material system gets to see.
 //-----------------------------------------------------------------------------
 #define SHADERAPI_INTERFACE_VERSION		"ShaderApi029"
@@ -272,7 +297,7 @@ public:
 	//
 
 	// Viewport methods
-	virtual void SetViewports( int nCount, const ShaderViewport_t* pViewports ) = 0;
+	virtual void SetViewports( int nCount, const ShaderViewport_t* pViewports, bool setImmediately = false ) = 0;
 	virtual int GetViewports( ShaderViewport_t* pViewports, int nMax ) const = 0;
 
 	// Buffer clearing
@@ -308,9 +333,6 @@ public:
 
 	// Binds a particular material to render with
 	virtual void Bind( IMaterial* pMaterial ) = 0;
-
-	// Flushes any primitives that are buffered
-	virtual void FlushBufferedPrimitives() = 0;
 
 	// Gets the dynamic mesh; note that you've got to render the mesh
 	// before calling this function a second time. Clients should *not*
@@ -357,12 +379,16 @@ public:
 	virtual void CullMode( MaterialCullMode_t cullMode ) = 0;
 	virtual void FlipCullMode( void ) = 0; //CW->CCW or CCW->CW, intended for mirror support where the view matrix is flipped horizontally
 
+	virtual void BeginGeneratingCSMs()= 0;
+	virtual void EndGeneratingCSMs() = 0;
+	virtual void PerpareForCascadeDraw( int cascade, float fShadowSlopeScaleDepthBias, float fShadowDepthBias ) = 0;
+
 	// Force writes only when z matches. . . useful for stenciling things out
 	// by rendering the desired Z values ahead of time.
 	virtual void ForceDepthFuncEquals( bool bEnable ) = 0;
 
 	// Forces Z buffering to be on or off
-	virtual void OverrideDepthEnable( bool bEnable, bool bDepthEnable ) = 0;
+	virtual void OverrideDepthEnable( bool bEnable, bool bDepthWriteEnable, bool bDepthTestEnable = true ) = 0;
 
 	virtual void SetHeightClipZ( float z ) = 0; 
 	virtual void SetHeightClipMode( enum MaterialHeightClipMode_t heightClipMode ) = 0; 
@@ -371,7 +397,7 @@ public:
 	virtual void EnableClipPlane( int index, bool bEnable ) = 0;
 	
 	// Returns the nearest supported format
-	virtual ImageFormat GetNearestSupportedFormat( ImageFormat fmt ) const = 0;
+	virtual ImageFormat GetNearestSupportedFormat( ImageFormat fmt, bool bFilteringRequired = true ) const = 0;
 	virtual ImageFormat GetNearestRenderTargetFormat( ImageFormat fmt ) const = 0;
 
 	// When AA is enabled, render targets are not AA and require a separate
@@ -398,7 +424,8 @@ public:
 		int width, 
 		int height, 
 		const char *pDebugName,
-		bool bTexture ) = 0;
+		bool bTexture,
+		bool bAliasDepthSurfaceOverColorX360 = false ) = 0;
 
 	virtual bool IsTexture( ShaderAPITextureHandle_t textureHandle ) = 0;
 	virtual bool IsTextureResident( ShaderAPITextureHandle_t textureHandle ) = 0;
@@ -449,7 +476,7 @@ public:
 	virtual void TexSetPriority( int priority ) = 0;
 
 	// Sets the texture state
-	virtual void BindTexture( Sampler_t sampler, ShaderAPITextureHandle_t textureHandle ) = 0;
+	virtual void BindTexture( Sampler_t sampler, TextureBindFlags_t nBindFlags, ShaderAPITextureHandle_t textureHandle ) = 0;
 
 	// Set the render target to a texID.
 	// Set to SHADER_RENDERTARGET_BACKBUFFER if you want to use the regular framebuffer.
@@ -459,7 +486,9 @@ public:
 	
 	// stuff that isn't to be used from within a shader
 	virtual void ClearBuffersObeyStencil( bool bClearColor, bool bClearDepth ) = 0;
-	virtual void ReadPixels( int x, int y, int width, int height, unsigned char *data, ImageFormat dstFormat ) = 0;
+	virtual void ReadPixels( int x, int y, int width, int height, unsigned char *data, ImageFormat dstFormat, ITexture *pRenderTargetTexture = NULL ) = 0;
+	virtual void ReadPixelsAsync( int x, int y, int width, int height, unsigned char *data, ImageFormat dstFormat, ITexture *pRenderTargetTexture = NULL, CThreadEvent *pPixelsReadEvent = NULL ) = 0;
+	virtual void ReadPixelsAsyncGetResult( int x, int y, int width, int height, unsigned char *data, ImageFormat dstFormat, CThreadEvent *pGetResultEvent = NULL ) = 0;
 	virtual void ReadPixels( Rect_t *pSrcRect, Rect_t *pDstRect, unsigned char *data, ImageFormat dstFormat, int nDstStride ) = 0;
 
 	virtual void FlushHardware() = 0;
@@ -501,6 +530,9 @@ public:
 
 	virtual void EvictManagedResources() = 0;
 
+	// Get stats on GPU memory usage
+	virtual void GetGPUMemoryStats( GPUMemoryStats &stats ) = 0;
+
 	// Level of anisotropic filtering
 	virtual void SetAnisotropicLevel( int nAnisotropyLevel ) = 0;
 
@@ -535,6 +567,10 @@ public:
 	virtual int OcclusionQuery_GetNumPixelsRendered( ShaderAPIOcclusionQuery_t hQuery, bool bFlush = false ) = 0;
 
 	virtual void SetFlashlightState( const FlashlightState_t &state, const VMatrix &worldToTexture ) = 0;
+			
+	virtual bool IsCascadedShadowMapping() const = 0;
+	virtual void SetCascadedShadowMappingState( const CascadedShadowMappingState_t &state, ITexture *pDepthTextureAtlas ) = 0;
+	virtual const CascadedShadowMappingState_t &GetCascadedShadowMappingState( ITexture **pDepthTextureAtlas, bool bLightMapScale = false ) const = 0;
 
 	virtual void ClearVertexAndPixelShaderRefCounts() = 0;
 	virtual void PurgeUnusedVertexAndPixelShaders() = 0;
@@ -562,6 +598,7 @@ public:
 		ShaderAPITextureHandle_t depthTextureHandle = SHADER_RENDERTARGET_DEPTHBUFFER ) = 0;
 
 	virtual void CopyRenderTargetToTextureEx( ShaderAPITextureHandle_t textureHandle, int nRenderTargetID, Rect_t *pSrcRect = NULL, Rect_t *pDstRect = NULL ) = 0;
+	virtual void CopyTextureToRenderTargetEx( int nRenderTargetID, ShaderAPITextureHandle_t textureHandle, Rect_t *pSrcRect = NULL, Rect_t *pDstRect = NULL ) = 0;
 
 	// For dealing with device lost in cases where SwapBuffers isn't called all the time (Hammer)
 	virtual void HandleDeviceLost() = 0;
@@ -570,9 +607,6 @@ public:
 
 	// Lets the shader know about the full-screen texture so it can 
 	virtual void SetFullScreenTextureHandle( ShaderAPITextureHandle_t h ) = 0;
-
-	// Sets the ambient light color
-	virtual void SetAmbientLightColor( float r, float g, float b ) = 0;
 
 	// Rendering parameters control special drawing modes withing the material system, shader
 	// system, shaders, and engine. renderparm.h has their definitions.
@@ -613,6 +647,10 @@ public:
 
 	virtual bool SupportsMSAAMode( int nMSAAMode ) = 0;
 
+#if defined( _GAMECONSOLE )
+	virtual bool PostQueuedTexture( const void *pData, int nSize, ShaderAPITextureHandle_t *pHandles, int nHandles, int nWidth, int nHeight, int nDepth, int nMips, int *pRefCount ) = 0;
+#endif // _GAMECONSOLE
+
 #if defined( _X360 )
 	virtual HXUIFONT OpenTrueTypeFont( const char *pFontname, int tall, int style ) = 0;
 	virtual void CloseTrueTypeFont( HXUIFONT hFont ) = 0;
@@ -623,7 +661,6 @@ public:
 	virtual bool GetTrueTypeGlyphs( HXUIFONT hFont, int numChars, wchar_t *pWch, int *pOffsetX, int *pOffsetY, int *pWidth, int *pHeight, unsigned char *pRGBA, int *pRGBAOffset ) = 0;
 	virtual ShaderAPITextureHandle_t CreateRenderTargetSurface( int width, int height, ImageFormat format, RTMultiSampleCount360_t multiSampleCount, const char *pDebugName, const char *pTextureGroupName ) = 0;
 	virtual void PersistDisplay() = 0;
-	virtual bool PostQueuedTexture( const void *pData, int nSize, ShaderAPITextureHandle_t *pHandles, int nHandles, int nWidth, int nHeight, int nDepth, int nMips, int *pRefCount ) = 0;
 	virtual void *GetD3DDevice() = 0;
 
 	virtual void PushVertexShaderGPRAllocation( int iVertexShaderCount = 64 ) = 0;
@@ -634,12 +671,18 @@ public:
 
 	virtual void SetCacheableTextureParams( ShaderAPITextureHandle_t *pHandles, int count, const char *pFilename, int mipSkipCount ) = 0;
 	virtual void FlushHiStencil() = 0;
-
-	virtual void Begin360ZPass( int nNumDynamicIndicesNeeded ) = 0;
-	virtual void End360ZPass() = 0;
-	virtual unsigned int Get360ZPassCounter() const  = 0;
+#endif
+#if defined( _GAMECONSOLE )
+	virtual void BeginConsoleZPass2( int nNumDynamicIndicesNeeded ) = 0;
+	virtual void EndConsoleZPass() = 0;
+	virtual unsigned int GetConsoleZPassCounter() const  = 0;
 #endif
 	
+#if defined( _PS3 )
+	virtual void FlushTextureCache() = 0;
+#endif
+	virtual void AntiAliasingHint( int nHint ) = 0;
+
 	virtual bool OwnGPUResources( bool bEnable ) = 0;
 
 	//get fog distances entered with FogStart(), FogEnd(), and SetFogZ()
@@ -656,6 +699,7 @@ public:
 
 	// Computes the vertex buffer pointers 
 	virtual void ComputeVertexDescription( unsigned char* pBuffer, VertexFormat_t vertexFormat, MeshDesc_t& desc ) const = 0;
+	virtual int VertexFormatSize( VertexFormat_t vertexFormat ) const = 0;
 
 	virtual void SetDisallowAccess( bool ) = 0;
 	virtual void EnableShaderShaderMutex( bool ) = 0;
@@ -698,6 +742,13 @@ public:
 	virtual void SetFlexWeights( int nFirstWeight, int nCount, const MorphWeight_t* pWeights ) = 0;
 
 	virtual void FogMaxDensity( float flMaxDensity ) = 0;
+
+	virtual void *GetD3DTexturePtr( ShaderAPITextureHandle_t hTexture ) = 0;
+#ifdef _PS3
+	virtual void GetPs3Texture(void* tex, ShaderAPITextureHandle_t hTexture ) = 0;
+	virtual void GetPs3Texture(void* tex, StandardTextureId_t nTextureId ) = 0;
+#endif 
+	virtual bool IsStandardTextureHandleValid( StandardTextureId_t textureId ) = 0;
 
 	// Create a multi-frame texture (equivalent to calling "CreateTexture" multiple times, but more efficient)
 	virtual void CreateTextures( 
@@ -761,6 +812,34 @@ public:
 	virtual void OnPresent( void ) = 0;
 
 	virtual void UpdateGameTime( float flTime ) = 0;
+
+#ifdef _GAMECONSOLE
+	// Backdoor used by the queued context to directly use write-combined memory	
+	virtual IMesh *GetExternalMesh( const ExternalMeshInfo_t& info ) = 0;
+	virtual void SetExternalMeshData( IMesh *pMesh, const ExternalMeshData_t &data ) = 0;
+	virtual IIndexBuffer *GetExternalIndexBuffer( int nIndexCount, uint16 *pIndexData ) = 0;
+	virtual void FlushGPUCache( void *pBaseAddr, size_t nSizeInBytes ) = 0;
+#endif
+
+	virtual bool IsStereoSupported() const = 0;
+	virtual void UpdateStereoTexture( ShaderAPITextureHandle_t texHandle, bool *pStereoActiveThisFrame ) = 0;
+	
+	virtual void SetSRGBWrite( bool bState ) = 0;
+
+	// debug logging
+	// only implemented in some subclasses
+	virtual void PrintfVA( char *fmt, va_list vargs ) = 0;
+	virtual void Printf( char *fmt, ... ) = 0;
+	virtual float Knob( char *knobname, float *setvalue = NULL ) = 0;
+
+	virtual void AddShaderComboInformation( const ShaderComboSemantics_t *pSemantics ) = 0;
+
+	virtual float GetLightMapScaleFactor() const = 0;
+
+	virtual ShaderAPITextureHandle_t FindTexture( const char *pDebugName ) = 0;
+	virtual void GetTextureDimensions( ShaderAPITextureHandle_t hTexture, int &nWidth, int &nHeight, int &nDepth ) = 0;
+
+	virtual ShaderAPITextureHandle_t GetStandardTextureHandle(StandardTextureId_t id) = 0;
 };
 
 

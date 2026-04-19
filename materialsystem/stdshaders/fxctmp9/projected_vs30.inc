@@ -21,30 +21,10 @@ public:
 	}
 	void SetMODEL( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nMODEL = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bMODEL = true;
-#endif
-	}
-private:
-	int m_nFOW;
-#ifdef _DEBUG
-	bool m_bFOW;
-#endif
-public:
-	void SetFOW( int i )
-	{
-		Assert( i >= 0 && i <= 1 );
-		m_nFOW = i;
-#ifdef _DEBUG
-		m_bFOW = true;
-#endif
-	}
-	void SetFOW( bool i )
-	{
-		m_nFOW = i ? 1 : 0;
-#ifdef _DEBUG
-		m_bFOW = true;
 #endif
 	}
 private:
@@ -63,6 +43,7 @@ public:
 	}
 	void SetDOPIXELFOG( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nDOPIXELFOG = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bDOPIXELFOG = true;
@@ -84,6 +65,7 @@ public:
 	}
 	void SetHARDWAREFOGBLEND( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 0 );
 		m_nHARDWAREFOGBLEND = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bHARDWAREFOGBLEND = true;
@@ -98,10 +80,6 @@ public:
 #endif // _DEBUG
 		m_nMODEL = 0;
 #ifdef _DEBUG
-		m_bFOW = false;
-#endif // _DEBUG
-		m_nFOW = 0;
-#ifdef _DEBUG
 		m_bDOPIXELFOG = true;
 #endif // _DEBUG
 		m_nDOPIXELFOG = g_pHardwareConfig->SupportsPixelShaders_2_b() ;
@@ -115,57 +93,15 @@ public:
 		// Asserts to make sure that we aren't using any skipped combinations.
 		// Asserts to make sure that we are setting all of the combination vars.
 #ifdef _DEBUG
-		bool bAllStaticVarsDefined = m_bMODEL && m_bFOW && m_bDOPIXELFOG && m_bHARDWAREFOGBLEND;
+		bool bAllStaticVarsDefined = m_bMODEL && m_bDOPIXELFOG && m_bHARDWAREFOGBLEND;
 		Assert( bAllStaticVarsDefined );
 #endif // _DEBUG
-		return ( 8 * m_nMODEL ) + ( 16 * m_nFOW ) + ( 32 * m_nDOPIXELFOG ) + ( 64 * m_nHARDWAREFOGBLEND ) + 0;
+		return ( 2 * m_nMODEL ) + ( 4 * m_nDOPIXELFOG ) + ( 8 * m_nHARDWAREFOGBLEND ) + 0;
 	}
 };
-#define shaderStaticTest_projected_vs30 vsh_forgot_to_set_static_MODEL + vsh_forgot_to_set_static_FOW + 0
+#define shaderStaticTest_projected_vs30 vsh_forgot_to_set_static_MODEL + 0
 class projected_vs30_Dynamic_Index
 {
-private:
-	int m_nCOMPRESSED_VERTS;
-#ifdef _DEBUG
-	bool m_bCOMPRESSED_VERTS;
-#endif
-public:
-	void SetCOMPRESSED_VERTS( int i )
-	{
-		Assert( i >= 0 && i <= 1 );
-		m_nCOMPRESSED_VERTS = i;
-#ifdef _DEBUG
-		m_bCOMPRESSED_VERTS = true;
-#endif
-	}
-	void SetCOMPRESSED_VERTS( bool i )
-	{
-		m_nCOMPRESSED_VERTS = i ? 1 : 0;
-#ifdef _DEBUG
-		m_bCOMPRESSED_VERTS = true;
-#endif
-	}
-private:
-	int m_nSKINNING;
-#ifdef _DEBUG
-	bool m_bSKINNING;
-#endif
-public:
-	void SetSKINNING( int i )
-	{
-		Assert( i >= 0 && i <= 1 );
-		m_nSKINNING = i;
-#ifdef _DEBUG
-		m_bSKINNING = true;
-#endif
-	}
-	void SetSKINNING( bool i )
-	{
-		m_nSKINNING = i ? 1 : 0;
-#ifdef _DEBUG
-		m_bSKINNING = true;
-#endif
-	}
 private:
 	int m_nDOWATERFOG;
 #ifdef _DEBUG
@@ -182,6 +118,7 @@ public:
 	}
 	void SetDOWATERFOG( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nDOWATERFOG = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bDOWATERFOG = true;
@@ -192,14 +129,6 @@ public:
 	projected_vs30_Dynamic_Index( IShaderDynamicAPI *pShaderAPI )
 	{
 #ifdef _DEBUG
-		m_bCOMPRESSED_VERTS = false;
-#endif // _DEBUG
-		m_nCOMPRESSED_VERTS = 0;
-#ifdef _DEBUG
-		m_bSKINNING = false;
-#endif // _DEBUG
-		m_nSKINNING = 0;
-#ifdef _DEBUG
 		m_bDOWATERFOG = true;
 #endif // _DEBUG
 		m_nDOWATERFOG = ( pShaderAPI->GetSceneFogMode() == MATERIAL_FOG_LINEAR_BELOW_FOG_Z ) ;
@@ -209,10 +138,37 @@ public:
 		// Asserts to make sure that we aren't using any skipped combinations.
 		// Asserts to make sure that we are setting all of the combination vars.
 #ifdef _DEBUG
-		bool bAllDynamicVarsDefined = m_bCOMPRESSED_VERTS && m_bSKINNING && m_bDOWATERFOG;
+		bool bAllDynamicVarsDefined = m_bDOWATERFOG;
 		Assert( bAllDynamicVarsDefined );
 #endif // _DEBUG
-		return ( 1 * m_nCOMPRESSED_VERTS ) + ( 2 * m_nSKINNING ) + ( 4 * m_nDOWATERFOG ) + 0;
+		return ( 1 * m_nDOWATERFOG ) + 0;
 	}
 };
-#define shaderDynamicTest_projected_vs30 vsh_forgot_to_set_dynamic_COMPRESSED_VERTS + vsh_forgot_to_set_dynamic_SKINNING + 0
+#define shaderDynamicTest_projected_vs30 0
+
+static const ShaderComboInformation_t s_DynamicComboArray_projected_vs30[1] = 
+{
+	{ "DOWATERFOG", 0, 1 },
+};
+
+static const ShaderComboInformation_t s_StaticComboArray_projected_vs30[3] = 
+{
+	{ "MODEL", 0, 1 },
+	{ "DOPIXELFOG", 0, 1 },
+	{ "HARDWAREFOGBLEND", 0, 0 },
+};
+static const ShaderComboSemantics_t projected_vs30_combos =
+{
+	"projected_vs30", s_DynamicComboArray_projected_vs30, 1, s_StaticComboArray_projected_vs30, 3 
+};
+
+class ConstructMe_projected_vs30
+{
+public:
+	ConstructMe_projected_vs30()
+	{
+		GetShaderDLL()->AddShaderComboInformation( &projected_vs30_combos );
+	}
+};
+
+static ConstructMe_projected_vs30 s_ConstructMe_projected_vs30;

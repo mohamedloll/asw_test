@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
+//========= Copyright (c) Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -100,23 +100,23 @@ void InitRefract_DX9( CBaseVSShader *pShader, IMaterialVar** params, Refract_DX9
 {
 	if (params[info.m_nBaseTexture]->IsDefined() )
 	{
-		pShader->LoadTexture( info.m_nBaseTexture );
+		pShader->LoadTexture( info.m_nBaseTexture, TEXTUREFLAGS_SRGB | ANISOTROPIC_OVERRIDE );
 	}
 	if (params[info.m_nNormalMap]->IsDefined() )
 	{
-		pShader->LoadBumpMap( info.m_nNormalMap );
+		pShader->LoadBumpMap( info.m_nNormalMap, ANISOTROPIC_OVERRIDE );
 	}
 	if (params[info.m_nNormalMap2]->IsDefined() )
 	{
-		pShader->LoadBumpMap( info.m_nNormalMap2 );
+		pShader->LoadBumpMap( info.m_nNormalMap2, ANISOTROPIC_OVERRIDE );
 	}
 	if( params[info.m_nEnvmap]->IsDefined() )
 	{
-		pShader->LoadCubeMap( info.m_nEnvmap );
+		pShader->LoadCubeMap( info.m_nEnvmap, TEXTUREFLAGS_SRGB | ANISOTROPIC_OVERRIDE );
 	}
 	if( params[info.m_nRefractTintTexture]->IsDefined() )
 	{
-		pShader->LoadTexture( info.m_nRefractTintTexture );
+		pShader->LoadTexture( info.m_nRefractTintTexture, TEXTUREFLAGS_SRGB  );
 	}
 }
 
@@ -192,6 +192,10 @@ void DrawRefract_DX9( CBaseVSShader *pShader, IMaterialVar** params, IShaderDyna
 			pShaderShadow->EnableSRGBRead( SHADER_SAMPLER5, true );
 		}
 
+		// Sampler for nvidia's stereo hackery
+		pShaderShadow->EnableTexture( SHADER_SAMPLER6, true );
+		pShaderShadow->EnableSRGBRead( SHADER_SAMPLER6, false );
+
 		pShaderShadow->EnableSRGBWrite( true );
 
 		unsigned int flags = VERTEX_POSITION | VERTEX_NORMAL;
@@ -221,7 +225,10 @@ void DrawRefract_DX9( CBaseVSShader *pShader, IMaterialVar** params, IShaderDyna
 		SET_STATIC_VERTEX_SHADER_COMBO( COLORMODULATE, bColorModulate );
 		SET_STATIC_VERTEX_SHADER( refract_vs20 );
 
-		if ( g_pHardwareConfig->SupportsPixelShaders_2_b() )
+		// We have to do this in the shader on R500 or Leopard
+		bool bShaderSRGBConvert = IsOSX() && ( g_pHardwareConfig->FakeSRGBWrite() || !g_pHardwareConfig->CanDoSRGBReadFromRTs() );
+
+		if ( g_pHardwareConfig->SupportsPixelShaders_2_b() || g_pHardwareConfig->ShouldAlwaysUseShaderModel2bShaders() ) // always send OpenGL down the ps2b path
 		{
 			DECLARE_STATIC_PIXEL_SHADER( refract_ps20b );
 			SET_STATIC_PIXEL_SHADER_COMBO( BLUR,  blurAmount );
@@ -233,6 +240,7 @@ void DrawRefract_DX9( CBaseVSShader *pShader, IMaterialVar** params, IShaderDyna
 			SET_STATIC_PIXEL_SHADER_COMBO( SECONDARY_NORMAL, bSecondaryNormal );
 			SET_STATIC_PIXEL_SHADER_COMBO( MIRRORABOUTVIEWPORTEDGES, bMirrorAboutViewportEdges );
 			SET_STATIC_PIXEL_SHADER_COMBO( MAGNIFY, bUseMagnification );
+			SET_STATIC_PIXEL_SHADER_COMBO( SHADER_SRGB_READ, bShaderSRGBConvert );
 			SET_STATIC_PIXEL_SHADER_COMBO( LOCALREFRACT, ( params[info.m_nLocalRefract]->GetIntValue() != 0 ) );
 			SET_STATIC_PIXEL_SHADER( refract_ps20b );
 		}
@@ -265,7 +273,7 @@ void DrawRefract_DX9( CBaseVSShader *pShader, IMaterialVar** params, IShaderDyna
 
 		if ( params[info.m_nBaseTexture]->IsTexture() )
 		{
-			pShader->BindTexture( SHADER_SAMPLER2, info.m_nBaseTexture, info.m_nFrame );
+			pShader->BindTexture( SHADER_SAMPLER2, IsX360() ? TEXTURE_BINDFLAGS_NONE : TEXTURE_BINDFLAGS_SRGBREAD, info.m_nBaseTexture, info.m_nFrame );
 
 			// Set refract texture dimensions
 			ITexture *pTarget = params[info.m_nBaseTexture]->GetTextureValue();
@@ -276,7 +284,7 @@ void DrawRefract_DX9( CBaseVSShader *pShader, IMaterialVar** params, IShaderDyna
 		}
 		else
 		{
-			pShaderAPI->BindStandardTexture( SHADER_SAMPLER2, TEXTURE_FRAME_BUFFER_FULL_TEXTURE_0 );
+			pShaderAPI->BindStandardTexture( SHADER_SAMPLER2, IsX360() ? TEXTURE_BINDFLAGS_NONE : TEXTURE_BINDFLAGS_SRGBREAD, TEXTURE_FRAME_BUFFER_FULL_TEXTURE_0 );
 
 			// Set refract texture dimensions
 			int nWidth = 0;
@@ -286,21 +294,27 @@ void DrawRefract_DX9( CBaseVSShader *pShader, IMaterialVar** params, IShaderDyna
 			pShaderAPI->SetPixelShaderConstant( 7, c7, 1 );
 		}
 
-		pShader->BindTexture( SHADER_SAMPLER3, info.m_nNormalMap, info.m_nBumpFrame );
+		pShader->BindTexture( SHADER_SAMPLER3, TEXTURE_BINDFLAGS_NONE, info.m_nNormalMap, info.m_nBumpFrame );
 
 		if ( bSecondaryNormal )
 		{
-			pShader->BindTexture( SHADER_SAMPLER1, info.m_nNormalMap2, info.m_nBumpFrame2 );
+			pShader->BindTexture( SHADER_SAMPLER1, TEXTURE_BINDFLAGS_NONE, info.m_nNormalMap2, info.m_nBumpFrame2 );
 		}
 
 		if( bHasEnvmap )
 		{
-			pShader->BindTexture( SHADER_SAMPLER4, info.m_nEnvmap, info.m_nEnvmapFrame );
+			pShader->BindTexture( SHADER_SAMPLER4, TEXTURE_BINDFLAGS_SRGBREAD, info.m_nEnvmap, info.m_nEnvmapFrame );
 		}
 
 		if( bRefractTintTexture )
 		{
-			pShader->BindTexture( SHADER_SAMPLER5, info.m_nRefractTintTexture, info.m_nRefractTintTextureFrame );
+			pShader->BindTexture( SHADER_SAMPLER5, TEXTURE_BINDFLAGS_SRGBREAD, info.m_nRefractTintTexture, info.m_nRefractTintTextureFrame );
+		}
+
+		bool bNvidiaStereoActiveThisFrame = pShaderAPI->IsStereoActiveThisFrame();
+		if ( bNvidiaStereoActiveThisFrame )
+		{
+			pShaderAPI->BindStandardTexture( SHADER_SAMPLER6, TEXTURE_BINDFLAGS_NONE, TEXTURE_STEREO_PARAM_MAP );
 		}
 
 		DECLARE_DYNAMIC_VERTEX_SHADER( refract_vs20 );
@@ -308,10 +322,11 @@ void DrawRefract_DX9( CBaseVSShader *pShader, IMaterialVar** params, IShaderDyna
 		SET_DYNAMIC_VERTEX_SHADER_COMBO( COMPRESSED_VERTS, (int)vertexCompression );
 		SET_DYNAMIC_VERTEX_SHADER( refract_vs20 );
 
-		if ( g_pHardwareConfig->SupportsPixelShaders_2_b() )
+		if ( g_pHardwareConfig->SupportsPixelShaders_2_b() || g_pHardwareConfig->ShouldAlwaysUseShaderModel2bShaders() ) // always send OpenGL down the ps2b path
 		{
 			DECLARE_DYNAMIC_PIXEL_SHADER( refract_ps20b );
 			SET_DYNAMIC_PIXEL_SHADER_COMBO( WRITE_DEPTH_TO_DESTALPHA, bWriteZ && bFullyOpaque && pShaderAPI->ShouldWriteDepthToDestAlpha() );
+			SET_DYNAMIC_PIXEL_SHADER_COMBO( D_NVIDIA_STEREO, bNvidiaStereoActiveThisFrame );
 			SET_DYNAMIC_PIXEL_SHADER( refract_ps20b );
 		}
 		else

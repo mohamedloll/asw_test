@@ -21,6 +21,7 @@ public:
 	}
 	void SetMODEL( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nMODEL = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bMODEL = true;
@@ -42,6 +43,7 @@ public:
 	}
 	void SetDOPIXELFOG( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nDOPIXELFOG = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bDOPIXELFOG = true;
@@ -63,6 +65,7 @@ public:
 	}
 	void SetHARDWAREFOGBLEND( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 0 );
 		m_nHARDWAREFOGBLEND = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bHARDWAREFOGBLEND = true;
@@ -84,51 +87,10 @@ public:
 	}
 	void SetSPECULAR( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nSPECULAR = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bSPECULAR = true;
-#endif
-	}
-private:
-	int m_nFLASHLIGHT;
-#ifdef _DEBUG
-	bool m_bFLASHLIGHT;
-#endif
-public:
-	void SetFLASHLIGHT( int i )
-	{
-		Assert( i >= 0 && i <= 1 );
-		m_nFLASHLIGHT = i;
-#ifdef _DEBUG
-		m_bFLASHLIGHT = true;
-#endif
-	}
-	void SetFLASHLIGHT( bool i )
-	{
-		m_nFLASHLIGHT = i ? 1 : 0;
-#ifdef _DEBUG
-		m_bFLASHLIGHT = true;
-#endif
-	}
-private:
-	int m_nFOW;
-#ifdef _DEBUG
-	bool m_bFOW;
-#endif
-public:
-	void SetFOW( int i )
-	{
-		Assert( i >= 0 && i <= 1 );
-		m_nFOW = i;
-#ifdef _DEBUG
-		m_bFOW = true;
-#endif
-	}
-	void SetFOW( bool i )
-	{
-		m_nFOW = i ? 1 : 0;
-#ifdef _DEBUG
-		m_bFOW = true;
 #endif
 	}
 public:
@@ -151,27 +113,19 @@ public:
 		m_bSPECULAR = false;
 #endif // _DEBUG
 		m_nSPECULAR = 0;
-#ifdef _DEBUG
-		m_bFLASHLIGHT = false;
-#endif // _DEBUG
-		m_nFLASHLIGHT = 0;
-#ifdef _DEBUG
-		m_bFOW = false;
-#endif // _DEBUG
-		m_nFOW = 0;
 	}
 	int GetIndex()
 	{
 		// Asserts to make sure that we aren't using any skipped combinations.
 		// Asserts to make sure that we are setting all of the combination vars.
 #ifdef _DEBUG
-		bool bAllStaticVarsDefined = m_bMODEL && m_bDOPIXELFOG && m_bHARDWAREFOGBLEND && m_bSPECULAR && m_bFLASHLIGHT && m_bFOW;
+		bool bAllStaticVarsDefined = m_bMODEL && m_bDOPIXELFOG && m_bHARDWAREFOGBLEND && m_bSPECULAR;
 		Assert( bAllStaticVarsDefined );
 #endif // _DEBUG
-		return ( 8 * m_nMODEL ) + ( 16 * m_nDOPIXELFOG ) + ( 32 * m_nHARDWAREFOGBLEND ) + ( 32 * m_nSPECULAR ) + ( 64 * m_nFLASHLIGHT ) + ( 128 * m_nFOW ) + 0;
+		return ( 4 * m_nMODEL ) + ( 8 * m_nDOPIXELFOG ) + ( 16 * m_nHARDWAREFOGBLEND ) + ( 16 * m_nSPECULAR ) + 0;
 	}
 };
-#define shaderStaticTest_multiblend_vs30 vsh_forgot_to_set_static_MODEL + vsh_forgot_to_set_static_SPECULAR + vsh_forgot_to_set_static_FLASHLIGHT + vsh_forgot_to_set_static_FOW + 0
+#define shaderStaticTest_multiblend_vs30 vsh_forgot_to_set_static_MODEL + vsh_forgot_to_set_static_SPECULAR + 0
 class multiblend_vs30_Dynamic_Index
 {
 private:
@@ -190,6 +144,7 @@ public:
 	}
 	void SetDOWATERFOG( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nDOWATERFOG = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bDOWATERFOG = true;
@@ -211,6 +166,7 @@ public:
 	}
 	void SetSKINNING( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nSKINNING = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bSKINNING = true;
@@ -224,7 +180,7 @@ private:
 public:
 	void SetMORPHING( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		Assert( i >= 0 && i <= 0 );
 		m_nMORPHING = i;
 #ifdef _DEBUG
 		m_bMORPHING = true;
@@ -232,6 +188,7 @@ public:
 	}
 	void SetMORPHING( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 0 );
 		m_nMORPHING = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bMORPHING = true;
@@ -252,7 +209,7 @@ public:
 #ifdef _DEBUG
 		m_bMORPHING = true;
 #endif // _DEBUG
-		m_nMORPHING = pShaderAPI->IsHWMorphingEnabled() ;
+		m_nMORPHING = false ;
 	}
 	int GetIndex()
 	{
@@ -266,3 +223,33 @@ public:
 	}
 };
 #define shaderDynamicTest_multiblend_vs30 vsh_forgot_to_set_dynamic_SKINNING + 0
+
+static const ShaderComboInformation_t s_DynamicComboArray_multiblend_vs30[3] = 
+{
+	{ "DOWATERFOG", 0, 1 },
+	{ "SKINNING", 0, 1 },
+	{ "MORPHING", 0, 0 },
+};
+
+static const ShaderComboInformation_t s_StaticComboArray_multiblend_vs30[4] = 
+{
+	{ "MODEL", 0, 1 },
+	{ "DOPIXELFOG", 0, 1 },
+	{ "HARDWAREFOGBLEND", 0, 0 },
+	{ "SPECULAR", 0, 1 },
+};
+static const ShaderComboSemantics_t multiblend_vs30_combos =
+{
+	"multiblend_vs30", s_DynamicComboArray_multiblend_vs30, 3, s_StaticComboArray_multiblend_vs30, 4 
+};
+
+class ConstructMe_multiblend_vs30
+{
+public:
+	ConstructMe_multiblend_vs30()
+	{
+		GetShaderDLL()->AddShaderComboInformation( &multiblend_vs30_combos );
+	}
+};
+
+static ConstructMe_multiblend_vs30 s_ConstructMe_multiblend_vs30;

@@ -15,7 +15,7 @@
 
 
 #include "materialsystem/imaterial.h"
-#include "appframework/IAppSystem.h"
+#include "appframework/iappsystem.h"
 #include "shaderapi/ishaderapi.h"
 
 //-----------------------------------------------------------------------------
@@ -61,7 +61,10 @@ public:
 	virtual const ImageFormatInfo_t& ImageFormatInfo( ImageFormat fmt ) const = 0;
 
     // Bind standard textures
-	virtual void BindStandardTexture( Sampler_t sampler, StandardTextureId_t id ) = 0;
+	virtual void BindStandardTexture( Sampler_t sampler, TextureBindFlags_t nBindFlags, StandardTextureId_t id ) = 0;
+#ifdef _PS3 
+	virtual ShaderAPITextureHandle_t GetStandardTexture( StandardTextureId_t id ) = 0;
+#endif
 
 	// What are the lightmap dimensions?
 	virtual void GetLightmapDimensions( int *w, int *h ) = 0;
@@ -73,6 +76,7 @@ public:
 	// Used to prevent meshes from drawing.
 	virtual bool IsInStubMode() = 0;
 	virtual bool InFlashlightMode() const = 0;
+	virtual bool IsCascadedShadowMapping() const = 0;
 
 	// For the shader API to shove the current version of aniso level into the
 	// "definitive" place (g_config) when the shader API decides to change it.
@@ -90,6 +94,10 @@ public:
 	// Tells the material system to draw a buffer clearing quad
 	virtual void DrawClearBufferQuad( unsigned char r, unsigned char g, unsigned char b, unsigned char a, bool bClearColor, bool bClearAlpha, bool bClearDepth ) = 0;
 
+#ifdef _PS3
+	virtual void DrawReloadZcullQuad() = 0;
+#endif // _PS3
+
 #if defined( _X360 )
 	virtual void ReadBackBuffer( Rect_t *pSrcRect, Rect_t *pDstRect, unsigned char *pData, ImageFormat dstFormat, int nDstStride ) = 0;
 #endif
@@ -100,8 +108,6 @@ public:
 	virtual bool OnSetFlexMesh( IMesh *pStaticMesh, IMesh *pMesh, int nVertexOffsetInBytes ) = 0;
 	virtual bool OnSetColorMesh( IMesh *pStaticMesh, IMesh *pMesh, int nVertexOffsetInBytes ) = 0;
 	virtual bool OnSetPrimitiveType( IMesh *pMesh, MaterialPrimitiveType_t type ) = 0;
-	virtual bool OnFlushBufferedPrimitives() = 0;
-
 
 	virtual void SyncMatrices() = 0;
 	virtual void SyncMatrix( MaterialMatrixMode_t ) = 0;
@@ -125,12 +131,20 @@ public:
 	virtual void OnThreadEvent( uint32 threadEvent ) = 0;
 
 	virtual MaterialThreadMode_t GetThreadMode() = 0;
+	virtual bool  				 IsRenderThreadSafe( ) = 0;
 
 	// Remove any materials from memory that aren't in use as determined
 	// by the IMaterial's reference count.
 	virtual void UncacheUnusedMaterials( bool bRecomputeStateSnapshots = false ) = 0;
 
 	virtual bool IsInFrame( ) const = 0;
+	
+	// Returns the texture for a particular lightmap page
+	virtual ShaderAPITextureHandle_t GetLightmapTexture( ShaderAPITextureHandle_t nLightmapPage ) = 0;
+	virtual bool IsRenderingPaint() const = 0;
+	virtual ShaderAPITextureHandle_t GetPaintmapTexture( ShaderAPITextureHandle_t nLightmapPage ) = 0;
+
+	virtual ShaderAPITextureHandle_t GetStandardTexture( StandardTextureId_t id ) = 0;
 };
 
 #endif // ISHADERUTIL_H

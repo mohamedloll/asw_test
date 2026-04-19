@@ -29,7 +29,6 @@ struct Projected_DX9_Vars_t
 
 	int m_nBaseTextureTransform;
 	int m_nBaseTexture;
-	int m_nFoW;
 };
 
 void InitParamsProjected_DX9( CBaseVSShader *pShader, IMaterialVar** params, const char *pMaterialName, 

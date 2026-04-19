@@ -96,19 +96,20 @@ float3 DiffuseTerm(const bool bHalfLambert, const float3 worldNormal, const floa
 	else
 	{
 		fResult = saturate( NDotL );						// Saturate pure Lambertian term
+		fResult = SoftenCosineTerm( fResult );				// For CS:GO
 	}
 
 	float3 fOut = float3( fResult, fResult, fResult );
 	if ( bDoLightingWarp )
 	{
-		fOut = 2.0f * tex1D( lightWarpSampler, fResult );
+		fOut = tex1D( lightWarpSampler, fResult ).xyz;
 	}
 
 	return fOut;
 }
 
 float3 PixelShaderDoGeneralDiffuseLight( const float fAtten, const float3 worldPos, const float3 worldNormal,
-										 in sampler NormalizeSampler,
+										 in samplerCUBE NormalizeSampler,
 										 const float3 vPosition, const float3 vColor, const bool bHalfLambert,
 										 const bool bDoLightingWarp, in sampler lightWarpSampler )
 {
@@ -131,7 +132,7 @@ float3 PixelShaderGetLightVector( const float3 worldPos, PixelShaderLightInfo cL
 	}
 	else
 	{
-		return normalize( cLightInfo[nLightIndex].pos - worldPos );
+		return normalize( cLightInfo[nLightIndex].pos.xyz - worldPos );
 	}
 }
 
@@ -156,22 +157,24 @@ void SpecularAndRimTerms( const float3 vWorldNormal, const float3 vLightDir, con
 						  // Outputs
 						  out float3 specularLighting, out float3 rimLighting )
 {
-	rimLighting = float3(0.0f, 0.0f, 0.0f);
-
-	float3 vReflect = reflect( -vEyeDir, vWorldNormal );				// Reflect view through normal
-	float LdotR = saturate(dot( vReflect, vLightDir ));					// L.R	(use half-angle instead?)
-	specularLighting = pow( LdotR, fSpecularExponent );					// Raise to specular exponent
+	float3 vHalfAngle = normalize( vEyeDir.xyz + vLightDir.xyz );
+	float flNDotH = saturate( dot( vWorldNormal.xyz, vHalfAngle.xyz ) );
+	specularLighting = pow( flNDotH, fSpecularExponent ); // Raise to specular exponent
 
 	// Optionally warp as function of scalar specular and fresnel
 	if ( bDoSpecularWarp )
-		specularLighting *= tex2D( specularWarpSampler, float2(specularLighting.x, fFresnel) ); // Sample at { (L.R)^k, fresnel }
-
-	specularLighting *= saturate(dot( vWorldNormal, vLightDir ));		// Mask with N.L
-	specularLighting *= color;											// Modulate with light color
-
-	if ( bDoRimLighting )												// Optionally do rim lighting
 	{
-		rimLighting  = pow( LdotR, fRimExponent );						// Raise to rim exponent
+		specularLighting *= tex2D( specularWarpSampler, float2(specularLighting.x, fFresnel) ).rgb; // Sample at { (N.H)^k, fresnel }
+	}
+
+	specularLighting *= pow( saturate( dot( vWorldNormal, vLightDir ) ), 0.5 ); // Mask with N.L raised to a power
+	specularLighting *= color;													// Modulate with light color
+
+	// Optionally do rim lighting
+	rimLighting = float3( 0.0, 0.0, 0.0 );
+	if ( bDoRimLighting )
+	{
+		rimLighting  = pow( flNDotH, fRimExponent );					// Raise to rim exponent
 		rimLighting *= saturate(dot( vWorldNormal, vLightDir ));		// Mask with N.L
 		rimLighting *= color;											// Modulate with light color
 	}
@@ -235,8 +238,8 @@ void PixelShaderDoSpecularLight( const float3 vWorldPos, const float3 vWorldNorm
 float3 PixelShaderDoLightingLinear( const float3 worldPos, const float3 worldNormal,
 				   const float3 staticLightingColor, const bool bStaticLight,
 				   const bool bAmbientLight, const float4 lightAtten, const float3 cAmbientCube[6],
-				   in sampler NormalizeSampler, const int nNumLights, PixelShaderLightInfo cLightInfo[3], const bool bHalfLambert,
-				   const bool bDoLightingWarp, in sampler lightWarpSampler )
+				   in samplerCUBE NormalizeSampler, const int nNumLights, PixelShaderLightInfo cLightInfo[3], const bool bHalfLambert,
+				   const bool bDoLightingWarp, in sampler lightWarpSampler, float flDirectShadow )
 {
 	float3 linearColor = 0.0f;
 
@@ -256,18 +259,19 @@ float3 PixelShaderDoLightingLinear( const float3 worldPos, const float3 worldNor
 
 	if ( nNumLights > 0 )
 	{
+		// First local light will always be forced to a directional light in CS:GO (see CanonicalizeMaterialLightingState() in shaderapidx8.cpp) - it may be completely black.
 		linearColor += PixelShaderDoGeneralDiffuseLight( lightAtten.x, worldPos, worldNormal, NormalizeSampler,
-														 cLightInfo[0].pos, cLightInfo[0].color, bHalfLambert,
-														 bDoLightingWarp, lightWarpSampler );
+														 cLightInfo[0].pos.xyz, cLightInfo[0].color.rgb, bHalfLambert,
+														 bDoLightingWarp, lightWarpSampler ) * flDirectShadow;
 		if ( nNumLights > 1 )
 		{
 			linearColor += PixelShaderDoGeneralDiffuseLight( lightAtten.y, worldPos, worldNormal, NormalizeSampler,
-															 cLightInfo[1].pos, cLightInfo[1].color, bHalfLambert,
+															 cLightInfo[1].pos.xyz, cLightInfo[1].color.rgb, bHalfLambert,
 															 bDoLightingWarp, lightWarpSampler );
 			if ( nNumLights > 2 )
 			{
 				linearColor += PixelShaderDoGeneralDiffuseLight( lightAtten.z, worldPos, worldNormal, NormalizeSampler,
-																 cLightInfo[2].pos, cLightInfo[2].color, bHalfLambert,
+																 cLightInfo[2].pos.xyz, cLightInfo[2].color.rgb, bHalfLambert,
 																 bDoLightingWarp, lightWarpSampler );
 				if ( nNumLights > 3 )
 				{
@@ -288,7 +292,7 @@ float3 PixelShaderDoLightingLinear( const float3 worldPos, const float3 worldNor
 void PixelShaderDoSpecularLighting( const float3 worldPos, const float3 worldNormal, const float fSpecularExponent, const float3 vEyeDir,
 									const float4 lightAtten, const int nNumLights, PixelShaderLightInfo cLightInfo[3],
 									const bool bDoSpecularWarp, in sampler specularWarpSampler, float fFresnel,
-									const bool bDoRimLighting, const float fRimExponent,
+									const bool bDoRimLighting, const float fRimExponent, const float flDirectShadow,
 
 									// Outputs
 									out float3 specularLighting, out float3 rimLighting )
@@ -298,6 +302,7 @@ void PixelShaderDoSpecularLighting( const float3 worldPos, const float3 worldNor
 
 	if( nNumLights > 0 )
 	{
+		// First local light will always be forced to a directional light in CS:GO (see CanonicalizeMaterialLightingState() in shaderapidx8.cpp) - it may be completely black.
 		PixelShaderDoSpecularLight( worldPos, worldNormal, fSpecularExponent, vEyeDir,
 									lightAtten.x, PixelShaderGetLightColor( cLightInfo, 0 ),
 									PixelShaderGetLightVector( worldPos, cLightInfo, 0 ),
@@ -305,8 +310,8 @@ void PixelShaderDoSpecularLighting( const float3 worldPos, const float3 worldNor
 									bDoRimLighting, fRimExponent,
 									localSpecularTerm, localRimTerm );
 
-		specularLighting += localSpecularTerm;		// Accumulate specular and rim terms
-		rimLighting += localRimTerm;
+		specularLighting += localSpecularTerm * flDirectShadow;		// Accumulate specular and rim terms
+		rimLighting += localRimTerm * flDirectShadow;
 	}
 
 	if( nNumLights > 1 )
@@ -362,37 +367,18 @@ float3 PixelShaderDoRimLighting( const float3 worldNormal, const float3 vEyeDir,
 float3 PixelShaderDoLighting( const float3 worldPos, const float3 worldNormal,
 				   const float3 staticLightingColor, const bool bStaticLight,
 				   const bool bAmbientLight, const float4 lightAtten, const float3 cAmbientCube[6],
-				   in sampler NormalizeSampler, const int nNumLights, PixelShaderLightInfo cLightInfo[3],
-				   const bool bHalfLambert, const bool bDoLightingWarp, in sampler lightWarpSampler )
+				   in samplerCUBE NormalizeSampler, const int nNumLights, PixelShaderLightInfo cLightInfo[3],
+				   const bool bHalfLambert, const bool bDoLightingWarp, in sampler lightWarpSampler, const float flDirectShadow = 1.0f )
 {
-	float3 returnColor;
+	float3 linearColor = PixelShaderDoLightingLinear( worldPos, worldNormal, staticLightingColor, 
+													  bStaticLight, bAmbientLight, lightAtten,
+													  cAmbientCube, NormalizeSampler, nNumLights, cLightInfo, bHalfLambert,
+													  bDoLightingWarp, lightWarpSampler, flDirectShadow );
 
-	// special case for no lighting
-	if( !bStaticLight && !bAmbientLight )
-	{
-		returnColor = float3( 0.0f, 0.0f, 0.0f );
-	}
-	else if( bStaticLight && !bAmbientLight  )
-	{
-		// special case for static lighting only
-		returnColor = GammaToLinear( staticLightingColor );
-	}
-	else
-	{
-		float3 linearColor;
+		// go ahead and clamp to the linear space equivalent of overbright 2 so that we match everything else.
+//		linearColor = HuePreservingColorClamp( linearColor, pow( 2.0f, 2.2 ) );
 
-		linearColor = PixelShaderDoLightingLinear( worldPos, worldNormal, staticLightingColor, 
-			bStaticLight, bAmbientLight, lightAtten,
-			cAmbientCube, NormalizeSampler, nNumLights, cLightInfo, bHalfLambert,
-			bDoLightingWarp, lightWarpSampler );
-
-		// go ahead and clamp to the linear space equivalent of overbright 2 so that we match
-		// everything else.
-//		returnColor = HuePreservingColorClamp( linearColor, pow( 2.0f, 2.2 ) );
-		returnColor = linearColor;
-	}
-
-	return returnColor;
+	return linearColor;
 }
 
 #endif //#ifndef COMMON_VERTEXLITGENERIC_DX9_H_

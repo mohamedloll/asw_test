@@ -27,6 +27,13 @@
 //  SKIP: ($FLASHLIGHT || $FLASHLIGHTSHADOWS) && $LIGHTING_PREVIEW
 // --------------------------------------------------------------------------------
 
+// PS3 sRGB writes require a half4 return value
+#if defined( _PS3 )
+#define float4_color_return_type half4
+#else // _PS3
+#define float4_color_return_type float4
+#endif // !_PS3
+
 // System defined pixel shader constants
 
 #if defined( _X360 )
@@ -47,14 +54,20 @@ const float4 cLightScale : register( c30 );
 // Flashlight constants
 #if defined(SHADER_MODEL_PS_2_0) || defined(SHADER_MODEL_PS_2_B) || defined(SHADER_MODEL_PS_3_0)
  const float4 cFlashlightColor       : register( c28 );
- const float4 cFlashlightScreenScale : register( c31 ); // .zw are currently unused
  #define flFlashlightNoLambertValue cFlashlightColor.w // This is either 0.0 or 2.0
+ 
+ const float4 cFlashlightScreenScale : register( c31 );
+ #define flFlashlightShadowBufferOneOverWidth cFlashlightScreenScale.z // 1.0f / ShadowBufferWidth
+ #define flFlashlightShadowBufferTwoOverWidth cFlashlightScreenScale.w // 2.0f / ShadowBufferWidth
 #endif
 
 // 3.0 standard constants
 #if defined( SHADER_MODEL_PS_3_0 )
 const float4 cScreenSize : register( c32 ); // Used for converting VPOS to useful 2D coordinates
 #endif
+
+const float4 g_vDepthFeatherProjToViewZW[2] : register( c13 );
+const float4 g_vDepthFeatherViewportMad : register( c15 );
 
 #define HDR_INPUT_MAP_SCALE 16.0f
 
@@ -67,9 +80,13 @@ const float4 cScreenSize : register( c32 ); // Used for converting VPOS to usefu
 #define PIXEL_FOG_TYPE_HEIGHT 1
 
 // If you change these, make the corresponding change in hardwareconfig.cpp
-#define NVIDIA_PCF_POISSON	0
-#define ATI_NOPCF			1
-#define ATI_NO_PCF_FETCH4	2
+#define NVIDIA_PCF			0
+#define ATI_NO_PCF_FETCH4	1
+#define NVIDIA_PCF_CHEAP	2
+#define ATI_NOPCF			3
+
+#define GAMECONSOLE_NINE_TAP_PCF	0
+#define GAMECONSOLE_SINGLE_TAP_PCF	1
 
 struct LPREVIEW_PS_OUT
 {
@@ -81,58 +98,58 @@ struct LPREVIEW_PS_OUT
 
 /*
 // unused
-HALF Luminance( HALF3 color )
+float Luminance( float3 color )
 {
-	return dot( color, HALF3( HALF_CONSTANT(0.30f), HALF_CONSTANT(0.59f), HALF_CONSTANT(0.11f) ) );
+	return dot( color, float3( 0.30f, 0.59f, 0.11f ) );
 }
 */
 
 /*
 // unused
-HALF LuminanceScaled( HALF3 color )
+float LuminanceScaled( float3 color )
 {
-	return dot( color, HALF3( HALF_CONSTANT(0.30f) / MAX_HDR_OVERBRIGHT, HALF_CONSTANT(0.59f) / MAX_HDR_OVERBRIGHT, HALF_CONSTANT(0.11f) / MAX_HDR_OVERBRIGHT ) );
+	return dot( color, float3( 0.30f / MAX_HDR_OVERBRIGHT, 0.59f / MAX_HDR_OVERBRIGHT, 0.11f / MAX_HDR_OVERBRIGHT ) );
 }
 */
 
 /*
 // unused
-HALF AvgColor( HALF3 color )
+float AvgColor( float3 color )
 {
-	return dot( color, HALF3( HALF_CONSTANT(0.33333f), HALF_CONSTANT(0.33333f), HALF_CONSTANT(0.33333f) ) );
+	return dot( color, float3( 0.33333f, 0.33333f, 0.33333f ) );
 }
 */
 
 /*
 // unused
-HALF4 DiffuseBump( sampler lightmapSampler,
+half4 DiffuseBump( sampler lightmapSampler,
                    float2  lightmapTexCoord1,
                    float2  lightmapTexCoord2,
                    float2  lightmapTexCoord3,
-                   HALF3   normal )
+                   float3   normal )
 {
-	HALF3 lightmapColor1 = tex2D( lightmapSampler, lightmapTexCoord1 );
-	HALF3 lightmapColor2 = tex2D( lightmapSampler, lightmapTexCoord2 );
-	HALF3 lightmapColor3 = tex2D( lightmapSampler, lightmapTexCoord3 );
+	float3 lightmapColor1 = tex2D( lightmapSampler, lightmapTexCoord1 );
+	float3 lightmapColor2 = tex2D( lightmapSampler, lightmapTexCoord2 );
+	float3 lightmapColor3 = tex2D( lightmapSampler, lightmapTexCoord3 );
 
-	HALF3 diffuseLighting;
+	float3 diffuseLighting;
 	diffuseLighting = saturate( dot( normal, bumpBasis[0] ) ) * lightmapColor1 +
 					  saturate( dot( normal, bumpBasis[1] ) ) * lightmapColor2 +
 					  saturate( dot( normal, bumpBasis[2] ) ) * lightmapColor3;
 
-	return HALF4( diffuseLighting, LuminanceScaled( diffuseLighting ) );
+	return float4( diffuseLighting, LuminanceScaled( diffuseLighting ) );
 }
 */
 
 
 /*
 // unused
-HALF Fresnel( HALF3 normal,
-              HALF3 eye,
-              HALF2 scaleBias )
+float Fresnel( float3 normal,
+              float3 eye,
+              float2 scaleBias )
 {
-	HALF fresnel = HALF_CONSTANT(1.0f) - dot( normal, eye );
-	fresnel = pow( fresnel, HALF_CONSTANT(5.0f) );
+	float fresnel = 1.0f - dot( normal, eye );
+	fresnel = pow( fresnel, 5.0f );
 
 	return fresnel * scaleBias.x + scaleBias.y;
 }
@@ -140,11 +157,11 @@ HALF Fresnel( HALF3 normal,
 
 /*
 // unused
-HALF4 GetNormal( sampler normalSampler,
+half4 GetNormal( sampler normalSampler,
                  float2 normalTexCoord )
 {
-	HALF4 normal = tex2D( normalSampler, normalTexCoord );
-	normal.rgb = HALF_CONSTANT(2.0f) * normal.rgb - HALF_CONSTANT(1.0f);
+	float4 normal = tex2D( normalSampler, normalTexCoord );
+	normal.rgb = 2.0f * normal.rgb - 1.0f;
 
 	return normal;
 }
@@ -187,22 +204,22 @@ float4 DecompressNormal( sampler NormalSampler, float2 tc, int nDecompressionMod
 }
 
 
-HALF3 NormalizeWithCubemap( sampler normalizeSampler, HALF3 input )
+float3 NormalizeWithCubemap( samplerCUBE normalizeSampler, float3 input )
 {
 //	return texCUBE( normalizeSampler, input ) * 2.0f - 1.0f;
-	return texCUBE( normalizeSampler, input );
+	return texCUBE( normalizeSampler, input ).xyz ;
 }
 
 /*
-HALF4 EnvReflect( sampler envmapSampler,
+half4 EnvReflect( sampler envmapSampler,
 				 sampler normalizeSampler,
-				 HALF3 normal,
+				 float3 normal,
 				 float3 eye,
-				 HALF2 fresnelScaleBias )
+				 float2 fresnelScaleBias )
 {
-	HALF3 normEye = NormalizeWithCubemap( normalizeSampler, eye );
-	HALF fresnel = Fresnel( normal, normEye, fresnelScaleBias );
-	HALF3 reflect = CalcReflectionVectorUnnormalized( normal, eye );
+	float3 normEye = NormalizeWithCubemap( normalizeSampler, eye );
+	float fresnel = Fresnel( normal, normEye, fresnelScaleBias );
+	float3 reflect = CalcReflectionVectorUnnormalized( normal, eye );
 	return texCUBE( envmapSampler, reflect );
 }
 */
@@ -253,7 +270,7 @@ float CalcWaterFogAlpha( const float flWaterZ, const float flEyePosZ, const floa
 #endif
 }
 
-float CalcPixelFogFactor( int iPIXELFOGTYPE, const float4 fogParams, const float3 vEyePos, const float3 vWorldPos, const float flProjPosZ )
+HALF CalcPixelFogFactor( int iPIXELFOGTYPE, const float4 fogParams, const float3 vEyePos, const float3 vWorldPos, const float flProjPosZ )
 {
 	float retVal;
 	if ( iPIXELFOGTYPE == PIXEL_FOG_TYPE_NONE )
@@ -276,7 +293,7 @@ float CalcPixelFogFactor( int iPIXELFOGTYPE, const float4 fogParams, const float
 	return retVal;
 }
 
-float CalcPixelFogFactorSupportsVertexFog( int iPIXELFOGTYPE, const float4 fogParams, const float3 vEyePos, const float3 vWorldPos, const float flProjPosZ, const float flVertexFogFactor )
+HALF CalcPixelFogFactorSupportsVertexFog( int iPIXELFOGTYPE, const float4 fogParams, const float3 vEyePos, const float3 vWorldPos, const float flProjPosZ, const HALF flVertexFogFactor )
 {
 	#if ( DOPIXELFOG )
 	{
@@ -314,6 +331,26 @@ float3 BlendPixelFog( const float3 vShaderColor, float pixelFogFactor, const flo
 	}
 }
 
+HALF3 BlendPixelFogHalf( const HALF3 vShaderColor, HALF pixelFogFactor, const HALF3 vFogColor, const int iPIXELFOGTYPE )
+{
+	if( iPIXELFOGTYPE == PIXEL_FOG_TYPE_RANGE ) //either range fog or no fog depending on fog parameters and whether this is ps20 or ps2b
+	{
+		#if !(defined(SHADER_MODEL_PS_1_1) || defined(SHADER_MODEL_PS_1_4) || defined(SHADER_MODEL_PS_2_0)) //Minimum requirement of ps2b
+			return lerp( vShaderColor.rgb, vFogColor.rgb, pixelFogFactor * pixelFogFactor ); //squaring the factor will get the middle range mixing closer to hardware fog
+		#else
+			return vShaderColor;
+		#endif
+	}
+	else if( iPIXELFOGTYPE == PIXEL_FOG_TYPE_HEIGHT )
+	{
+		return lerp( vShaderColor.rgb, vFogColor.rgb, pixelFogFactor );
+	}
+	else if( iPIXELFOGTYPE == PIXEL_FOG_TYPE_NONE )
+	{
+		return vShaderColor;
+	}
+}
+
 
 float SoftParticleDepth( float flDepth )
 {
@@ -330,7 +367,7 @@ float DepthToDestAlpha( const float flProjZ )
 	#endif
 }
 
-float4 FinalOutput( const float4 vShaderColor, float pixelFogFactor, const int iPIXELFOGTYPE, const int iTONEMAP_SCALE_TYPE, const bool bWriteDepthToDestAlpha = false, const float flProjZ = 1.0f )
+float4_color_return_type FinalOutput( const float4 vShaderColor, float pixelFogFactor, const int iPIXELFOGTYPE, const int iTONEMAP_SCALE_TYPE, const bool bWriteDepthToDestAlpha = false, const float flProjZ = 1.0f )
 {
 	float4 result;
 	if( iTONEMAP_SCALE_TYPE == TONEMAP_SCALE_LINEAR )
@@ -356,8 +393,56 @@ float4 FinalOutput( const float4 vShaderColor, float pixelFogFactor, const int i
 		result.rgb = BlendPixelFog( result.rgb, pixelFogFactor, g_LinearFogColor.rgb, iPIXELFOGTYPE );
 	}
 
+#if defined(_X360) && defined( CSTRIKE15 )
+	// [mariod] - is this the only path? (defintely not TONEMAP_SCALE_GAMMA)...ensure aligned with what the shaders are doing, add combo (mimic srgb write render state) if necessary and mem exists...
+	if( iTONEMAP_SCALE_TYPE == TONEMAP_SCALE_LINEAR )
+	{
+		result.rgb = LinearToGamma( result.rgb );
+		//result.rgb = SrgbLinearToGamma( result.rgb );
+	}
+#endif
 
-	return result;
+
+	return ( float4_color_return_type )result;
+}
+
+
+float4_color_return_type FinalOutputHalf( const HALF4 vShaderColor, float pixelFogFactor, const int iPIXELFOGTYPE, const int iTONEMAP_SCALE_TYPE, const bool bWriteDepthToDestAlpha = false, const float flProjZ = 1.0f )
+{
+	HALF4 result;
+	if( iTONEMAP_SCALE_TYPE == TONEMAP_SCALE_LINEAR )
+	{
+		result.rgb = vShaderColor.rgb * (HALF)LINEAR_LIGHT_SCALE;
+	}
+	else if( iTONEMAP_SCALE_TYPE == TONEMAP_SCALE_GAMMA )
+	{
+		result.rgb = vShaderColor.rgb * (HALF)GAMMA_LIGHT_SCALE;
+	}
+	else if( iTONEMAP_SCALE_TYPE == TONEMAP_SCALE_NONE )
+	{
+		result.rgb = vShaderColor.rgb;
+	}
+	
+	if( bWriteDepthToDestAlpha )
+		result.a = DepthToDestAlpha( flProjZ );
+	else
+		result.a = vShaderColor.a;
+
+	if ( iPIXELFOGTYPE == PIXEL_FOG_TYPE_RANGE )
+	{
+		result.rgb = BlendPixelFogHalf( result.rgb, pixelFogFactor, g_LinearFogColor.rgb, iPIXELFOGTYPE );
+	}
+
+#if defined(_X360) && defined( CSTRIKE15 )
+	// [mariod] - should we send TONEMAP_SCALE_NONE down this path too?
+	if( iTONEMAP_SCALE_TYPE == TONEMAP_SCALE_LINEAR )
+	{
+		result.rgb = LinearToGamma( result.rgb );
+		//result.rgb = SrgbLinearToGamma( result.rgb );
+	}
+#endif
+
+	return ( float4_color_return_type )result;
 }
 
 LPREVIEW_PS_OUT FinalOutput( const LPREVIEW_PS_OUT vShaderColor, float pixelFogFactor, const int iPIXELFOGTYPE, const int iTONEMAP_SCALE_TYPE )
@@ -682,21 +767,21 @@ float4 HSLtoRGB( float4 hsl )
 #define TCOMBINE_SSBUMP_NOBUMP 11					// detail is an ssbump but use it as an albedo. shader does the magic here - no user needs to specify mode 11
 #define TCOMBINE_NONE 12									// there is no detail texture
 
-float4 TextureCombine( float4 baseColor, float4 detailColor, int combine_mode,
-					   float fBlendFactor )
+HALF4 TextureCombine( HALF4 baseColor, HALF4 detailColor, int combine_mode,
+					   HALF fBlendFactor )
 {
 	if ( combine_mode == TCOMBINE_MOD2X_SELECT_TWO_PATTERNS)
 	{
-		float3 dc=lerp(detailColor.r,detailColor.a, baseColor.a);
-		baseColor.rgb*=lerp(float3(1,1,1),2.0*dc,fBlendFactor);
+		HALF3 dc=lerp(detailColor.r,detailColor.a, baseColor.a);
+		baseColor.rgb*=lerp(HALF3(1,1,1),2.0h*dc,fBlendFactor);
 	}
 	if ( combine_mode == TCOMBINE_RGB_EQUALS_BASE_x_DETAILx2)
-		baseColor.rgb*=lerp(float3(1,1,1),2.0*detailColor.rgb,fBlendFactor);
+		baseColor.rgb*=lerp(HALF3(1,1,1),2.0h*detailColor.rgb,fBlendFactor);
 	if ( combine_mode == TCOMBINE_RGB_ADDITIVE )
  		baseColor.rgb += fBlendFactor * detailColor.rgb;
 	if ( combine_mode == TCOMBINE_DETAIL_OVER_BASE )
 	{
-		float fblend=fBlendFactor * detailColor.a;
+		HALF fblend=fBlendFactor * detailColor.a;
 		baseColor.rgb = lerp( baseColor.rgb, detailColor.rgb, fblend);
 	}
 	if ( combine_mode == TCOMBINE_FADE )
@@ -705,7 +790,7 @@ float4 TextureCombine( float4 baseColor, float4 detailColor, int combine_mode,
 	}
 	if ( combine_mode == TCOMBINE_BASE_OVER_DETAIL )
 	{
-		float fblend=fBlendFactor * (1-baseColor.a);
+		HALF fblend=fBlendFactor * (1-baseColor.a);
 		baseColor.rgb = lerp( baseColor.rgb, detailColor.rgb, fblend );
 		baseColor.a = detailColor.a;
 	}
@@ -720,7 +805,7 @@ float4 TextureCombine( float4 baseColor, float4 detailColor, int combine_mode,
 	}
 	if ( combine_mode == TCOMBINE_SSBUMP_NOBUMP )
 	{
-		baseColor.rgb = baseColor.rgb * dot( detailColor.rgb, 2.0/3.0 );
+		baseColor.rgb = baseColor.rgb * dot( detailColor.rgb, 2.0h/3.0h );
 	}
 	return baseColor;
 }
@@ -730,8 +815,8 @@ float3 lerp5(float3 f1, float3 f2, float i1, float i2, float x)
   return f1+(f2-f1)*(x-i1)/(i2-i1);
 }
 
-float3 TextureCombinePostLighting( float3 lit_baseColor, float4 detailColor, int combine_mode,
-								   float fBlendFactor )
+HALF3 TextureCombinePostLighting( HALF3 lit_baseColor, HALF4 detailColor, int combine_mode,
+								   HALF fBlendFactor )
 {
 	if ( combine_mode == TCOMBINE_RGB_ADDITIVE_SELFILLUM )
  		lit_baseColor += fBlendFactor * detailColor.rgb;
@@ -739,50 +824,83 @@ float3 TextureCombinePostLighting( float3 lit_baseColor, float4 detailColor, int
 	{
  		// fade in an unusual way - instead of fading out color, remap an increasing band of it from
  		// 0..1
-		if ( fBlendFactor > 0.5)
-			lit_baseColor += min(1, (1.0/fBlendFactor)*max(0, detailColor.rgb-(1-fBlendFactor) ) );
+		if ( fBlendFactor > 0.5h)
+			lit_baseColor += min(1, (1.0h/fBlendFactor)*max(0, detailColor.rgb-(1-fBlendFactor) ) );
 		else
-			lit_baseColor += 2*fBlendFactor*2*max(0, detailColor.rgb-.5);
+			lit_baseColor += 2*fBlendFactor*2*max(0, detailColor.rgb-.5h);
 	}
 	return lit_baseColor;
 }
 
-//NOTE: On X360. fProjZ is expected to be pre-reversed for cheaper math here in the pixel shader
-float DepthFeathering( sampler DepthSampler, const float2 vScreenPos, float fProjZ, float fProjW, float4 vDepthBlendConstants )
+#if ( defined( _X360 ) || defined ( _PS3 ) )		
+float SampleHardwareDepth( sampler DepthSampler, float2 vDepthSampleCoords )
+{
+	float flSceneProjZ = 0.0f;
+	
+	#if ( defined( _PS3 ) )
+	{
+		float3 vSceneDepth = tex2D( DepthSampler, vDepthSampleCoords ).xyz;
+		// There's a slightly faster, but less precise way to recover Z here if we need it - see the Cgc docs.
+		vSceneDepth = round( vSceneDepth.xyz * 255.0f );
+		float3 vDepthFactorPrecise = float3( 65536.0/16777215.0, 256.0/16777215.0, 1.0/16777215.0 );
+		flSceneProjZ = dot( vSceneDepth.xyz, vDepthFactorPrecise );
+	}
+	#elif ( defined( _X360 ) )
+	{
+		float4 vSampledDepths;
+		asm 
+		{
+			tfetch2D vSampledDepths.x___, vDepthSampleCoords, DepthSampler, OffsetX=0.5, OffsetY=0.5, MinFilter=point, MagFilter=point, MipFilter=point
+		};
+		flSceneProjZ = vSampledDepths.x;
+		#if ( defined( REVERSE_DEPTH_ON_X360 ) )
+		{
+			flSceneProjZ = 1.0f - flSceneProjZ;
+		}
+		#endif
+    }
+	#endif
+	
+	return flSceneProjZ;
+}
+#endif
+
+HALF DepthFeathering( sampler DepthSampler, const float4 vProjPos, float4 vDepthBlendConstants )
 {
 #	if ( !(defined(SHADER_MODEL_PS_1_1) || defined(SHADER_MODEL_PS_1_4) || defined(SHADER_MODEL_PS_2_0)) ) //minimum requirement of ps2b
 	{
+		float2 vProjPosDivW = vProjPos.xy / vProjPos.w;
+		float2 vScreenPos = vProjPosDivW * g_vDepthFeatherViewportMad.xy + g_vDepthFeatherViewportMad.zw;
+		
 		float flFeatheredAlpha;
-		float2 flDepths;
-#define flSceneDepth flDepths.x
-#define flSpriteDepth flDepths.y
-
-#		if ( defined( _X360 ) )
+		
+#		if ( defined( _X360 ) || defined ( _PS3 ) )		
 		{
-			//Get depth from the depth texture. Need to sample with the offset of (0.5, 0.5) to fix rounding errors
-			asm {
-				tfetch2D flDepths.x___, vScreenPos, DepthSampler, OffsetX=0.5, OffsetY=0.5, MinFilter=point, MagFilter=point, MipFilter=point
-			};
-
-#			if(	!defined( REVERSE_DEPTH_ON_X360 ) )
-				flSceneDepth = 1.0f - flSceneDepth;
-#			endif
-
-			//get the sprite depth into the same range as the texture depth
-			flSpriteDepth = fProjZ / fProjW;
-
-			//unproject to get at the pre-projection z. This value is much more linear than depth
-			flDepths = vDepthBlendConstants.z / flDepths;
-			flDepths = vDepthBlendConstants.y - flDepths;
-
-			flFeatheredAlpha = flSceneDepth - flSpriteDepth;
-			flFeatheredAlpha *= vDepthBlendConstants.x;
-			flFeatheredAlpha = saturate( flFeatheredAlpha );
+			// This code can handle oblique projection matrices used on the PS3. The depth feathering factor is a function computed in viewspace Z.
+			// Sample the scene's depth at the current fragment.
+			float flSceneProjZ = SampleHardwareDepth( DepthSampler, vScreenPos );
+			
+			float4 vSceneProjPos = float4( vProjPosDivW.x, vProjPosDivW.y, flSceneProjZ, 1.0f );
+			
+			float flSceneViewZ = dot( vSceneProjPos, g_vDepthFeatherProjToViewZW[0] );
+			float flSceneViewW = dot( vSceneProjPos, g_vDepthFeatherProjToViewZW[1] );
+			flSceneViewZ /= flSceneViewW;
+			
+			// Computes the fragment's viewspace Z from its projection space coord.
+			// We could iterate the fragment's viewspace Z to save these 2 dots and a rcp, but this would require an extra iterator
+			// and modifications to all the vertex shaders to compute viewspace coords (which was tricky enough that this approach seems
+			// like the best compromise of devtime+testing vs. perf).
+			float flSurfViewZ = dot( vProjPos, g_vDepthFeatherProjToViewZW[0] );
+			float flSurfViewW = dot( vProjPos, g_vDepthFeatherProjToViewZW[1] );
+			flSurfViewZ /= flSurfViewW;
+		
+			flFeatheredAlpha = flSurfViewZ - flSceneViewZ;
+			flFeatheredAlpha = saturate( saturate( vDepthBlendConstants.z * flFeatheredAlpha ) + vDepthBlendConstants.w );
 		}
 #		else
 		{
-			flSceneDepth = tex2D( DepthSampler, vScreenPos ).a;	// PC uses dest alpha of the frame buffer
-			flSpriteDepth = SoftParticleDepth( fProjZ );
+			float flSceneDepth = tex2D( DepthSampler, vScreenPos ).a;	// PC uses dest alpha of the frame buffer
+			float flSpriteDepth = SoftParticleDepth( vProjPos.z );
 
 			flFeatheredAlpha = abs(flSceneDepth - flSpriteDepth) * vDepthBlendConstants.x;
 			flFeatheredAlpha = max( smoothstep( 0.75f, 1.0f, flSceneDepth ), flFeatheredAlpha ); //as the sprite approaches the edge of our compressed depth space, the math stops working. So as the sprite approaches the far depth, smoothly remove feathering.
@@ -790,16 +908,93 @@ float DepthFeathering( sampler DepthSampler, const float2 vScreenPos, float fPro
 		}
 #		endif
 
-#undef flSceneDepth
-#undef flSpriteDepth
-
 		return flFeatheredAlpha;
 	}
 #	else
 	{
-		return 1.0f;
+		return 1.0h;
 	}
 #	endif
 }
+
+HALF ComputeCameraFade( float4 vProjPos, float flNearPlane = 7.0f )
+{
+#if ( defined( _X360 ) || defined ( _PS3 ) )		
+	// Compute viewspace Z and W, just like depth feathering (which is currently only supported on the consoles, 
+	// which is why I'm only computing the factor in viewspace on the consoles as well).
+	float flSurfViewZ = dot( vProjPos, g_vDepthFeatherProjToViewZW[0] );
+	float flSurfViewW = dot( vProjPos, g_vDepthFeatherProjToViewZW[1] );
+	// Project to W=1.
+	flSurfViewZ /= flSurfViewW;
+	// Compute fade factor from viewspace Z.
+	float flFadeFactorScale = .06f;
+	flSurfViewZ = saturate( ( -flSurfViewZ - flNearPlane  ) * flFadeFactorScale );
+	return flSurfViewZ * flSurfViewZ;
+#else
+	return smoothstep( 0.0f, 1.0f, saturate( vProjPos.z * 0.025f ) );
+#endif	
+}
+
+#define ORDERED_DITHER_MAGNITUDE .008f
+
+float3 ScreenSpaceOrderedDither( float2 vScreenPos )
+{
+	if (0)
+	{
+		// No dithering.
+		return float3(0.0f, 0.0f, 0.0f);
+	}
+	else if (1)
+	{
+		// Iestyn's RGB dither (3 extra instructions).
+	    float3 vDither = dot( float2(171, 231), vScreenPos );
+    	vDither = frac( vDither / float3( 103, 71, 97 ) ) - 0.5f;
+		return ( vDither / 255 ) * .175f;
+	}
+	else if (0)
+	{
+		// 2x2 ordered dither.
+		vScreenPos = frac( vScreenPos * .5f ) * 2.0f;
+		return ( ( vScreenPos.y * 3.0f + ( vScreenPos.y * 2.0f - 1.0f ) * vScreenPos.x * -2.0f ) - 2.0f ) * ( ORDERED_DITHER_MAGNITUDE / 4.0f );
+	}
+	else		
+	{
+		// 2x2 ordered dither (unoptimized - ~5 extra instructions).
+		float3 vOutput = float3(0, 0, 0);
+		
+		int2 vDitherPhase = frac(vScreenPos * .5f) * 2.0f;
+		float flMagnitude = ORDERED_DITHER_MAGNITUDE * (1.0f/4.0f);
+		if (vDitherPhase.x)
+		{
+			if (vDitherPhase.y)
+			{
+				// 11: 1
+				vOutput.xyz += float3(1.0f, 1.0f, 1.0f) * flMagnitude;
+			}
+			else
+			{
+				// 10: 2
+				vOutput.xyz += float3(2.0f, 2.0f, 2.0f) * flMagnitude;
+			}
+		}
+		else
+		{
+			if (vDitherPhase.y)
+			{
+				// 01: 3
+				vOutput.xyz += float3(3.0f, 3.0f, 3.0f) * flMagnitude;
+			}
+			else
+			{
+				// 00: 0
+				//vOutput = float3(0.0f, 0.0f, 0.0f);
+			}
+		}
+		// Output biasing to match Iestyn's dither.
+		vOutput -= float3(2.0f, 2.0f, 2.0f) * flMagnitude;
+		return vOutput;
+	}		
+}
+
 
 #endif //#ifndef COMMON_PS_FXC_H_

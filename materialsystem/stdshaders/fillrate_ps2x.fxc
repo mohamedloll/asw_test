@@ -4,7 +4,7 @@
 
 const float4 g_ColorConstant	: register( c0 );
 
-float4 main( void ) : COLOR
+float4_color_return_type main( void ) : COLOR
 {
 	float4 result = (g_ColorConstant * (1.0 / 2.0));
 	

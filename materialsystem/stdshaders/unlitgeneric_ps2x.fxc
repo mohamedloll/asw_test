@@ -10,9 +10,9 @@ struct PS_INPUT
 	float2 vTexCoord0	: TEXCOORD0;
 };
 
-float4 main( PS_INPUT i ) : COLOR
+float4_color_return_type main( PS_INPUT i ) : COLOR
 {
-	float4 result = i.vColor0 * tex2D( TextureSampler, i.vTexCoord0 );
+	float4 result = ( i.vColor0 * tex2D( TextureSampler, i.vTexCoord0 ) );
 	
 	return FinalOutput( result, 0, PIXEL_FOG_TYPE_NONE, TONEMAP_SCALE_NONE );
 }

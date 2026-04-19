@@ -1,4 +1,4 @@
-//===== Copyright © 1996-2007, Valve Corporation, All rights reserved. ======//
+//===== Copyright ï¿½ 1996-2007, Valve Corporation, All rights reserved. ======//
 //
 // Purpose: 
 //
@@ -8,9 +8,9 @@
 
 #include "BaseVSShader.h"
 
-#include "ConVar.h"
+#include "convar.h"
 
-#ifndef _X360
+#if !defined( _X360 ) && !defined( _PS3 )
 #include "lightmappedgeneric_vs30.inc"
 #include "worldtwotextureblend_ps30.inc"
 #endif
@@ -19,8 +19,19 @@
 #include "worldtwotextureblend_ps20.inc"
 #include "worldtwotextureblend_ps20b.inc"
 
+#include "shaderapifast.h"
+
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
+
+
+
+#if defined( CSTRIKE15 ) && defined( _X360 )
+static ConVar r_shader_srgbread( "r_shader_srgbread", "1", 0, "1 = use shader srgb texture reads, 0 = use HW" );
+#else
+static ConVar r_shader_srgbread( "r_shader_srgbread", "0", 0, "1 = use shader srgb texture reads, 0 = use HW" );
+#endif
+
 
 // FIXME: Need to make a dx9 version so that "CENTROID" works.
 BEGIN_VS_SHADER( WorldTwoTextureBlend, 
@@ -125,7 +136,7 @@ END_SHADER_PARAMS
 		
 		if (params[BASETEXTURE]->IsDefined())
 		{
-			LoadTexture( BASETEXTURE );
+			LoadTexture( BASETEXTURE, TEXTUREFLAGS_SRGB );
 
 			if (!params[BASETEXTURE]->GetTextureValue()->IsTranslucent())
 			{
@@ -139,7 +150,7 @@ END_SHADER_PARAMS
 			LoadTexture( DETAIL );
 		}
 
-		LoadTexture( FLASHLIGHTTEXTURE );
+		LoadTexture( FLASHLIGHTTEXTURE, TEXTUREFLAGS_SRGB );
 		
 		// Don't alpha test if the alpha channel is used for other purposes
 		if (IS_FLAG_SET(MATERIAL_VAR_SELFILLUM) || IS_FLAG_SET(MATERIAL_VAR_BASEALPHAENVMAPMASK) )
@@ -156,7 +167,6 @@ END_SHADER_PARAMS
 	{
 		bool bSinglePassFlashlight = false;
 		bool hasBump = params[BUMPMAP]->IsTexture();
-		bool hasDiffuseBumpmap = hasBump && (params[NODIFFUSEBUMPLIGHTING]->GetIntValue() == 0);
 		bool hasBaseTexture = params[BASETEXTURE]->IsTexture();
 		bool hasDetailTexture = /*!hasBump && */params[DETAIL]->IsTexture();
 		bool hasVertexColor = IS_FLAG_SET( MATERIAL_VAR_VERTEXCOLOR ) != 0;
@@ -168,11 +178,15 @@ END_SHADER_PARAMS
 
 		bool bSeamlessMapping = params[SEAMLESS_SCALE]->GetFloatValue() != 0.0;
 
+#if defined( CSTRIKE15 )
+		bool bShaderSrgbRead = ( IsX360() && r_shader_srgbread.GetBool() );
+#else
 		bool bShaderSrgbRead = ( IsX360() && IS_PARAM_DEFINED( SHADERSRGBREAD360 ) && params[SHADERSRGBREAD360]->GetIntValue() );
+#endif
 
 		SHADOW_STATE
 		{
-			int nShadowFilterMode = 0;
+			ShadowFilterMode_t nShadowFilterMode = SHADOWFILTERMODE_DEFAULT;
 
 			// Alpha test: FIXME: shouldn't this be handled in Shader_t::SetInitialShadowState
 			pShaderShadow->EnableAlphaTest( bIsAlphaTested );
@@ -180,7 +194,7 @@ END_SHADER_PARAMS
 			{
 				if ( g_pHardwareConfig->SupportsPixelShaders_2_b() )
 				{
-					nShadowFilterMode = g_pHardwareConfig->GetShadowFilterMode();	// Based upon vendor and device dependent formats
+					nShadowFilterMode = g_pHardwareConfig->GetShadowFilterMode( false /* bForceLowQuality */, g_pHardwareConfig->HasFastVertexTextures() && !IsPlatformX360() && !IsPlatformPS3() /* bPS30 */ );	// Based upon vendor and device dependent formats
 				}
 
 				SetAdditiveBlendingShadowState( BASETEXTURE, true );
@@ -203,13 +217,13 @@ END_SHADER_PARAMS
 			//			if( hasLightmap )
 			{
 				pShaderShadow->EnableTexture( SHADER_SAMPLER1, true );
-				pShaderShadow->EnableSRGBRead( SHADER_SAMPLER1, true );
+				pShaderShadow->EnableSRGBRead( SHADER_SAMPLER1, g_pHardwareConfig->GetHDRType() == HDR_TYPE_NONE );
 			}
 			if( hasFlashlight )
 			{
 				pShaderShadow->EnableTexture( SHADER_SAMPLER2, true );
 				pShaderShadow->EnableTexture( SHADER_SAMPLER7, true );
-				pShaderShadow->SetShadowDepthFiltering( SHADER_SAMPLER7 );
+				//pShaderShadow->SetShadowDepthFiltering( SHADER_SAMPLER7 );
 				flags |= VERTEX_TANGENT_S | VERTEX_TANGENT_T | VERTEX_NORMAL;
 			}
 			if( hasDetailTexture )
@@ -244,9 +258,12 @@ END_SHADER_PARAMS
 
 			pShaderShadow->EnableSRGBWrite( true );
 
+			int nLightingPreviewMode = 0;
+#if 0
 			int nLightingPreviewMode = IS_FLAG2_SET( MATERIAL_VAR2_USE_GBUFFER0 ) + 2 * IS_FLAG2_SET( MATERIAL_VAR2_USE_GBUFFER1 );
+#endif
 
-#ifndef _X360
+#if !defined( _X360 ) && !defined( _PS3 )
 			if ( g_pHardwareConfig->HasFastVertexTextures() )
 			{
 				DECLARE_STATIC_VERTEX_SHADER( lightmappedgeneric_vs30 );
@@ -254,15 +271,15 @@ END_SHADER_PARAMS
 				SET_STATIC_VERTEX_SHADER_COMBO( BUMPMASK,  false );
 				SET_STATIC_VERTEX_SHADER_COMBO( TANGENTSPACE,  hasFlashlight );
 				SET_STATIC_VERTEX_SHADER_COMBO( BUMPMAP,  hasBump );
-				SET_STATIC_VERTEX_SHADER_COMBO( DIFFUSEBUMPMAP,  hasDiffuseBumpmap );
 				SET_STATIC_VERTEX_SHADER_COMBO( VERTEXCOLOR,  hasVertexColor );
 				SET_STATIC_VERTEX_SHADER_COMBO( VERTEXALPHATEXBLENDFACTOR, false );
-				SET_STATIC_VERTEX_SHADER_COMBO( PARALLAX_MAPPING, 0 ); //( bumpmap_variant == 2 )?1:0);
 				SET_STATIC_VERTEX_SHADER_COMBO( SEAMLESS, bSeamlessMapping ); //( bumpmap_variant == 2 )?1:0);
 				SET_STATIC_VERTEX_SHADER_COMBO( DETAILTEXTURE,  hasDetailTexture );
 				SET_STATIC_VERTEX_SHADER_COMBO( SELFILLUM,  hasSelfIllum );
 				SET_STATIC_VERTEX_SHADER_COMBO( FANCY_BLENDING,  false );
 				SET_STATIC_VERTEX_SHADER_COMBO( LIGHTING_PREVIEW, nLightingPreviewMode != 0 );
+				SET_STATIC_VERTEX_SHADER_COMBO( PAINT, 0 );
+				SET_STATIC_VERTEX_SHADER_COMBO( ADDBUMPMAPS, 0 );
 				SET_STATIC_VERTEX_SHADER( lightmappedgeneric_vs30 );
 			}
 			else
@@ -273,28 +290,27 @@ END_SHADER_PARAMS
 				SET_STATIC_VERTEX_SHADER_COMBO( BUMPMASK,  false );
 				SET_STATIC_VERTEX_SHADER_COMBO( TANGENTSPACE,  hasFlashlight );
 				SET_STATIC_VERTEX_SHADER_COMBO( BUMPMAP,  hasBump );
-				SET_STATIC_VERTEX_SHADER_COMBO( DIFFUSEBUMPMAP,  hasDiffuseBumpmap );
 				SET_STATIC_VERTEX_SHADER_COMBO( VERTEXCOLOR,  hasVertexColor );
 				SET_STATIC_VERTEX_SHADER_COMBO( VERTEXALPHATEXBLENDFACTOR, false );
-				SET_STATIC_VERTEX_SHADER_COMBO( PARALLAX_MAPPING, 0 ); //( bumpmap_variant == 2 )?1:0);
 				SET_STATIC_VERTEX_SHADER_COMBO( SEAMLESS, bSeamlessMapping ); //( bumpmap_variant == 2 )?1:0);
 				SET_STATIC_VERTEX_SHADER_COMBO( DETAILTEXTURE,  hasDetailTexture );
 				SET_STATIC_VERTEX_SHADER_COMBO( SELFILLUM,  hasSelfIllum );
 				SET_STATIC_VERTEX_SHADER_COMBO( FANCY_BLENDING,  false );
 				SET_STATIC_VERTEX_SHADER_COMBO( LIGHTING_PREVIEW, nLightingPreviewMode != 0 );
-	#ifdef _X360
+				SET_STATIC_VERTEX_SHADER_COMBO( PAINT, 0 );
+				SET_STATIC_VERTEX_SHADER_COMBO( ADDBUMPMAPS, 0 );
+	#if defined( _X360 ) || defined( _PS3 )
 				SET_STATIC_VERTEX_SHADER_COMBO( FLASHLIGHT, hasFlashlight );
 	#endif
 				SET_STATIC_VERTEX_SHADER( lightmappedgeneric_vs20 );
 			}
 
-#ifndef _X360
+#if !defined( _X360 ) && !defined( _PS3 )
 			if ( g_pHardwareConfig->HasFastVertexTextures() )
 			{
 				DECLARE_STATIC_PIXEL_SHADER( worldtwotextureblend_ps30 );
 				SET_STATIC_PIXEL_SHADER_COMBO( DETAILTEXTURE,  hasDetailTexture );
 				SET_STATIC_PIXEL_SHADER_COMBO( BUMPMAP,  hasBump );
-				SET_STATIC_PIXEL_SHADER_COMBO( DIFFUSEBUMPMAP,  hasDiffuseBumpmap );
 				SET_STATIC_PIXEL_SHADER_COMBO( VERTEXCOLOR,  hasVertexColor );
 				SET_STATIC_PIXEL_SHADER_COMBO( SELFILLUM,  hasSelfIllum );
 				SET_STATIC_PIXEL_SHADER_COMBO( DETAIL_ALPHA_MASK_BASE_TEXTURE,  bHasDetailAlpha );
@@ -311,7 +327,6 @@ END_SHADER_PARAMS
 				DECLARE_STATIC_PIXEL_SHADER( worldtwotextureblend_ps20b );
 				SET_STATIC_PIXEL_SHADER_COMBO( DETAILTEXTURE,  hasDetailTexture );
 				SET_STATIC_PIXEL_SHADER_COMBO( BUMPMAP,  hasBump );
-				SET_STATIC_PIXEL_SHADER_COMBO( DIFFUSEBUMPMAP,  hasDiffuseBumpmap );
 				SET_STATIC_PIXEL_SHADER_COMBO( VERTEXCOLOR,  hasVertexColor );
 				SET_STATIC_PIXEL_SHADER_COMBO( SELFILLUM,  hasSelfIllum );
 				SET_STATIC_PIXEL_SHADER_COMBO( DETAIL_ALPHA_MASK_BASE_TEXTURE,  bHasDetailAlpha );
@@ -326,7 +341,6 @@ END_SHADER_PARAMS
 				DECLARE_STATIC_PIXEL_SHADER( worldtwotextureblend_ps20 );
 				SET_STATIC_PIXEL_SHADER_COMBO( DETAILTEXTURE,  hasDetailTexture );
 				SET_STATIC_PIXEL_SHADER_COMBO( BUMPMAP,  hasBump );
-				SET_STATIC_PIXEL_SHADER_COMBO( DIFFUSEBUMPMAP,  hasDiffuseBumpmap );
 				SET_STATIC_PIXEL_SHADER_COMBO( VERTEXCOLOR,  hasVertexColor );
 				SET_STATIC_PIXEL_SHADER_COMBO( SELFILLUM,  hasSelfIllum );
 				SET_STATIC_PIXEL_SHADER_COMBO( DETAIL_ALPHA_MASK_BASE_TEXTURE,  bHasDetailAlpha );
@@ -358,16 +372,16 @@ END_SHADER_PARAMS
 		{
 			if( hasBaseTexture )
 			{
-				BindTexture( SHADER_SAMPLER0, BASETEXTURE, FRAME );
+				BindTexture( SHADER_SAMPLER0, SRGBReadMask( !bShaderSrgbRead ), BASETEXTURE, FRAME );
 			}
 			else
 			{
-				pShaderAPI->BindStandardTexture( SHADER_SAMPLER0, TEXTURE_WHITE );
+				ShaderApiFast( pShaderAPI )->BindStandardTexture( SHADER_SAMPLER0, SRGBReadMask( !bShaderSrgbRead ), TEXTURE_WHITE );
 			}
 
 			//			if( hasLightmap )
 			{
-				pShaderAPI->BindStandardTexture( SHADER_SAMPLER1, TEXTURE_LIGHTMAP );
+				ShaderApiFast( pShaderAPI )->BindStandardTexture( SHADER_SAMPLER1, ( g_pHardwareConfig->GetHDRType() == HDR_TYPE_NONE ) ? TEXTURE_BINDFLAGS_SRGBREAD : TEXTURE_BINDFLAGS_NONE, TEXTURE_LIGHTMAP );
 			}
 
 			bool bFlashlightShadows = false;
@@ -376,35 +390,35 @@ END_SHADER_PARAMS
 			{
 				VMatrix worldToTexture;
 				ITexture *pFlashlightDepthTexture;
-				FlashlightState_t state = pShaderAPI->GetFlashlightStateEx( worldToTexture, &pFlashlightDepthTexture );
+				FlashlightState_t state = ShaderApiFast( pShaderAPI )->GetFlashlightStateEx( worldToTexture, &pFlashlightDepthTexture );
 				bFlashlightShadows = state.m_bEnableShadows;
 				bUberlight = state.m_bUberlight;
 
 				SetFlashLightColorFromState( state, pShaderAPI, bSinglePassFlashlight );
 
-				BindTexture( SHADER_SAMPLER2, state.m_pSpotlightTexture, state.m_nSpotlightTextureFrame );
+				BindTexture( SHADER_SAMPLER2, TEXTURE_BINDFLAGS_NONE, state.m_pSpotlightTexture, state.m_nSpotlightTextureFrame );
 
 				if( pFlashlightDepthTexture && g_pConfig->ShadowDepthTexture() )
 				{
-					BindTexture( SHADER_SAMPLER7, pFlashlightDepthTexture );
+					BindTexture( SHADER_SAMPLER7, TEXTURE_BINDFLAGS_SHADOWDEPTH, pFlashlightDepthTexture );
 				}
 			}
 			if( hasDetailTexture )
 			{
-				BindTexture( SHADER_SAMPLER3, DETAIL, DETAILFRAME );
+				BindTexture( SHADER_SAMPLER3, TEXTURE_BINDFLAGS_NONE, DETAIL, DETAILFRAME );
 			}
 			if( hasBump )
 			{
 				if( !g_pConfig->m_bFastNoBump )
 				{
-					BindTexture( SHADER_SAMPLER4, BUMPMAP, BUMPFRAME );
+					BindTexture( SHADER_SAMPLER4, TEXTURE_BINDFLAGS_NONE, BUMPMAP, BUMPFRAME );
 				}
 				else
 				{
-					pShaderAPI->BindStandardTexture( SHADER_SAMPLER4, TEXTURE_NORMALMAP_FLAT );
+					ShaderApiFast( pShaderAPI )->BindStandardTexture( SHADER_SAMPLER4, TEXTURE_BINDFLAGS_NONE, TEXTURE_NORMALMAP_FLAT );
 				}
 			}
-			pShaderAPI->BindStandardTexture( SHADER_SAMPLER6, TEXTURE_NORMALIZATION_CUBEMAP_SIGNED );
+			ShaderApiFast( pShaderAPI )->BindStandardTexture( SHADER_SAMPLER6, TEXTURE_BINDFLAGS_NONE, TEXTURE_NORMALIZATION_CUBEMAP_SIGNED );
 
 			// If we don't have a texture transform, we don't have
 			// to set vertex shader constants or run vertex shader instructions
@@ -418,7 +432,7 @@ END_SHADER_PARAMS
 			{
 				bVertexShaderFastPath = false;
 			}
-			if( pShaderAPI->GetIntRenderingParameter(INT_RENDERPARM_ENABLE_FIXED_LIGHTING) != 0 )
+			if( ShaderApiFast( pShaderAPI )->GetIntRenderingParameter(INT_RENDERPARM_ENABLE_FIXED_LIGHTING) != 0 )
 			{
 				bVertexShaderFastPath = false;
 			}
@@ -436,25 +450,25 @@ END_SHADER_PARAMS
 				}
 			}
 
-			MaterialFogMode_t fogType = pShaderAPI->GetSceneFogMode();
+			MaterialFogMode_t fogType = ShaderApiFast( pShaderAPI )->GetSceneFogMode();
 
 			if ( IsPC() )
 			{
-				bool bWorldNormal = pShaderAPI->GetIntRenderingParameter( INT_RENDERPARM_ENABLE_FIXED_LIGHTING ) == ENABLE_FIXED_LIGHTING_OUTPUTNORMAL_AND_DEPTH;
+				bool bWorldNormal = ShaderApiFast( pShaderAPI )->GetIntRenderingParameter( INT_RENDERPARM_ENABLE_FIXED_LIGHTING ) == ENABLE_FIXED_LIGHTING_OUTPUTNORMAL_AND_DEPTH;
 				if ( bWorldNormal )
 				{
 					float vEyeDir[4];
-					pShaderAPI->GetWorldSpaceCameraDirection( vEyeDir );
+					ShaderApiFast( pShaderAPI )->GetWorldSpaceCameraDirection( vEyeDir );
 
-					float flFarZ = pShaderAPI->GetFarZ();
+					float flFarZ = ShaderApiFast( pShaderAPI )->GetFarZ();
 					vEyeDir[0] /= flFarZ;	// Divide by farZ for SSAO algorithm
 					vEyeDir[1] /= flFarZ;
 					vEyeDir[2] /= flFarZ;
-					pShaderAPI->SetVertexShaderConstant( VERTEX_SHADER_SHADER_SPECIFIC_CONST_12, vEyeDir );
+					ShaderApiFast( pShaderAPI )->SetVertexShaderConstant( VERTEX_SHADER_SHADER_SPECIFIC_CONST_12, vEyeDir );
 				}
 			}
 
-#ifndef _X360
+#if !defined( _X360 ) && !defined( _PS3 )
 			if (g_pHardwareConfig->HasFastVertexTextures() )
 			{
 				DECLARE_DYNAMIC_VERTEX_SHADER( lightmappedgeneric_vs30 );
@@ -473,7 +487,7 @@ END_SHADER_PARAMS
 			bool bWriteWaterFogToAlpha;
 			if( bFullyOpaque ) 
 			{
-				bWriteDepthToAlpha = pShaderAPI->ShouldWriteDepthToDestAlpha();
+				bWriteDepthToAlpha = ShaderApiFast( pShaderAPI )->ShouldWriteDepthToDestAlpha();
 				bWriteWaterFogToAlpha = (fogType == MATERIAL_FOG_LINEAR_BELOW_FOG_Z);
 				AssertMsg( !(bWriteDepthToAlpha && bWriteWaterFogToAlpha), "Can't write two values to alpha at the same time." );
 			}
@@ -484,7 +498,7 @@ END_SHADER_PARAMS
 				bWriteWaterFogToAlpha = false;
 			}
 
-#ifndef _X360
+#if !defined( _X360 ) && !defined( _PS3 )
 			if ( g_pHardwareConfig->HasFastVertexTextures() )
 			{
 				DECLARE_DYNAMIC_PIXEL_SHADER( worldtwotextureblend_ps30 );
@@ -530,21 +544,21 @@ END_SHADER_PARAMS
 			SetPixelShaderConstantGammaToLinear( 7, SELFILLUMTINT );
 
 			float eyePos[4];
-			pShaderAPI->GetWorldSpaceCameraPosition( eyePos );
-			pShaderAPI->SetPixelShaderConstant( 10, eyePos, 1 );
-			pShaderAPI->SetPixelShaderFogParams( 11 );
+			ShaderApiFast( pShaderAPI )->GetWorldSpaceCameraPosition( eyePos );
+			ShaderApiFast( pShaderAPI )->SetPixelShaderConstant( 10, eyePos, 1 );
+			ShaderApiFast( pShaderAPI )->SetPixelShaderFogParams( 11 );
 
 			if ( bSeamlessMapping )
 			{
 				float map_scale[4]={ params[SEAMLESS_SCALE]->GetFloatValue(),0,0,0};
-				pShaderAPI->SetVertexShaderConstant( VERTEX_SHADER_SHADER_SPECIFIC_CONST_0, map_scale );
+				ShaderApiFast( pShaderAPI )->SetVertexShaderConstant( VERTEX_SHADER_SHADER_SPECIFIC_CONST_0, map_scale );
 			}
 
 
 			if( hasFlashlight )
 			{
 				VMatrix worldToTexture;
-				const FlashlightState_t &flashlightState = pShaderAPI->GetFlashlightState( worldToTexture );
+				const FlashlightState_t &flashlightState = ShaderApiFast( pShaderAPI )->GetFlashlightState( worldToTexture );
 
 				// Set the flashlight attenuation factors
 				float atten[4];
@@ -552,7 +566,7 @@ END_SHADER_PARAMS
 				atten[1] = flashlightState.m_fLinearAtten;
 				atten[2] = flashlightState.m_fQuadraticAtten;
 				atten[3] = flashlightState.m_FarZAtten;
-				pShaderAPI->SetPixelShaderConstant( 20, atten, 1 );
+				ShaderApiFast( pShaderAPI )->SetPixelShaderConstant( 20, atten, 1 );
 
 				// Set the flashlight origin
 				float pos[4];
@@ -560,9 +574,9 @@ END_SHADER_PARAMS
 				pos[1] = flashlightState.m_vecLightOrigin[1];
 				pos[2] = flashlightState.m_vecLightOrigin[2];
 				pos[3] = flashlightState.m_FarZ; // didn't have this in main. . probably need this?
-				pShaderAPI->SetPixelShaderConstant( 15, pos, 1 );
+				ShaderApiFast( pShaderAPI )->SetPixelShaderConstant( 15, pos, 1 );
 
-				pShaderAPI->SetPixelShaderConstant( 16, worldToTexture.Base(), 4 );
+				ShaderApiFast( pShaderAPI )->SetPixelShaderConstant( 16, worldToTexture.Base(), 4 );
 
 				if ( IsPC() && g_pHardwareConfig->HasFastVertexTextures() )
 				{
@@ -576,7 +590,7 @@ END_SHADER_PARAMS
 	SHADER_DRAW
 	{
 		bool bHasFlashlight = UsingFlashlight( params );
-		if ( bHasFlashlight && IsX360() )
+		if ( bHasFlashlight && ( IsX360() || IsPS3() ) )
 		{
 			DrawPass( params, pShaderAPI, pShaderShadow, false, vertexCompression );
 			SHADOW_STATE

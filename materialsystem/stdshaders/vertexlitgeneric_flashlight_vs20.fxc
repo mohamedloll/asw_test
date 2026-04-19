@@ -32,7 +32,7 @@ struct VS_INPUT
 struct VS_OUTPUT
 {
     float4 vProjPos					: POSITION;			// Projection-space position	
-#if !defined( _X360 ) && !defined( SHADER_MODEL_VS_3_0 )
+#if !defined( _X360 ) && !defined( _PS3 ) && !defined( SHADER_MODEL_VS_3_0 )
 	float  fog						: FOG;
 #endif
 
@@ -61,7 +61,7 @@ VS_OUTPUT main( const VS_INPUT v )
 	float3 worldNormal, worldPos;
 	SkinPositionAndNormal( 
 		g_bSkinning, 
-		v.vPos, v.vNormal,
+		v.vPos, v.vNormal.xyz,
 		v.vBoneWeights, v.vBoneIndices,
 		worldPos, worldNormal );
 
@@ -71,6 +71,12 @@ VS_OUTPUT main( const VS_INPUT v )
 	}
 	
 	o.vProjPos = mul( float4( worldPos, 1 ), cViewProj );
+	
+#ifdef _PS3
+	// Account for OpenGL's flipped y coordinate and expanded z range [-1,1] instead of [0,1]
+	o.vProjPos.y = -o.vProjPos.y;
+	o.vProjPos.z = 2.0f * o.vProjPos.z - o.vProjPos.w;
+#endif // _PS3
 	
 	o.worldPos = worldPos;
 	o.projPos_fogFactorW.xyz = o.vProjPos.xyz;
@@ -82,15 +88,15 @@ VS_OUTPUT main( const VS_INPUT v )
 	o.projPos_fogFactorW.w = CalcNonFixedFunctionFog( worldPos, g_FogType );
 #endif
 
-	o.spotTexCoord.x = dot( worldPos, cWorldToTextureTransform[0] ) + cWorldToTextureTransform[0].w;
-	o.spotTexCoord.y = dot( worldPos, cWorldToTextureTransform[1] ) + cWorldToTextureTransform[1].w;
-	o.spotTexCoord.z = dot( worldPos, cWorldToTextureTransform[2] ) + cWorldToTextureTransform[2].w;
-	o.spotTexCoord.w = dot( worldPos, cWorldToTextureTransform[3] ) + cWorldToTextureTransform[3].w;
+	o.spotTexCoord.x = dot( worldPos, cWorldToTextureTransform[0].xyz ) + cWorldToTextureTransform[0].w;
+	o.spotTexCoord.y = dot( worldPos, cWorldToTextureTransform[1].xyz ) + cWorldToTextureTransform[1].w;
+	o.spotTexCoord.z = dot( worldPos, cWorldToTextureTransform[2].xyz ) + cWorldToTextureTransform[2].w;
+	o.spotTexCoord.w = dot( worldPos, cWorldToTextureTransform[3].xyz ) + cWorldToTextureTransform[3].w;
 	
-	o.baseTexCoord.x = dot( v.vBaseTexCoord, cBaseTexCoordTransform[0] ) + cBaseTexCoordTransform[0].w;
-	o.baseTexCoord.y = dot( v.vBaseTexCoord, cBaseTexCoordTransform[1] ) + cBaseTexCoordTransform[1].w;
+	o.baseTexCoord.x = dot( v.vBaseTexCoord, cBaseTexCoordTransform[0].xy ) + cBaseTexCoordTransform[0].w;
+	o.baseTexCoord.y = dot( v.vBaseTexCoord, cBaseTexCoordTransform[1].xy ) + cBaseTexCoordTransform[1].w;
 	
-	float3 vWorldPosToLight = cLightPosition - worldPos;
+	float3 vWorldPosToLight = cLightPosition.xyz - worldPos;
 	o.vWorldToLight = vWorldPosToLight;
 	
 	float3 distatten;

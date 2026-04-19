@@ -20,6 +20,7 @@ public:
 	}
 	void SetNORMALMAP( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nNORMALMAP = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bNORMALMAP = true;
@@ -41,6 +42,7 @@ public:
 	}
 	void SetWORLDVERTEXTRANSITION( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nWORLDVERTEXTRANSITION = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bWORLDVERTEXTRANSITION = true;
@@ -62,6 +64,7 @@ public:
 	}
 	void SetSEAMLESS( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nSEAMLESS = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bSEAMLESS = true;
@@ -83,6 +86,7 @@ public:
 	}
 	void SetDETAIL( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nDETAIL = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bDETAIL = true;
@@ -104,6 +108,7 @@ public:
 	}
 	void SetDOPIXELFOG( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nDOPIXELFOG = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bDOPIXELFOG = true;
@@ -125,6 +130,7 @@ public:
 	}
 	void SetHARDWAREFOGBLEND( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nHARDWAREFOGBLEND = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bHARDWAREFOGBLEND = true;
@@ -189,6 +195,7 @@ public:
 	}
 	void SetDOWATERFOG( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nDOWATERFOG = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bDOWATERFOG = true;
@@ -215,3 +222,33 @@ public:
 	}
 };
 #define shaderDynamicTest_lightmappedgeneric_flashlight_vs20 0
+
+static const ShaderComboInformation_t s_DynamicComboArray_lightmappedgeneric_flashlight_vs20[1] = 
+{
+	{ "DOWATERFOG", 0, 1 },
+};
+
+static const ShaderComboInformation_t s_StaticComboArray_lightmappedgeneric_flashlight_vs20[6] = 
+{
+	{ "NORMALMAP", 0, 1 },
+	{ "WORLDVERTEXTRANSITION", 0, 1 },
+	{ "SEAMLESS", 0, 1 },
+	{ "DETAIL", 0, 1 },
+	{ "DOPIXELFOG", 0, 1 },
+	{ "HARDWAREFOGBLEND", 0, 1 },
+};
+static const ShaderComboSemantics_t lightmappedgeneric_flashlight_vs20_combos =
+{
+	"lightmappedgeneric_flashlight_vs20", s_DynamicComboArray_lightmappedgeneric_flashlight_vs20, 1, s_StaticComboArray_lightmappedgeneric_flashlight_vs20, 6 
+};
+
+class ConstructMe_lightmappedgeneric_flashlight_vs20
+{
+public:
+	ConstructMe_lightmappedgeneric_flashlight_vs20()
+	{
+		GetShaderDLL()->AddShaderComboInformation( &lightmappedgeneric_flashlight_vs20_combos );
+	}
+};
+
+static ConstructMe_lightmappedgeneric_flashlight_vs20 s_ConstructMe_lightmappedgeneric_flashlight_vs20;

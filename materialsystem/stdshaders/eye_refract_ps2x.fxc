@@ -11,13 +11,13 @@
 // STATIC: "RAYTRACESPHERE"				"0..1"	[ps20b]
 // STATIC: "RAYTRACESPHERE"				"0..1"	[ps30]
 
-// STATIC: "FLASHLIGHTDEPTHFILTERMODE"	"0..2"	[ps20b] [PC]
+// STATIC: "FLASHLIGHTDEPTHFILTERMODE"	"0..3"	[ps20b] [PC]
 // STATIC: "FLASHLIGHTDEPTHFILTERMODE"	"0..2"	[ps30]  [PC]
-// STATIC: "FLASHLIGHTDEPTHFILTERMODE"	"0..0"	[ps20b] [XBOX]
+// STATIC: "FLASHLIGHTDEPTHFILTERMODE"	"0..0"	[ps20b] [CONSOLE]
 // STATIC: "WORLD_NORMAL"				"0..0"	[ps20]  [PC]
 // STATIC: "WORLD_NORMAL"				"0..0"	[ps20b] [PC]
 // STATIC: "WORLD_NORMAL"				"0..1"	[ps30]  [PC]
-// STATIC: "WORLD_NORMAL"				"0..0"	[XBOX]
+// STATIC: "WORLD_NORMAL"				"0..0"	[CONSOLE]
 
 // DYNAMIC: "NUM_LIGHTS"				"0..2"	[ps20]
 // DYNAMIC: "NUM_LIGHTS"				"0..4"	[ps20b]
@@ -57,7 +57,7 @@
 // Texture Samplers ===============================================================================
 sampler g_tCorneaSampler				: register( s0 );
 sampler g_tIrisSampler					: register( s1 );
-sampler g_tEyeReflectionCubemapSampler	: register( s2 );
+samplerCUBE g_tEyeReflectionCubemapSampler	: register( s2 );
 sampler g_tEyeAmbientOcclSampler		: register( s3 );
 sampler g_tLightwarpSampler				: register( s4 ); // 1D texture for TF NPR lighting
 
@@ -136,7 +136,7 @@ float IntersectRaySphere ( float3 cameraPos, float3 ray, float3 sphereCenter, fl
 
 
 // Main ===========================================================================================
-float4 main( PS_INPUT i ) : COLOR
+float4_color_return_type main( PS_INPUT i ) : COLOR
 {
 	// Set bools to compile out code
 	bool bFlashlight = ( FLASHLIGHT != 0 ) ? true : false;
@@ -306,7 +306,7 @@ float4 main( PS_INPUT i ) : COLOR
 		// Flashlight cookie
 #if !defined( SHADER_MODEL_PS_2_0 )
 		float3 vProjCoords = vFlashlightTexCoord.xyz / vFlashlightTexCoord.w;
-		float3 cFlashlightCookieColor = tex2D( g_tFlashlightCookieSampler, vProjCoords );
+		float3 cFlashlightCookieColor = tex2D( g_tFlashlightCookieSampler, vProjCoords ).rgb;
 #else 
 		float3 cFlashlightCookieColor = tex2Dproj( g_tFlashlightCookieSampler, vFlashlightTexCoord.xyzw );
 #endif
@@ -324,8 +324,7 @@ float4 main( PS_INPUT i ) : COLOR
 
 		// Shadow depth map
 #if FLASHLIGHTSHADOWS && !defined( SHADER_MODEL_PS_2_0 )
-		int nShadowLevel = FLASHLIGHTDEPTHFILTERMODE;
-		float flShadow = DoFlashlightShadow( g_tFlashlightDepthSampler, g_tRandomRotationSampler, vProjCoords, float2(0,0), nShadowLevel, g_vShadowTweaks, false );
+		float flShadow = DoFlashlightShadow( g_tFlashlightDepthSampler, g_tRandomRotationSampler, vProjCoords, float2(0,0), FLASHLIGHTDEPTHFILTERMODE, g_vShadowTweaks );
 		float flAttenuated = lerp( flShadow, 1.0f, g_vShadowTweaks.y );		// Blend between fully attenuated and not attenuated
 		flShadow = saturate( lerp( flAttenuated, flShadow, flFlashlightAttenuation ) ); // Blend between shadow and above, according to light attenuation
 		cFlashlightCookieColor *= flShadow; // Apply shadow term to cookie color

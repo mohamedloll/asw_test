@@ -40,6 +40,7 @@ public:
 	}
 	void SetPIXELFOGTYPE( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nPIXELFOGTYPE = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bPIXELFOGTYPE = true;
@@ -61,6 +62,7 @@ public:
 	}
 	void SetNUM_LIGHTS( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 4 );
 		m_nNUM_LIGHTS = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bNUM_LIGHTS = true;
@@ -82,6 +84,7 @@ public:
 	}
 	void SetAMBIENT_LIGHT( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nAMBIENT_LIGHT = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bAMBIENT_LIGHT = true;
@@ -103,6 +106,7 @@ public:
 	}
 	void SetWRITE_DEPTH_TO_DESTALPHA( bool i )
 	{
+		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nWRITE_DEPTH_TO_DESTALPHA = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bWRITE_DEPTH_TO_DESTALPHA = true;
@@ -141,3 +145,26 @@ public:
 	}
 };
 #define shaderDynamicTest_teeth_bump_ps30 psh_forgot_to_set_dynamic_NUM_LIGHTS + psh_forgot_to_set_dynamic_AMBIENT_LIGHT + psh_forgot_to_set_dynamic_WRITE_DEPTH_TO_DESTALPHA + 0
+
+static const ShaderComboInformation_t s_DynamicComboArray_teeth_bump_ps30[4] = 
+{
+	{ "PIXELFOGTYPE", 0, 1 },
+	{ "NUM_LIGHTS", 0, 4 },
+	{ "AMBIENT_LIGHT", 0, 1 },
+	{ "WRITE_DEPTH_TO_DESTALPHA", 0, 1 },
+};
+static const ShaderComboSemantics_t teeth_bump_ps30_combos =
+{
+	"teeth_bump_ps30", s_DynamicComboArray_teeth_bump_ps30, 4, NULL, 0 
+};
+
+class ConstructMe_teeth_bump_ps30
+{
+public:
+	ConstructMe_teeth_bump_ps30()
+	{
+		GetShaderDLL()->AddShaderComboInformation( &teeth_bump_ps30_combos );
+	}
+};
+
+static ConstructMe_teeth_bump_ps30 s_ConstructMe_teeth_bump_ps30;

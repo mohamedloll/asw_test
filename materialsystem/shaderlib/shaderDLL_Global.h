@@ -13,6 +13,15 @@
 #pragma once
 #endif
 
+#ifdef _PS3
+
+class CPs3NonVirt_IShaderSystem;
+inline CPs3NonVirt_IShaderSystem *GetShaderSystem()
+{
+	return NULL;
+}
+
+#else
 
 //-----------------------------------------------------------------------------
 // forward declarations
@@ -28,6 +37,8 @@ inline IShaderSystem *GetShaderSystem()
 	extern IShaderSystem* g_pSLShaderSystem;
 	return g_pSLShaderSystem;
 }
+
+#endif
 
 
 #endif	// SHADERDLL_GLOBAL_H

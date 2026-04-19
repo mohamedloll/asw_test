@@ -1,4 +1,4 @@
-//===== Copyright © 1996-2005, Valve Corporation, All rights reserved. ======//
+//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
 //
 // Purpose: A wet version of base * lightmap
 //
@@ -15,8 +15,6 @@
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
-
-extern ConVar mat_fullbright;
 
 DEFINE_FALLBACK_SHADER( Cable, Cable_DX9 )
 
@@ -36,7 +34,7 @@ BEGIN_VS_SHADER( Cable_DX9,
 	SHADER_INIT
 	{
 		LoadBumpMap( BUMPMAP );
-		LoadTexture( BASETEXTURE );
+		LoadTexture( BASETEXTURE, TEXTUREFLAGS_SRGB );
 	}
 
 	SHADER_DRAW
@@ -57,11 +55,9 @@ BEGIN_VS_SHADER( Cable_DX9,
 			pShaderShadow->EnableAlphaTest( IS_FLAG_SET(MATERIAL_VAR_ALPHATEST) );
 
 			pShaderShadow->EnableTexture( SHADER_SAMPLER0, true );
+
 			pShaderShadow->EnableTexture( SHADER_SAMPLER1, true );
-			if ( g_pHardwareConfig->GetDXSupportLevel() >= 90)
-			{
-				pShaderShadow->EnableSRGBRead( SHADER_SAMPLER1, true );
-			}
+			pShaderShadow->EnableSRGBRead( SHADER_SAMPLER1, true );
 			
 			int tCoordDimensions[] = {2,2};
 			pShaderShadow->VertexShaderVertexFormat( 
@@ -93,17 +89,17 @@ BEGIN_VS_SHADER( Cable_DX9,
 		}
 		DYNAMIC_STATE
 		{
-			bool bLightingOnly = mat_fullbright.GetInt() == 2 && !IS_FLAG_SET( MATERIAL_VAR_NO_DEBUG_OVERRIDE );
+			bool bLightingOnly = g_pConfig->nFullbright == 2 && !IS_FLAG_SET( MATERIAL_VAR_NO_DEBUG_OVERRIDE );
 
-			BindTexture( SHADER_SAMPLER0, BUMPMAP );
+			BindTexture( SHADER_SAMPLER0, TEXTURE_BINDFLAGS_NONE, BUMPMAP );
 			if ( bLightingOnly )
 			{
-				pShaderAPI->BindStandardTexture( SHADER_SAMPLER1, TEXTURE_GREY );
+				pShaderAPI->BindStandardTexture( SHADER_SAMPLER1, TEXTURE_BINDFLAGS_SRGBREAD, TEXTURE_GREY );
 
 			}
 			else
 			{
-				BindTexture( SHADER_SAMPLER1, BASETEXTURE );			
+				BindTexture( SHADER_SAMPLER1, TEXTURE_BINDFLAGS_SRGBREAD, BASETEXTURE );			
 			}
 
 			pShaderAPI->SetPixelShaderFogParams( PSREG_FOG_PARAMS );		

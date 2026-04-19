@@ -6,7 +6,7 @@
 // DYNAMIC: "NUM_LIGHTS"				"0..4"	[ps30]
 // DYNAMIC: "AMBIENT_LIGHT"				"0..1"
 // DYNAMIC: "WRITE_DEPTH_TO_DESTALPHA"	"0..1"	[ps20b] [PC]
-// DYNAMIC: "WRITE_DEPTH_TO_DESTALPHA"	"0..0"	[ps20b] [XBOX]
+// DYNAMIC: "WRITE_DEPTH_TO_DESTALPHA"	"0..0"	[ps20b] [CONSOLE]
 // DYNAMIC: "WRITE_DEPTH_TO_DESTALPHA"	"0..1"	[ps30]
 
 #if defined( SHADER_MODEL_PS_2_0 )
@@ -22,7 +22,7 @@ PixelShaderLightInfo cLightInfo[3]			: register( PSREG_LIGHT_INFO_ARRAY );			// 
 
 sampler BaseTextureSampler					: register( s0 );
 sampler BumpTextureSampler					: register( s1 );
-sampler NormalizeSampler					: register( s2 );
+samplerCUBE NormalizeSampler				: register( s2 );
 
 struct PS_INPUT
 {
@@ -46,7 +46,7 @@ struct PS_INPUT
 
 
 
-float4 main( PS_INPUT i ) : COLOR
+float4_color_return_type main( PS_INPUT i ) : COLOR
 {
 	bool bAmbientLight = AMBIENT_LIGHT ? true : false;
 	int nNumLights = NUM_LIGHTS;
@@ -70,7 +70,7 @@ float4 main( PS_INPUT i ) : COLOR
 													float3( 0.0f, 0.0f, 0.0f ), false,
 													bAmbientLight, vLightAtten,
 													cAmbientCube, NormalizeSampler, nNumLights, cLightInfo, true,
-													false, NormalizeSampler );
+													false, BaseTextureSampler ); // this last sampler is unused, we just need to pass in a value
 
 #if ((defined(SHADER_MODEL_PS_2_B) || defined(SHADER_MODEL_PS_3_0)))
 
@@ -79,7 +79,8 @@ float4 main( PS_INPUT i ) : COLOR
 	// Summation of specular from all local lights
 	PixelShaderDoSpecularLighting( i.worldPos_projPosZ.xyz, worldSpaceNormal, fSpecExp, normalize(worldVertToEyeVector),
 								   vLightAtten, nNumLights, cLightInfo,
-								   false, NormalizeSampler, 1.0f, false, 1.0f,
+								   false, BaseTextureSampler, // this sampler is not used, we just need to pass a value in
+								   1.0f, false, 1.0f, 1.0f,
 
 								   // Outputs
 								   specularLighting, vDummy );

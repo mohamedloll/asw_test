@@ -1,4 +1,4 @@
-//===== Copyright © 1996-2005, Valve Corporation, All rights reserved. ======//
+//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
 //
 // Purpose: 
 //
@@ -15,10 +15,39 @@
 
 #include "cpp_shader_constant_register_map.h"
 #include "shaderlib/cshader.h"
-#include "shaderlib/baseshader.h"
-#include "ConVar.h"
+#include "shaderlib/BaseShader.h"
+#include "shaderapifast.h"
+#include "convar.h"
 #include <renderparm.h>
 
+
+// Texture combining modes for combining base and detail/basetexture2
+// Matches what's in common_ps_fxc.h
+#define DETAIL_BLEND_MODE_RGB_EQUALS_BASE_x_DETAILx2				0	// Original mode (Mod2x)
+#define DETAIL_BLEND_MODE_RGB_ADDITIVE								1	// Base.rgb+detail.rgb*fblend
+#define DETAIL_BLEND_MODE_DETAIL_OVER_BASE							2
+#define DETAIL_BLEND_MODE_FADE										3	// Straight fade between base and detail.
+#define DETAIL_BLEND_MODE_BASE_OVER_DETAIL							4	// Use base alpha for blend over detail
+#define DETAIL_BLEND_MODE_RGB_ADDITIVE_SELFILLUM					5	// Add detail color post lighting
+#define DETAIL_BLEND_MODE_RGB_ADDITIVE_SELFILLUM_THRESHOLD_FADE		6
+#define DETAIL_BLEND_MODE_MOD2X_SELECT_TWO_PATTERNS					7	// Use alpha channel of base to select between mod2x channels in r+a of detail
+#define DETAIL_BLEND_MODE_MULTIPLY									8
+#define DETAIL_BLEND_MODE_MASK_BASE_BY_DETAIL_ALPHA					9	// Use alpha channel of detail to mask base
+#define DETAIL_BLEND_MODE_SSBUMP_BUMP								10	// Use detail to modulate lighting as an ssbump
+#define DETAIL_BLEND_MODE_SSBUMP_NOBUMP								11	// Detail is an ssbump but use it as an albedo. shader does the magic here - no user needs to specify mode 11
+#define DETAIL_BLEND_MODE_NONE										12	// There is no detail texture
+
+// Texture combining modes for combining base and decal texture
+#define DECAL_BLEND_MODE_DECAL_ALPHA								0	// Original mode ( = decalRGB*decalA + baseRGB*(1-decalA))
+#define DECAL_BLEND_MODE_RGB_MOD1X									1	// baseRGB * decalRGB
+#define DECAL_BLEND_MODE_NONE										2	// There is no decal texture
+
+// We force aniso on certain textures for the consoles only
+#if defined( _GAMECONSOLE )
+	#define ANISOTROPIC_OVERRIDE TEXTUREFLAGS_ANISOTROPIC
+#else
+	#define ANISOTROPIC_OVERRIDE 0
+#endif
 
 //-----------------------------------------------------------------------------
 // Helper macro for vertex shaders
@@ -160,19 +189,25 @@ public:
 		int m_nFlashlightTextureFrameVar;
 		int m_nBaseTexture2Var;
 		int m_nBaseTexture2FrameVar;
-		int m_nBumpmap2Var;
-		int m_nBumpmap2Frame;
-		int m_nBump2Transform;
+		int m_nBumpmapVar2;
+		int m_nBumpmapFrame2;
+		int m_nBumpTransform2;
 		int m_nDetailVar;
 		int m_nDetailScale;
 		int m_nDetailTextureCombineMode;
 		int m_nDetailTextureBlendFactor;
 		int m_nDetailTint;
+		int m_nDetailVar2;
+		int m_nDetailScale2;
+		int m_nDetailTextureBlendFactor2;
+		int m_nDetailTint2;
 		int m_nTeethForwardVar;
 		int m_nTeethIllumFactorVar;
 		int m_nAlphaTestReference;
 		bool m_bSSBump;
 		float m_fSeamlessScale;								// 0.0 = not seamless
+		int m_nLayerTint1;
+		int m_nLayerTint2;
 	};
 	void DrawFlashlight_dx90( IMaterialVar** params, 
 		IShaderDynamicAPI *pShaderAPI, IShaderShadow* pShaderShadow, DrawFlashlight_dx90_Vars_t &vars );
@@ -188,6 +223,18 @@ private:
 	// Converts a color + alpha into a vector4
 	void ColorVarsToVector( int colorVar, int alphaVar, Vector4D &color );
 };
+
+FORCEINLINE bool IsSRGBDetailTexture( int nMode )
+{
+	return	( nMode == DETAIL_BLEND_MODE_DETAIL_OVER_BASE ) ||
+			( nMode == DETAIL_BLEND_MODE_FADE ) ||
+			( nMode == DETAIL_BLEND_MODE_BASE_OVER_DETAIL );
+}
+
+FORCEINLINE bool IsSRGBDecalTexture( int nMode )
+{
+	return	(nMode == DECAL_BLEND_MODE_DECAL_ALPHA);
+}
 
 FORCEINLINE char * GetFlashlightTextureFilename()
 {
@@ -206,11 +253,11 @@ extern ConVar r_flashlightbrightness;
 FORCEINLINE void SetFlashLightColorFromState( FlashlightState_t const &state, IShaderDynamicAPI *pShaderAPI, bool bSinglePassFlashlight, int nPSRegister=28, bool bFlashlightNoLambert=false )
 {
 	// Old code
-	//float flToneMapScale = ( pShaderAPI->GetToneMappingScaleLinear() ).x;
+	//float flToneMapScale = ( ShaderApiFast( pShaderAPI )->GetToneMappingScaleLinear() ).x;
 	//float flFlashlightScale = 1.0f / flToneMapScale;
 
 	// Fix to old code to keep flashlight from ever getting brighter than 1.0
-	//float flToneMapScale = ( pShaderAPI->GetToneMappingScaleLinear() ).x;
+	//float flToneMapScale = ( ShaderApiFast( pShaderAPI )->GetToneMappingScaleLinear() ).x;
 	//if ( flToneMapScale < 1.0f )
 	//	flToneMapScale = 1.0f;
 	//float flFlashlightScale = 1.0f / flToneMapScale;
@@ -239,7 +286,7 @@ FORCEINLINE void SetFlashLightColorFromState( FlashlightState_t const &state, IS
 	// Red flashlight for testing
 	//vPsConst[0] = 0.5f; vPsConst[1] = 0.0f; vPsConst[2] = 0.0f;
 
-	pShaderAPI->SetPixelShaderConstant( nPSRegister, ( float * )vPsConst );
+	ShaderApiFast( pShaderAPI )->SetPixelShaderConstant( nPSRegister, ( float * )vPsConst );
 }
 
 FORCEINLINE float ShadowAttenFromState( FlashlightState_t const &state )
@@ -273,11 +320,11 @@ FORCEINLINE void SetupUberlightFromState( IShaderDynamicAPI *pShaderAPI, Flashli
 	Vector4D vShearRound		= Vector4D( u.m_fShearx,	u.m_fSheary,				2.0f / u.m_fRoundness,	   -u.m_fRoundness / 2.0f );
 	Vector4D vaAbB				= Vector4D( u.m_fWidth,		u.m_fWidth + u.m_fWedge,	u.m_fHeight,				u.m_fHeight + u.m_fHedge );
 
-	pShaderAPI->SetPixelShaderConstant( PSREG_UBERLIGHT_SMOOTH_EDGE_0, vSmoothEdge0.Base(), 1 );
-	pShaderAPI->SetPixelShaderConstant( PSREG_UBERLIGHT_SMOOTH_EDGE_1, vSmoothEdge1.Base(), 1 );
-	pShaderAPI->SetPixelShaderConstant( PSREG_UBERLIGHT_SMOOTH_EDGE_OOW, vSmoothOneOverW.Base(), 1 );
-	pShaderAPI->SetPixelShaderConstant( PSREG_UBERLIGHT_SHEAR_ROUND, vShearRound.Base(), 1 );
-	pShaderAPI->SetPixelShaderConstant( PSREG_UBERLIGHT_AABB, vaAbB.Base(), 1 );
+	ShaderApiFast( pShaderAPI )->SetPixelShaderConstant( PSREG_UBERLIGHT_SMOOTH_EDGE_0, vSmoothEdge0.Base(), 1 );
+	ShaderApiFast( pShaderAPI )->SetPixelShaderConstant( PSREG_UBERLIGHT_SMOOTH_EDGE_1, vSmoothEdge1.Base(), 1 );
+	ShaderApiFast( pShaderAPI )->SetPixelShaderConstant( PSREG_UBERLIGHT_SMOOTH_EDGE_OOW, vSmoothOneOverW.Base(), 1 );
+	ShaderApiFast( pShaderAPI )->SetPixelShaderConstant( PSREG_UBERLIGHT_SHEAR_ROUND, vShearRound.Base(), 1 );
+	ShaderApiFast( pShaderAPI )->SetPixelShaderConstant( PSREG_UBERLIGHT_AABB, vaAbB.Base(), 1 );
 
 	QAngle angles;
 	QuaternionAngles( state.m_quatOrientation, angles );
@@ -286,7 +333,7 @@ FORCEINLINE void SetupUberlightFromState( IShaderDynamicAPI *pShaderAPI, Flashli
 	matrix3x4_t viewMatrix, viewMatrixInverse;
 	AngleMatrix( angles, state.m_vecLightOrigin, viewMatrixInverse );
 	MatrixInvert( viewMatrixInverse, viewMatrix );
-	pShaderAPI->SetPixelShaderConstant( PSREG_UBERLIGHT_WORLD_TO_LIGHT, viewMatrix.Base(), 4 );
+	ShaderApiFast( pShaderAPI )->SetPixelShaderConstant( PSREG_UBERLIGHT_WORLD_TO_LIGHT, viewMatrix.Base(), 4 );
 }
 
 
@@ -361,12 +408,5 @@ extern ConVar mat_envmaptintoverride;
 extern ConVar mat_envmaptintscale;
 #endif
 
-
-extern ConVar r_emulategl;
-
-FORCEINLINE bool IsOpenGL( void )
-{
-	return IsPosix() || r_emulategl.GetBool();
-}
 
 #endif // BASEVSSHADER_H

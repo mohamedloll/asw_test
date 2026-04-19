@@ -74,12 +74,12 @@ BEGIN_VS_SHADER_FLAGS( MorphAccumulate_DX9, "Help for MorphAccumulate", SHADER_N
 		}
 		DYNAMIC_STATE
 		{
-			BindTexture( SHADER_SAMPLER0, DELTA );
-			BindTexture( SHADER_SAMPLER1, SIDESPEED );
+			BindTexture( SHADER_SAMPLER0, TEXTURE_BINDFLAGS_NONE, DELTA );
+			BindTexture( SHADER_SAMPLER1, TEXTURE_BINDFLAGS_NONE, SIDESPEED );
 
 			if ( !bUseConstantBasedAccum )
 			{
-				pShaderAPI->BindStandardTexture( SHADER_SAMPLER2, TEXTURE_MORPH_WEIGHTS );
+				pShaderAPI->BindStandardTexture( SHADER_SAMPLER2, TEXTURE_BINDFLAGS_NONE, TEXTURE_MORPH_WEIGHTS );
 
 				int nXOffset = pShaderAPI->GetIntRenderingParameter( INT_RENDERPARM_MORPH_WEIGHT_X_OFFSET );
 				int nYOffset = pShaderAPI->GetIntRenderingParameter( INT_RENDERPARM_MORPH_WEIGHT_Y_OFFSET );

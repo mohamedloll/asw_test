@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2006, Valve Corporation, All rights reserved. ============//
+//========= Copyright (c) 1996-2006, Valve Corporation, All rights reserved. ============//
 
 #ifndef EYE_REFRACT_HELPER_H
 #define EYE_REFRACT_HELPER_H
@@ -31,7 +31,6 @@ struct Eye_Refract_Vars_t
 	int m_nIrisV;
 	int m_nDilation;
 	int m_nGlossiness;
-	int m_nIntro;
 	int m_nEntityOrigin; // Needed for intro
 	int m_nWarpParam;
 	int m_nCorneaTexture;

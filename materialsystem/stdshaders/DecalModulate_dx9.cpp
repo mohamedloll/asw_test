@@ -1,4 +1,4 @@
-//===== Copyright © 1996-2005, Valve Corporation, All rights reserved. ======//
+//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
 //
 // Purpose: 
 //
@@ -13,7 +13,7 @@
 #include "decalmodulate_ps20.inc"
 #include "decalmodulate_ps20b.inc"
 
-#ifndef _X360
+#if !defined( _X360 ) && !defined( _PS3 )
 #include "decalmodulate_vs30.inc"
 #include "decalmodulate_ps30.inc"
 #endif
@@ -29,6 +29,8 @@ BEGIN_VS_SHADER( DecalModulate_dx9,
 	BEGIN_SHADER_PARAMS
 		SHADER_PARAM( FOGEXPONENT, SHADER_PARAM_TYPE_FLOAT, "0.4", "exponent to tweak fog fade" )
 		SHADER_PARAM( FOGSCALE, SHADER_PARAM_TYPE_FLOAT, "1.0", "scale to tweak fog fade" )
+        SHADER_PARAM( FOGFADESTART, SHADER_PARAM_TYPE_FLOAT, "0", "fog amount at which to start fading decal" )
+		SHADER_PARAM( FOGFADEEND, SHADER_PARAM_TYPE_FLOAT, "0", "fog amount at which to end fading decal" )
 	END_SHADER_PARAMS
 	
 	SHADER_FALLBACK
@@ -48,9 +50,18 @@ BEGIN_VS_SHADER( DecalModulate_dx9,
 			params[ FOGSCALE ]->SetFloatValue( 1.0f );
 		}
 
+		if( !params[ FOGFADESTART]->IsDefined() )
+		{
+			params[ FOGFADESTART ]->SetFloatValue( 0 );
+		}
+		if( !params[ FOGFADEEND ]->IsDefined() )
+		{
+			params[ FOGFADEEND ]->SetFloatValue( 0.0f );
+		}
+
 		SET_FLAGS( MATERIAL_VAR_NO_DEBUG_OVERRIDE );
 
-#ifndef _X360
+#if !defined( _X360 ) && !defined( _PS3 )
 		if ( g_pHardwareConfig->HasFastVertexTextures() )
 		{
 			// The vertex shader uses the vertex id stream
@@ -78,7 +89,7 @@ BEGIN_VS_SHADER( DecalModulate_dx9,
 			// Be sure not to write to dest alpha
 			pShaderShadow->EnableAlphaWrites( false );
 
-			//SRGB conversions hose the blend on some hardware, so keep everything in gamma space.
+			// SRGB conversions hose the blend on some hardware, so keep we everything in gamma space
 			pShaderShadow->EnableSRGBRead( SHADER_SAMPLER0, false );
 			pShaderShadow->EnableSRGBWrite( false );
 
@@ -90,8 +101,10 @@ BEGIN_VS_SHADER( DecalModulate_dx9,
 			int nLightingPreviewMode = IS_FLAG2_SET( MATERIAL_VAR2_USE_GBUFFER0 ) + 2 * IS_FLAG2_SET( MATERIAL_VAR2_USE_GBUFFER1 );
 
 			bool bHasVertexAlpha = IS_FLAG_SET( MATERIAL_VAR_VERTEXCOLOR ) && IS_FLAG_SET( MATERIAL_VAR_VERTEXALPHA );
+			
+			bool bHasFogFade = ( params[FOGFADEEND]->GetFloatValue() > 0.0f );
 
-#ifndef _X360
+#if !defined( _X360 ) && !defined( _PS3 )
 			if ( !g_pHardwareConfig->HasFastVertexTextures() )
 #endif
 			{
@@ -104,16 +117,18 @@ BEGIN_VS_SHADER( DecalModulate_dx9,
 				{
 					DECLARE_STATIC_PIXEL_SHADER( decalmodulate_ps20b );
 					SET_STATIC_PIXEL_SHADER_COMBO( VERTEXALPHA,  bHasVertexAlpha );
+					SET_STATIC_PIXEL_SHADER_COMBO( FOGFADE, bHasFogFade );
 					SET_STATIC_PIXEL_SHADER( decalmodulate_ps20b );
 				}
 				else
 				{
 					DECLARE_STATIC_PIXEL_SHADER( decalmodulate_ps20 );
 					SET_STATIC_PIXEL_SHADER_COMBO( VERTEXALPHA,  bHasVertexAlpha );
+					SET_STATIC_PIXEL_SHADER_COMBO( FOGFADE, bHasFogFade );
 					SET_STATIC_PIXEL_SHADER( decalmodulate_ps20 );
 				}
 			}
-#ifndef _X360
+#if !defined( _X360 ) && !defined( _PS3 )
 			else
 			{
 				DECLARE_STATIC_VERTEX_SHADER( decalmodulate_vs30 );
@@ -123,6 +138,7 @@ BEGIN_VS_SHADER( DecalModulate_dx9,
 
 				DECLARE_STATIC_PIXEL_SHADER( decalmodulate_ps30 );
 				SET_STATIC_PIXEL_SHADER_COMBO( VERTEXALPHA,  bHasVertexAlpha );
+				SET_STATIC_PIXEL_SHADER_COMBO( FOGFADE, bHasFogFade );
 				SET_STATIC_PIXEL_SHADER( decalmodulate_ps30 );
 			}
 #endif
@@ -135,7 +151,7 @@ BEGIN_VS_SHADER( DecalModulate_dx9,
 				flags |= VERTEX_COLOR;
 			}
 
-#ifndef _X360
+#if !defined( _X360 ) && !defined( _PS3 )
 			// The VS30 shader offsets decals along the normal (for morphed geom)
 			flags |= g_pHardwareConfig->HasFastVertexTextures() ? VERTEX_NORMAL : 0;
 #endif
@@ -143,7 +159,7 @@ BEGIN_VS_SHADER( DecalModulate_dx9,
 			int nTexCoordCount = 1;
 			int userDataSize = 0;
 
-#ifndef _X360
+#if !defined( _X360 ) && !defined( _PS3 )
 			if ( g_pHardwareConfig->HasFastVertexTextures() )
 			{
 				nTexCoordCount = 3;
@@ -154,14 +170,14 @@ BEGIN_VS_SHADER( DecalModulate_dx9,
 		}
 		DYNAMIC_STATE
 		{
-			if ( pShaderAPI->InFlashlightMode() && !IsX360() )
+			if ( pShaderAPI->InFlashlightMode() && !( IsX360() || IsPS3() ) )
 			{
 				// Don't draw anything for the flashlight pass
 				Draw( false );
 				return;
 			}
 
-			BindTexture( SHADER_SAMPLER0, BASETEXTURE, FRAME );
+			BindTexture( SHADER_SAMPLER0, TEXTURE_BINDFLAGS_NONE, BASETEXTURE, FRAME );
 
 			// Set an identity base texture transformation
 			Vector4D transformation[2];
@@ -180,9 +196,11 @@ BEGIN_VS_SHADER( DecalModulate_dx9,
 			float fConsts[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
 			fConsts[0] = params[ FOGEXPONENT ]->GetFloatValue();
 			fConsts[1] = params[ FOGSCALE ]->GetFloatValue();
+			fConsts[2] = params[ FOGFADESTART ]->GetFloatValue();
+			fConsts[3] = params[ FOGFADEEND ]->GetFloatValue();
 			pShaderAPI->SetPixelShaderConstant( 0, fConsts );
 
-#ifndef _X360
+#if !defined( _X360 ) && !defined( _PS3 )
 			if ( !g_pHardwareConfig->HasFastVertexTextures() )
 #endif
 			{
@@ -203,7 +221,7 @@ BEGIN_VS_SHADER( DecalModulate_dx9,
 					SET_DYNAMIC_PIXEL_SHADER( decalmodulate_ps20 );
 				}
 			}
-#ifndef _X360
+#if !defined( _X360 ) && !defined( _PS3 )
 			else
 			{
 				SetHWMorphVertexShaderState( VERTEX_SHADER_SHADER_SPECIFIC_CONST_6, VERTEX_SHADER_SHADER_SPECIFIC_CONST_7, SHADER_VERTEXTEXTURE_SAMPLER0 );

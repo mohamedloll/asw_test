@@ -9,6 +9,8 @@
 #ifndef ISHADERDYNAMIC_H
 #define ISHADERDYNAMIC_H
 
+#ifndef SPU
+
 #ifdef _WIN32
 #pragma once
 #endif
@@ -17,8 +19,7 @@
 #include "materialsystem/imaterial.h"
 #include "materialsystem/imaterialsystem.h"
 
-
-typedef int ShaderAPITextureHandle_t;
+typedef intp ShaderAPITextureHandle_t;
 #define INVALID_SHADERAPI_TEXTURE_HANDLE 0
 
 
@@ -38,6 +39,7 @@ struct LightState_t
 	int  m_nNumLights;
 	bool m_bAmbientLight;
 	bool m_bStaticLight;
+	bool m_bStaticLightIndirectOnly;  // only valid if m_bStaticLight true
 	inline int HasDynamicLight() { return (m_bAmbientLight || (m_nNumLights > 0)) ? 1 : 0; }
 };
 
@@ -53,6 +55,7 @@ struct ShaderColorCorrectionInfo_t
 	float m_pLookupWeights[4];
 };
 
+#endif // SPU
 
 //-----------------------------------------------------------------------------
 // the 3D shader API interface
@@ -120,8 +123,13 @@ enum StandardTextureId_t
 
 	TEXTURE_PAINT,
 
-	TEXTURE_MAX_STD_TEXTURES = TEXTURE_SSAO_NOISE_2D + 1
+	// Stereo-ized texture that contains eye-dependent stereo constants.
+	TEXTURE_STEREO_PARAM_MAP,
+	
+	TEXTURE_MAX_STD_TEXTURES
 };
+
+#ifndef SPU
 
 enum TextureFilterMode_t
 {
@@ -137,6 +145,16 @@ enum TessellationMode_t;
 abstract_class IShaderDynamicAPI
 {
 public:
+
+	virtual void BeginPerfEEvent( wchar* name ) {}
+	virtual void EndPerfEvent() {}
+	virtual void SetVertexShaderViewProj() = 0;
+	virtual void UpdateVertexShaderMatrix( int m ) = 0;
+	virtual void SetVertexShaderModelViewProjAndModelView() = 0;
+	virtual void SetVertexShaderCameraPos() = 0;
+	virtual bool SetSkinningMatrices( const MeshInstanceData_t &instance ) = 0;
+	virtual void BindTexture( Sampler_t sampler, TextureBindFlags_t nBindFlags, ShaderAPITextureHandle_t textureHandle ) = 0;
+
 	// returns the current time in seconds....
 	virtual double CurrentTime() const = 0;
 
@@ -170,6 +188,9 @@ public:
 	// Get the dimensions of the back buffer.
 	virtual void GetBackBufferDimensions( int& width, int& height ) const = 0;
 
+	// Get information about the physical and pixel aspect ratios of the backbuffer.
+	virtual const AspectRatioInfo_t &GetAspectRatioInfo( void ) const = 0;
+
 	// Get the dimensions of the current render target
 	virtual void GetCurrentRenderTargetDimensions( int& nWidth, int& nHeight ) const = 0;
 
@@ -186,18 +207,18 @@ public:
 	virtual const FlashlightState_t &GetFlashlightState( VMatrix &worldToTexture ) const = 0;
 	virtual bool InEditorMode() const = 0;
 
+	virtual bool IsCascadedShadowMapping() const = 0;
+	virtual const CascadedShadowMappingState_t &GetCascadedShadowMappingState( ITexture **pDepthTextureAtlas, bool bLightMapScale = false ) const = 0;
+
 	// Binds a standard texture
-	virtual void BindStandardTexture( Sampler_t sampler, StandardTextureId_t id ) = 0;
+	virtual void BindStandardTexture( Sampler_t sampler, TextureBindFlags_t nBindFlags, StandardTextureId_t id ) = 0;
 
 	virtual ITexture *GetRenderTargetEx( int nRenderTargetID ) const = 0;
 
 	virtual void SetToneMappingScaleLinear( const Vector &scale ) = 0;
 	virtual const Vector &GetToneMappingScaleLinear( void ) const = 0;
-
-	// Sets the ambient light color
-	virtual void SetAmbientLightColor( float r, float g, float b ) = 0;
-
 	virtual void SetFloatRenderingParameter(int parm_number, float value) = 0;
+
 	virtual void SetIntRenderingParameter(int parm_number, int value) = 0 ;
 	virtual void SetVectorRenderingParameter(int parm_number, Vector const &value) = 0 ;
 
@@ -263,7 +284,9 @@ public:
 
 	virtual bool SinglePassFlashlightModeEnabled( void ) = 0;
 
-	virtual void SetDepthFeatheringPixelShaderConstant( int iConstant, float fDepthBlendScale ) = 0;
+	virtual void GetActualProjectionMatrix( float *pMatrix ) = 0;
+
+	virtual void SetDepthFeatheringShaderConstants( int iConstant, float fDepthBlendScale ) = 0;
 
 	virtual void GetFlashlightShaderInfo( bool *pShadowsEnabled, bool *pUberLight ) const = 0;
 
@@ -276,16 +299,23 @@ public:
 
 	virtual float GetSubDHeight() = 0;
 
-#ifdef _X360
-	// Enables X360-specific command predication.
+#if defined( _GAMECONSOLE )
+	// Enables console-specific command predication.
 	// Set values to 'true' if batches should be rendered in the z-pass and/or the render pass.
 	// Disabling predication returns to default values, which allows D3D to control predication
 	virtual void EnablePredication( bool bZPass, bool bRenderPass ) = 0;
 	virtual void DisablePredication() = 0;
-#endif // _X360
+#endif // _GAMECONSOLE
+
+	virtual bool IsRenderingPaint() const = 0;
+
+	virtual bool IsStereoActiveThisFrame() const = 0;
+
+	virtual bool IsStandardTextureHandleValid( StandardTextureId_t textureId ) = 0;
 };
 
 // end class IShaderDynamicAPI
 
+#endif //SPU
 
 #endif // ISHADERDYNAMIC_H

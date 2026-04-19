@@ -43,12 +43,20 @@ VS_OUTPUT main( const VS_INPUT v )
 	DecompressVertex_Normal( v.vNormal, vObjNormal );
 
 	// Projected position
-	float4 vProjPos = mul( v.vPos, cModelViewProj );
+	float3 vWorldPos = mul4x3( v.vPos, cModel[0] );
+	float4 vProjPos = mul( float4( vWorldPos, 1 ), cViewProj );
+	
+#ifdef _PS3
+	// Account for OpenGL's flipped y coordinate and expanded z range [-1,1] instead of [0,1]
+	vProjPos.y = -vProjPos.y;
+	vProjPos.z = 2.0f * vProjPos.z - vProjPos.w;
+#endif // _PS3
+
 	o.vProjPos = o.vProjPos_POSITION = vProjPos;
 
 	// Project tangent basis
-	float2 vProjTangentS = mul( v.vTangentS, cViewProj );
-	float2 vProjTangentT = mul( v.vTangentT, cViewProj );
+	float2 vProjTangentS = mul( v.vTangentS, cViewProj ).xy;
+	float2 vProjTangentT = mul( v.vTangentT, cViewProj ).xy;
 
 	// Map projected position to the reflection texture
 	float2 vReflectPos;
@@ -67,7 +75,6 @@ VS_OUTPUT main( const VS_INPUT v )
 	o.vPositionToCameraRayTs_projW.w = vProjPos.w;
 
 	// Compute fog based on the position
-	float3 vWorldPos = mul( v.vPos, cModel[0] );
 	o.worldPos = vWorldPos;
 
 	#if !defined( _X360 ) && !defined( SHADER_MODEL_VS_3_0 )

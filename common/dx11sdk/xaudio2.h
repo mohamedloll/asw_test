@@ -17,7 +17,7 @@
  *
  **************************************************************************/
 
-#include <comdecl.h>        // For DEFINE_CLSID and DEFINE_IID
+#include "comdecl.h"        // For DEFINE_CLSID and DEFINE_IID
 
 // XAudio 2.0 (March 2008 SDK)
 //DEFINE_CLSID(XAudio2, fac23f48, 31f5, 45a8, b4, 9b, 52, 25, d6, 14, 01, aa);

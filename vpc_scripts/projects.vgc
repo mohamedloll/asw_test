@@ -178,3 +178,13 @@ $Project "soundemittersystem"
 {
 	"soundemittersystem\soundemittersystem.vpc"
 }
+
+$Project "soundsystem"
+{
+	"soundsystem\soundsystem.vpc"
+}
+
+$Project "soundsystem_lowlevel"
+{
+	"soundsystem\lowlevel\soundsystem_lowlevel.vpc"
+}

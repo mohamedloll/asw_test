@@ -22,7 +22,7 @@ $Configuration
 
 	$Linker [!$PS3]
 	{
-		$AdditionalDependencies			"$BASE Imm32.lib Shlwapi.lib odbc32.lib odbccp32.lib winmm.lib" [$WINDOWS]
+		$AdditionalDependencies			"$BASE Imm32.lib Shlwapi.lib odbc32.lib odbccp32.lib winmm.lib msvcrt.lib" [$WINDOWS]
 		$SystemLibraries				"iconv" [$OSXALL]
 		$SystemFrameworks				"Carbon"
 		$SystemLibraries				"SDL2" [$LINUXALL]

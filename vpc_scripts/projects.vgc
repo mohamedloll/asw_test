@@ -198,3 +198,8 @@ $Project "vgui_surfacelib"
 {
 	"vgui2\vgui_surfacelib\vgui_surfacelib.vpc"
 }
+
+$Project "vgui2"
+{
+	"vgui2\src\vgui_dll.vpc"
+}

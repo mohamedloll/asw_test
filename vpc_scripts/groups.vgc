@@ -36,6 +36,7 @@ $Group "game"
 	"vstdlib"
 	"vguimatsurface"
 	"vgui_surfacelib"
+	"vgui2"
 	"vtf"
 }
 

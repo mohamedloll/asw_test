@@ -2877,7 +2877,7 @@ void CInputWin32::OnIMEComposition( int flags )
 				if ( pEvent )
 				{
 					pEvent->SetString("eventtype", "addchars");
-					pEvent->SetWString("eventdata", tempstr);
+					//pEvent->SetWString("eventdata", tempstr);
 					g_pGameEventManager->FireEventClientSide( pEvent );
 				}
 			}
@@ -2901,7 +2901,7 @@ void CInputWin32::OnIMEComposition( int flags )
 				if ( pEvent )
 				{
 					pEvent->SetString("eventtype", "setcomposition");
-					pEvent->SetWString("eventdata", tempstr);
+					//pEvent->SetWString("eventdata", tempstr);
 					g_pGameEventManager->FireEventClientSide( pEvent );
 				}
 			}
@@ -2927,7 +2927,7 @@ void CInputWin32::OnIMEEndComposition()
 	if ( pEvent )
 	{
 		pEvent->SetString("eventtype", "cancelcomposition");
-		pEvent->SetWString("eventdata", L"");
+		//pEvent->SetWString("eventdata", L"");
 		g_pGameEventManager->FireEventClientSide( pEvent );
 	}
 	

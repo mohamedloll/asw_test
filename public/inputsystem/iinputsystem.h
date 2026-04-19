@@ -1,4 +1,4 @@
-//===== Copyright © 1996-2005, Valve Corporation, All rights reserved. ======//
+//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
 //
 // Purpose: 
 //
@@ -12,11 +12,12 @@
 
 #include "tier0/platform.h"
 #include "tier0/platwindow.h"
-#include "appframework/IAppSystem.h"
+#include "appframework/iappsystem.h"
 #include "inputsystem/InputEnums.h"
 #include "inputsystem/ButtonCode.h"
 #include "inputsystem/AnalogCode.h"
-
+#include <mathlib/vector.h>
+#include "input_device.h"
 
 ///-----------------------------------------------------------------------------
 /// A handle to a cursor icon
@@ -49,6 +50,12 @@ enum InputStandardCursor_t
 };
 
 
+#ifdef _PS3
+#include "cell/pad.h"
+typedef bool (*BCellPadDataHook_t)( CellPadData &data );
+typedef bool (*BCellPadNoDataHook_t)();
+#endif
+
 ///-----------------------------------------------------------------------------
 /// Main interface for input. This is a low-level interface, creating an
 /// OS-independent queue of low-level input events which were sampled since
@@ -73,7 +80,7 @@ public:
 	virtual void EnableMessagePump( bool bEnable ) = 0;
 
 	/// Polls the current input state
-	virtual void PollInputState() = 0;
+	virtual void PollInputState( bool bIsInGame = false ) = 0;
 
 	/// Gets the time of the last polling in ms
 	virtual int GetPollTick() const = 0;
@@ -97,6 +104,18 @@ public:
 	virtual int GetEventCount() const = 0;
 	virtual const InputEvent_t* GetEventData( ) const = 0;
 
+	// Motion Controller status
+	virtual bool	   MotionControllerActive() const = 0;
+	virtual Quaternion GetMotionControllerOrientation() const = 0; // Pointer direction
+	virtual float	   GetMotionControllerPosX() const = 0;
+	virtual float	   GetMotionControllerPosY() const = 0;
+	virtual int		   GetMotionControllerDeviceStatus() const = 0;
+	virtual uint64		   GetMotionControllerDeviceStatusFlags() const = 0;
+	virtual void	   SetMotionControllerDeviceStatus( int nStatus ) = 0;
+	virtual void	   SetMotionControllerCalibrationInvalid( void ) = 0;
+	virtual void	   StepMotionControllerCalibration( void ) = 0;
+	virtual void	   ResetMotionControllerScreenCalibration( void ) = 0;
+
 	/// Posts a user-defined event into the event queue; this is expected
 	/// to be called in overridden wndprocs connected to the root panel.
 	virtual void PostUserEvent( const InputEvent_t &event ) = 0;
@@ -119,9 +138,6 @@ public:
 
 	/// Resets the input state
 	virtual void ResetInputState() = 0;
-
-	/// Sets a player as the primary user - all other controllers will be ignored.
-	virtual void SetPrimaryUserId( int userId ) = 0;
 
 	/// Convert back + forth between ButtonCode/AnalogCode + strings
 	virtual const char *ButtonCodeToString( ButtonCode_t code ) const = 0;
@@ -170,6 +186,81 @@ public:
 	/// Mouse capture
 	virtual void EnableMouseCapture( PlatWindow_t hWnd ) = 0;
 	virtual void DisableMouseCapture() = 0;
+	
+	// Mouse visibility, tell inputsystem when we hide stuff rather than querying the OS which is expensive on OSX
+	virtual void SetMouseCursorVisible( bool bVisible ) = 0;
+
+#ifdef _PS3
+	virtual void SetPS3CellPadDataHook( BCellPadDataHook_t hookFunc ) = 0;
+	virtual void SetPS3CellPadNoDataHook( BCellPadNoDataHook_t hookFunc ) = 0;
+
+	virtual void SetPS3StartButtonIdentificationMode() = 0;
+	virtual bool GetPS3CursorPos( int &x, int &y ) = 0;
+	virtual void PS3SetupHardwareCursor( void* image ) = 0;
+
+	virtual void DisableHardwareCursor( void ) = 0;
+	virtual void EnableHardwareCursor( void ) = 0;
+#endif
+
+#if defined( USE_SDL ) || defined( LINUX )
+	virtual void DisableHardwareCursor( void ) = 0;
+	virtual void EnableHardwareCursor( void ) = 0;
+#endif
+	
+	/// Reset the current cursor icon.  Used to reset the icon in the case of alt+tabs where the cursor has been forced to a different
+	/// icon because it was outside of the client rect during the reload.
+	virtual void ResetCursorIcon() = 0;
+
+	// read and clear accumulated raw input values
+	virtual void GetRawMouseAccumulators( int& accumX, int& accumY ) = 0;
+
+	// ========================================================================
+	// Platform Input Device Interface
+	//
+	// This section provides a way to determine what Input/controller setup(s) are available on a
+	//  given platform (PC, MAC, PS3, XBox) and what input device is currently selected/in use on
+	//  the local client
+	//
+	//  Modules outside of the inputsystem need this information for tasks such as statistics, 
+	//  achievements, and player rankings which take into account what input controller setup the 
+	//  player is using on a per-platform basis.
+	//
+	//  The platform can be specified because a dedicate server may be running on a different 
+	//    platform than the clients connected to it.
+	// 
+	// The master list of input devices and platforms used here is located in src\common\input_device.h 
+	//
+	// The methods here allow the user to write platform agnostic code to iterate through and
+	//  and process the list of input devices specific to the current (or specified) platform 
+	//  without seeing devices not applicable to that platform.
+	// 
+	// Terminology:
+	//   Connected Device    = Input setup is connected and available for use, can be more than one
+	//   Current Device		 = Input setup being actively used
+	// 
+
+	// ================================================================
+	// Input Device Functions specific to the local client and hardware
+	// ================================================================
+
+	// Manage the list of input devices that are connected
+	virtual InputDevice_t GetConnectedInputDevices( void ) = 0;				// returns the bitfield of all connected devices
+	virtual bool IsInputDeviceConnected( InputDevice_t device ) = 0;
+	virtual void SetInputDeviceConnected( InputDevice_t device, bool connected = true ) = 0;
+	virtual InputDevice_t IsOnlySingleDeviceConnected( void ) = 0;
+
+	// Access the currently selected Input device
+	virtual InputDevice_t GetCurrentInputDevice( void ) = 0;				// returns the enum referring to the one currently selected device
+	virtual bool IsDeviceReadingInput( InputDevice_t device ) const = 0;			// returns whether the passed in device is the current device.  Returns true if no current device is defined.
+	virtual void SetCurrentInputDevice( InputDevice_t device ) = 0;
+	virtual void ResetCurrentInputDevice( void ) = 0;						// sets the input device to the platform default
+
+	virtual void SampleInputToFindCurrentDevice( bool ) = 0;  // looks for the next 'significant' button press to determine and set the current input device
+	virtual bool IsSamplingForCurrentDevice( void ) = 0;
+
+	virtual bool IsSteamControllerActive() const = 0;
+	virtual void SetSteamControllerMode( const char *pMode, const void *obj=NULL ) = 0;
+
 };
 
 DECLARE_TIER2_INTERFACE( IInputSystem, g_pInputSystem );

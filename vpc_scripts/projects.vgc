@@ -138,3 +138,8 @@ $Project "tier0"
 {
 	"tier0\tier0.vpc"
 }
+
+$Project "inputsystem"
+{
+	"inputsystem\inputsystem.vpc"
+}

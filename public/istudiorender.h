@@ -18,7 +18,7 @@
 #include "tier1/utlvector.h"
 #include "materialsystem/imaterial.h"
 #include "materialsystem/imaterialsystem.h"
-#include "appframework/IAppSystem.h"
+#include "appframework/iappsystem.h"
 #include "datacache/imdlcache.h"
 #include "tier0/fasttimer.h"
 #include "studio.h"
@@ -48,7 +48,7 @@ struct ShaderStencilState_t;
 
 
 // undone: what's the standard for function type naming?
-typedef void (*StudioRender_Printf_t)( const char *fmt, ... );
+typedef void (*StudioRender_Printf_t)( PRINTF_FORMAT_STRING const char *fmt, ... );
 
 struct StudioRenderConfig_t
 {
@@ -119,9 +119,18 @@ enum
 
 	STUDIORENDER_SHADOWDEPTHTEXTURE		= 0x200,
 									
-	STUDIORENDER_NO_SKIN				= 0x400,
+	STUDIORENDER_UNUSED					= 0x400,
 
 	STUDIORENDER_SKIP_DECALS			= 0x800,
+
+	STUDIORENDER_MODEL_IS_CACHEABLE     = 0x1000,
+	
+	STUDIORENDER_SHADOWDEPTHTEXTURE_INCLUDE_TRANSLUCENT_MATERIALS = 0x2000,
+
+	STUDIORENDER_NO_PRIMARY_DRAW		= 0x4000,
+
+	STUDIORENDER_SSAODEPTHTEXTURE		= 0x8000,
+
 };
 
 
@@ -146,6 +155,8 @@ enum OverrideType_t
 	OVERRIDE_NORMAL = 0,
 	OVERRIDE_BUILD_SHADOWS,
 	OVERRIDE_DEPTH_WRITE,
+	OVERRIDE_SELECTIVE,
+	OVERRIDE_SSAO_DEPTH_WRITE,
 };
 
 
@@ -258,6 +269,7 @@ struct StudioArrayInstanceData_t : public StudioShadowArrayInstanceData_t
 	uint32 m_nFlashlightUsage;	// Mask indicating which flashlights to use.
 	ShaderStencilState_t *m_pStencilState;
 	ColorMeshInfo_t *m_pColorMeshInfo;
+	bool m_bColorMeshHasIndirectLightingOnly;
 	Vector4D m_DiffuseModulation;
 };
 
@@ -364,7 +376,8 @@ public:
 	virtual void DrawStaticPropShadows( const DrawModelInfo_t &drawInfo, const matrix3x4_t &modelToWorld, int flags ) = 0;
 
 	// Causes a material to be used instead of the materials the model was compiled with
-	virtual void ForcedMaterialOverride( IMaterial *newMaterial, OverrideType_t nOverrideType = OVERRIDE_NORMAL ) = 0;
+	virtual void ForcedMaterialOverride( IMaterial *newMaterial, OverrideType_t nOverrideType = OVERRIDE_NORMAL, int nMaterialIndex = -1 ) = 0;
+	virtual bool IsForcedMaterialOverride() = 0;
 
 	// Create, destroy list of decals for a particular model
 	virtual StudioDecalHandle_t CreateDecalList( studiohwdata_t *pHardwareData ) = 0;
@@ -373,7 +386,7 @@ public:
 	// Add decals to a decal list by doing a planar projection along the ray
 	// The BoneToWorld matrices must be set before this is called
 	virtual void AddDecal( StudioDecalHandle_t handle, studiohdr_t *pStudioHdr, matrix3x4_t *pBoneToWorld, 
-		const Ray_t & ray, const Vector& decalUp, IMaterial* pDecalMaterial, float radius, int body, bool noPokethru = false, int maxLODToDecal = ADDDECAL_TO_ALL_LODS ) = 0;
+		const Ray_t & ray, const Vector& decalUp, IMaterial* pDecalMaterial, float radius, int body, bool noPokethru = false, int maxLODToDecal = ADDDECAL_TO_ALL_LODS, void *pvProxyUserData = NULL, int nAdditionalDecalFlags = 0 ) = 0;
 
 	// Compute the lighting at a point and normal
 	virtual void ComputeLighting( const Vector* pAmbient, int lightCount,
@@ -418,6 +431,18 @@ public:
 	// draw an array of models with the same state
 	virtual void DrawModelArray( const StudioModelArrayInfo2_t &info, int nCount, StudioArrayData_t *pArrayData, 
 		int nInstanceStride, int flags = STUDIORENDER_DRAW_ENTIRE_MODEL ) = 0;
+
+#ifndef _CERT
+	struct FacesRenderedInfo_t
+	{
+		studiohdr_t *pStudioHdr;
+		unsigned int nFaceCount;
+		unsigned int nRenderCount;
+	};
+
+	typedef void ( * FaceInfoCallbackFunc_t )( int nTopN, FacesRenderedInfo_t *pRenderedFaceInfo, int nTotalFaces );
+	virtual void GatherRenderedFaceInfo( FaceInfoCallbackFunc_t pFunc ) = 0;
+#endif // !_CERT
 };
 
 DECLARE_TIER3_INTERFACE( IStudioRender, g_pStudioRender );

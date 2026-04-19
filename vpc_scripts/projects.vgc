@@ -168,3 +168,8 @@ $Project "stdshader_dx9"
 {
 	"materialsystem\stdshaders\stdshader_dx9.vpc"
 }
+
+$Project "studiorender"
+{
+	"studiorender\studiorender.vpc"
+}

@@ -2395,7 +2395,6 @@ BEGIN_DATADESC_NO_BASE( CBaseEntity )
 END_DATADESC()
 
 BEGIN_ENT_SCRIPTDESC_ROOT( CBaseEntity, "Root class of all server-side entities" )
-	DEFINE_SCRIPT_INSTANCE_HELPER( &g_BaseEntityScriptInstanceHelper )
 	DEFINE_SCRIPTFUNC_NAMED( ConnectOutputToScript, "ConnectOutput", "Adds an I/O connection that will call the named function when the specified output fires"  )
 	DEFINE_SCRIPTFUNC_NAMED( DisconnectOutputFromScript, "DisconnectOutput", "Removes a connected script function from an I/O event."  )
 	
@@ -3246,6 +3245,7 @@ bool CBaseEntity::Intersects( CBaseEntity *pOther )
 
 extern ConVar ai_LOS_mode;
 
+#if defined( FVIS_STACK_TRACKING )
 // With RUNTIME STACK TRANSLATION enabled, you get a few additional cvars which let you debug exactly where
 // FVisible calls are coming from.
 // To use,
@@ -3290,6 +3290,7 @@ static ConCommand perf_fvis_stacks_dump("perf_fvis_stacks_dump", CC_FVis_Stack_D
 ConVar perf_fvis_stacks_trace( "perf_fvis_stacks_trace", "0", FCVAR_CHEAT, "Enable to get detailed perf on fvis" );
 
 #endif
+#endif
 
 //=========================================================
 // FVisible - returns true if a line can be traced from
@@ -3299,7 +3300,7 @@ bool CBaseEntity::FVisible( CBaseEntity *pEntity, int traceMask, CBaseEntity **p
 {
 	VPROF( "CBaseEntity::FVisible" );
 
-#ifdef ENABLE_RUNTIME_STACK_TRANSLATION
+#ifdef FVIS_STACK_TRACKING
 	if ( perf_fvis_stacks_trace.GetBool() )
 		s_FVisCallStackInfo.GetEntryForCurrentCallStack( 1 ).i += 1;
 #endif
@@ -3367,7 +3368,7 @@ bool CBaseEntity::FVisible( const Vector &vecTarget, int traceMask, CBaseEntity 
 {
 	VPROF( "CBaseEntity::FVisible" );
 
-#ifdef ENABLE_RUNTIME_STACK_TRANSLATION
+#ifdef FVIS_STACK_TRACKING
 	if ( perf_fvis_stacks_trace.GetBool() )
 		s_FVisCallStackInfo.GetEntryForCurrentCallStack( 1 ).i += 1;
 #endif

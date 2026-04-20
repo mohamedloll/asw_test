@@ -2310,7 +2310,7 @@ void PrecacheParticleFileAndSystems( const char *pParticleSystemFile )
 
 void PrecacheGameSoundsFile( const char *pSoundFile )
 {
-	soundemitterbase->AddSoundsFromFile( pSoundFile, true );
+	soundemitterbase->AddSoundsFromFile( pSoundFile, true, false );
 	SoundSystemPreloadSounds();
 }
 

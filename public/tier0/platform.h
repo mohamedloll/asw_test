@@ -443,6 +443,8 @@
 	#define IsGameConsole() 0
 #endif
 
+#define IsXbox() IsGameConsole()
+#define IsConsole() IsGameConsole()
 
 
 //-----------------------------------------------------------------------------

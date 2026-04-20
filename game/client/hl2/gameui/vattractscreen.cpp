@@ -1064,10 +1064,6 @@ void CAttractScreen::ShowSignInDialog( int iPrimaryUser, int iSecondaryUser, Bla
 	s_idSecondaryUser = -1;
 	s_bSecondaryUserIsGuest = 0;
 
-	// Whoever presses start becomes the primary user
-	// and determines who's config we load, etc.
-	g_pInputSystem->SetPrimaryUserId( iPrimaryUser );
-
 	// Lock the UI convar options to a particular splitscreen player slot
 	SetGameUIActiveSplitScreenPlayerSlot( 0 );
 

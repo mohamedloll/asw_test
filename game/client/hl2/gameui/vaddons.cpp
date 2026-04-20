@@ -949,7 +949,7 @@ void Addons::ExtractAddonMetadata( const char *pcAddonDir )
 
 	// Construct path to the VPK and create the object
 	V_snprintf( szAddonVPKFullPath, sizeof( szAddonVPKFullPath ), "%s%s%c%s.vpk", szModPath, ADDONS_DIRNAME, CORRECT_PATH_SEPARATOR, pcAddonDir );
-	CPackedStore mypack( szAddonVPKFullPath, g_pFullFileSystem );
+	CPackedStore mypack( NULL, szAddonVPKFullPath, g_pFullFileSystem );
 	
 	// Construct the output path for the addoninfo.txt and write it out
 	V_snprintf( szAddonInfoFullPath, sizeof( szAddonInfoFullPath ), "%s%s%c%s", szModPath, ADDONS_DIRNAME, CORRECT_PATH_SEPARATOR, ADDONINFO_FILENAME );

@@ -3496,12 +3496,6 @@ bool CViewRender::DrawOneMonitor( ITexture *pRenderTarget, int cameraNum, C_Poin
 
 	bool bSky = pCameraEnt->IsSkyEnabled();
 
-	if ( pCameraEnt->GetBrightness() != -1.0f )
-	{
-		CMatRenderContextPtr pRenderContext( materials );
-		pRenderContext->SetAmbientLightColor( pCameraEnt->GetBrightness(), pCameraEnt->GetBrightness(), pCameraEnt->GetBrightness() );
-	}
-
 	bool fogEnabled = pCameraEnt->IsFogEnabled();
 
 	CViewSetup monitorView = cameraView;
@@ -3549,13 +3543,6 @@ bool CViewRender::DrawOneMonitor( ITexture *pRenderTarget, int cameraNum, C_Poin
  	render->Push3DView( monitorView, VIEW_CLEAR_DEPTH | VIEW_CLEAR_COLOR, pRenderTarget, (VPlane *)frustum );
 	ViewDrawScene( false, bSky ? SKYBOX_2DSKYBOX_VISIBLE : SKYBOX_NOT_VISIBLE, monitorView, 0, VIEW_MONITOR );
  	render->PopView( frustum );
-
-	// Reset brightness
-	if ( pCameraEnt->GetBrightness() != 1.0f )
-	{
-		CMatRenderContextPtr pRenderContext( materials );
-		pRenderContext->SetAmbientLightColor( -1.0f, -1.0f, -1.0f );
-	}
 
 	// Reset the world fog parameters.
 	if ( fogEnabled )

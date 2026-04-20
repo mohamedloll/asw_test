@@ -1003,7 +1003,7 @@ static HSOUNDSCRIPTHANDLE PrecachePhysicsSoundByStringIndex( int idx )
 		return CBaseEntity::PrecacheScriptSound( physprops->GetString( idx ) );
 	}
 
-	return SOUNDEMITTER_INVALID_HANDLE;
+	return NULL;
 }
 
 //-----------------------------------------------------------------------------

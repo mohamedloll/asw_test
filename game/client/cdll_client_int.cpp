@@ -3089,22 +3089,49 @@ class CClientMaterialSystem : public IClientMaterialSystem
 {
 	virtual HTOOLHANDLE GetCurrentRecordingEntity()
 	{
-		if ( !ToolsEnabled() )
+		if (!ToolsEnabled())
 			return HTOOLHANDLE_INVALID;
 
-		if ( !clienttools->IsInRecordingMode() )
+		if (!clienttools->IsInRecordingMode())
 			return HTOOLHANDLE_INVALID;
 
-		C_BaseEntity *pEnt = view->GetCurrentlyDrawingEntity();
-		if ( !pEnt || !pEnt->IsToolRecording() )
+		const C_BaseEntity* pEnt = NULL;
+		if (m_pProxyData) //dynamic_cast not possible with void *. Just going to have to search to verify that it actually is an entity
+		{
+			CClientEntityList& entList = ClientEntityList();
+			C_BaseEntity* pIter = entList.FirstBaseEntity();
+			while (pIter)
+			{
+				if ((pIter == m_pProxyData) || (pIter->GetClientRenderable() == m_pProxyData))
+				{
+					pEnt = pIter;
+					break;
+				}
+
+				pIter = entList.NextBaseEntity(pIter);
+			}
+		}
+
+		if (!pEnt && (materials->GetThreadMode() == MATERIAL_SINGLE_THREADED))
+		{
+			pEnt = view->GetCurrentlyDrawingEntity();
+		}
+
+		if (!pEnt || !pEnt->IsToolRecording())
 			return HTOOLHANDLE_INVALID;
 
 		return pEnt->GetToolHandle();
 	}
-	virtual void PostToolMessage( HTOOLHANDLE hEntity, KeyValues *pMsg )
+	virtual void PostToolMessage(HTOOLHANDLE hEntity, KeyValues* pMsg)
 	{
-		ToolFramework_PostToolMessage( hEntity, pMsg );
+		ToolFramework_PostToolMessage(hEntity, pMsg);
 	}
+	virtual void SetMaterialProxyData(void* pProxyData)
+	{
+		m_pProxyData = pProxyData;
+	}
+
+	void* m_pProxyData;
 };
 
 //-----------------------------------------------------------------------------

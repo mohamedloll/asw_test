@@ -1155,7 +1155,7 @@ void CBaseHudChat::OnTick( void )
 
 	FadeChatHistory();
 
-	if ( IsConsole() )
+	if ( IsGameConsole() )
 	{
 		// force to one time only for layout
 		vgui::ivgui()->RemoveTickSignal( GetVPanel() );

@@ -47,17 +47,6 @@ const wchar_t *GetStringForIndex( int index );
 #endif
 static bool g_bPermitDirectSoundPrecache = false;
 
-template< class T >
-static FORCEINLINE T Clamp( T const &val, T const &minVal, T const &maxVal )
-{
-	if ( val < minVal )
-		return minVal;
-	else if ( val > maxVal )
-		return maxVal;
-	else
-		return val;
-}
-
 #if !defined( CLIENT_DLL )
 
 static ConVar cc_norepeat( "cc_norepeat", "5", 0, "In multiplayer games, don't repeat captions more often than this many seconds." );
@@ -404,11 +393,6 @@ public:
 		Q_StripExtension( mapname, scriptfile, sizeof( scriptfile ) );
 		Q_strncat( scriptfile, "_level_sounds.txt", sizeof( scriptfile ), COPY_ALL_CHARACTERS );
 
-		if ( filesystem->FileExists( scriptfile, "GAME" ) )
-		{
-			soundemitterbase->AddSoundOverrides( scriptfile );
-		}
-
 #if !defined( CLIENT_DLL )
 	
 		PreloadSounds();
@@ -435,8 +419,6 @@ public:
 
 	virtual void LevelShutdownPostEntity()
 	{
-		soundemitterbase->ClearSoundOverrides();
-
 #if !defined( CLIENT_DLL )
 		FinishLog();
 
@@ -502,7 +484,7 @@ public:
 				CBaseEntity::PrecacheSound( soundname );
 	
 				g_bPermitDirectSoundPrecache = false;
-				return SOUNDEMITTER_INVALID_HANDLE;
+				return NULL;
 			}
 
 #if !defined( CLIENT_DLL )
@@ -556,11 +538,6 @@ public:
 		{
 			char const *actorModel = STRING( ent->GetModelName() );
 			gender = soundemitterbase->GetActorGender( actorModel );
-		}
-
-		if ( !soundemitterbase->GetParametersForSoundEx( ep.m_pSoundName, handle, params, gender, true ) )
-		{
-			return;
 		}
 
 		if ( !params.soundname[0] )
@@ -751,11 +728,6 @@ public:
 #endif
 			}
 			return;
-		}
-
-		if ( ep.m_hSoundScriptHandle == SOUNDEMITTER_INVALID_HANDLE )
-		{
-			ep.m_hSoundScriptHandle = (HSOUNDSCRIPTHANDLE)soundemitterbase->GetSoundIndex( ep.m_pSoundName );
 		}
 
 		if ( ep.m_hSoundScriptHandle == -1 )
@@ -1030,14 +1002,6 @@ public:
 
 	void StopSoundByHandle( int entindex, const char *soundname, HSOUNDSCRIPTHANDLE& handle, bool bIsStoppingSpeakerSound = false )
 	{
-		if ( handle == SOUNDEMITTER_INVALID_HANDLE )
-		{
-			handle = (HSOUNDSCRIPTHANDLE)soundemitterbase->GetSoundIndex( soundname );
-		}
-
-		if ( handle == SOUNDEMITTER_INVALID_HANDLE )
-			return;
-
 		CSoundParametersInternal *params;
 
 		params = soundemitterbase->InternalGetParametersForSound( (int)handle );
@@ -1074,10 +1038,6 @@ public:
 	void StopSound( int entindex, const char *soundname )
 	{
 		HSOUNDSCRIPTHANDLE handle = (HSOUNDSCRIPTHANDLE)soundemitterbase->GetSoundIndex( soundname );
-		if ( handle == SOUNDEMITTER_INVALID_HANDLE )
-		{
-			return;
-		}
 
 		StopSoundByHandle( entindex, soundname, handle );
 	}
@@ -1713,7 +1673,7 @@ soundlevel_t CBaseEntity::LookupSoundLevel( const char *soundname )
 
 soundlevel_t CBaseEntity::LookupSoundLevel( const char *soundname, HSOUNDSCRIPTHANDLE& handle )
 {
-	return soundemitterbase->LookupSoundLevelByHandle( soundname, handle );
+	return SNDLVL_NONE; // TODO?
 }
 
 //-----------------------------------------------------------------------------
@@ -1795,9 +1755,7 @@ bool CBaseEntity::GetParametersForSound( const char *soundname, CSoundParameters
 
 bool CBaseEntity::GetParametersForSound( const char *soundname, HSOUNDSCRIPTHANDLE& handle, CSoundParameters &params, const char *actormodel )
 {
-	gender_t gender = soundemitterbase->GetActorGender( actormodel );
-	
-	return soundemitterbase->GetParametersForSoundEx( soundname, handle, params, gender );
+	return true;
 }
 
 HSOUNDSCRIPTHANDLE CBaseEntity::PrecacheScriptSound( const char *soundname )

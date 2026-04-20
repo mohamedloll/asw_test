@@ -118,7 +118,11 @@ public:
 
 	inline bool HasElement(const char* pStr) const
 	{
+#ifndef JPH_DEBUG_RENDERER
 		return Find(pStr) != UTL_INVAL_SYMBOL;
+#else
+		return false;
+#endif
 	}
 	
 	// Remove all symbols in the table.

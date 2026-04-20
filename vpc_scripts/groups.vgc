@@ -58,3 +58,21 @@ $Group "everything"
 	"game_shader"
 	"videocfg"
 }
+
+$Group "jolt"
+{
+	"appframework"
+	"interfaces"
+	"tier0_static"
+	"tier1"
+	"tier2"
+	"mathlib"
+	"vstdlib_static"
+	"joltphysics_avx2"
+	"joltphysics_sse42"
+	"joltphysics_sse2"
+	"vphysics_jolt_avx2"
+	"vphysics_jolt_sse42"
+	"vphysics_jolt_sse2"
+	"vphysics_wrapper_external"
+}

@@ -15,7 +15,7 @@
 #pragma once
 #endif
 
-
+#include <basetypes.h>
 #include <string.h>
 #include "tier0/platform.h"
 #include "tier0/dbg.h"
@@ -24,7 +24,7 @@
 #include "tier1/utlblockmemory.h"
 #include "tier1/strtools.h"
 
-#include <algorithm>
+#include <cstdlib>
 
 #define FOR_EACH_VEC( vecName, iteratorName ) \
 	for ( int iteratorName = 0; (vecName).IsUtlVector && iteratorName < (vecName).Count(); iteratorName++ )
@@ -929,15 +929,19 @@ void CUtlVector<T, A>::InPlaceQuickSort( int (__cdecl *pfnCompare)(const T *, co
 template< typename T, class A >
 void CUtlVector<T, A>::Sort( void )
 {
+#ifndef JPH_DEBUG_RENDERER
 	//STACK STATS TODO: Do we care about allocation tracking precision enough to match element origins across a sort?
 	std::sort( Base(), Base() + Count() );
+#endif
 }
 
 template< typename T, class A >
 template <class F>
 void CUtlVector<T, A>::SortPredicate( F &&predicate )
 {
+#ifndef JPH_DEBUG_RENDERER
 	std::sort( Base(), Base() + Count(), predicate );
+#endif
 }
 
 //-----------------------------------------------------------------------------

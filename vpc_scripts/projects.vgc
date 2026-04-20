@@ -203,3 +203,8 @@ $Project "vgui2"
 {
 	"vgui2\src\vgui_dll.vpc"
 }
+
+$Project "launcher_main"
+{
+	"launcher_main\launcher_main.vpc"
+}
